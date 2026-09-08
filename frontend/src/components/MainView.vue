@@ -197,13 +197,15 @@
                     获取历史版本列表
                   </n-button>
                   <n-button
-                    :type="isBatchQuerying ? 'warning' : 'default'"
+                    :type="isBatchQuerying ? 'error' : 'default'"
                     :secondary="!isBatchQuerying"
                     size="medium"
                     :disabled="versionItems.length === 0 || isListingVersions || isTargetQuerying"
-                    :loading="isBatchQuerying"
                     @click="handleBatchQueryClick"
                   >
+                    <template #icon v-if="isBatchQuerying">
+                      <n-spin size="small" />
+                    </template>
                     {{ isBatchQuerying ? '⏹️ 停止查询' : '批量查询前 30 个版本号' }}
                   </n-button>
                   <n-button
@@ -211,9 +213,11 @@
                     :secondary="!isTargetQuerying"
                     size="medium"
                     :disabled="versionItems.length === 0 || isListingVersions || isBatchQuerying"
-                    :loading="isTargetQuerying"
                     @click="handleTargetQueryClick"
                   >
+                    <template #icon v-if="isTargetQuerying">
+                      <n-spin size="small" />
+                    </template>
                     {{ isTargetQuerying ? '⏹️ 停止查询' : '🎯 查询到指定版本' }}
                   </n-button>
                 </div>
@@ -561,10 +565,10 @@
     </n-modal>
 
     <!-- 6. Target Version Modal Dialog -->
-    <n-modal v-model:show="showTargetVersionModal" preset="card" title="🎯 查询到指定版本" style="width: 440px;">
+    <n-modal v-model:show="showTargetVersionModal" preset="card" title="🎯 跨步加速查询指定版本" style="width: 460px;">
       <div class="target-version-dialog-body">
         <p style="margin-bottom: 12px; font-size: 13px; color: #666; line-height: 1.6;">
-          请输入目标版本号（例如：<code>10.2.80</code> 或 <code>8.0.0</code>）。程序将从最新版本开始自动逐个查询详情，直到匹配到该版本或全部查询完毕。
+          请输入目标版本号（例如：<code>10.2.80</code> 或 <code>8.0.0</code>）。程序采用<b>跨步跳跃与回溯加速算法</b>，每隔若干版本探测一次，当版本小于目标时自动向回精确锁定，大幅缩短查询耗时。
         </p>
         <n-input
           ref="targetVersionInputRef"
@@ -575,6 +579,10 @@
           autofocus
           @keydown.enter="confirmStartTargetQuery"
         />
+        <div style="margin-top: 14px; display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-size: 13px; color: #555;">跳跃步长 (每隔几个版本探测):</span>
+          <n-input-number v-model:value="targetQueryStep" :min="2" :max="30" size="small" style="width: 110px;" />
+        </div>
         <div style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px;">
           <n-button secondary @click="showTargetVersionModal = false">取消</n-button>
           <n-button type="primary" :disabled="!targetVersionInput.trim()" @click="confirmStartTargetQuery">
@@ -598,6 +606,7 @@ import {
   NTabPane,
   NCard,
   NInput,
+  NInputNumber,
   NInputGroup,
   NSelect,
   NSwitch,
@@ -734,6 +743,7 @@ const shouldStopTargetQuery = ref(false)
 const showTargetVersionModal = ref(false)
 const targetVersionInput = ref('')
 const targetVersionInputRef = ref<any>(null)
+const targetQueryStep = ref<number>(6)
 const versionForm = ref({
   bundleId: 'com.alipay.iphoneclient',
   appId: 0,
@@ -749,14 +759,80 @@ interface VersionItem {
   isQuerying?: boolean
 }
 
+function parseVersionParts(v: string): number[] {
+  if (!v || v === '未查询') return []
+  const clean = v.trim().toLowerCase().replace(/^v/, '')
+  const match = clean.match(/^(\d+(?:\.\d+)*)/)
+  if (!match) return []
+  return match[1].split('.').map(num => parseInt(num, 10))
+}
+
+function compareVersions(v1: string, v2: string): number {
+  const p1 = parseVersionParts(v1)
+  const p2 = parseVersionParts(v2)
+  if (p1.length === 0 || p2.length === 0) {
+    const clean1 = v1.trim().toLowerCase().replace(/^v/, '')
+    const clean2 = v2.trim().toLowerCase().replace(/^v/, '')
+    if (clean1 === clean2) return 0
+    return clean1 > clean2 ? 1 : -1
+  }
+  const maxLen = Math.max(p1.length, p2.length)
+  for (let i = 0; i < maxLen; i++) {
+    const num1 = p1[i] || 0
+    const num2 = p2[i] || 0
+    if (num1 > num2) return 1
+    if (num1 < num2) return -1
+  }
+  return 0
+}
+
 function isVersionMatch(actual: string, target: string): boolean {
   if (!actual || actual === '未查询') return false
   const a = actual.trim().toLowerCase().replace(/^v/, '')
   const t = target.trim().toLowerCase().replace(/^v/, '')
-  return a === t
+  if (a === t) return true
+  return compareVersions(actual, target) === 0
 }
 
 const versionItems = ref<VersionItem[]>([])
+
+async function querySingleVersionMetadata(row: VersionItem) {
+  row.isQuerying = true
+  isAnyOperationRunning.value = true
+  statusText.value = `正在查询版本 ID ${row.versionId} 的版本详情...`
+
+  try {
+    const res = await GetVersionMetadata(versionForm.value.bundleId, row.versionId, versionForm.value.appId)
+    row.displayVersion = res.displayVersion
+    row.fileSize = res.displayFileSize
+    row.releaseDate = res.releaseDate ? new Date(res.releaseDate).toLocaleDateString() : '-'
+    statusText.value = `版本 ID ${row.versionId} 对应版本号: ${res.displayVersion} (体积: ${res.displayFileSize}, 发布日期: ${row.releaseDate})`
+  } catch (err: any) {
+    message.error(`查询版本详情失败: ${err}`)
+  } finally {
+    row.isQuerying = false
+    isAnyOperationRunning.value = false
+  }
+}
+
+async function downloadFromVersions(row: VersionItem) {
+  const appName = versionForm.value.appName || versionForm.value.bundleId
+  const ver = row.displayVersion !== '未查询' ? row.displayVersion : (row.versionId ? `Build ${row.versionId}` : '最新版')
+  try {
+    await AddDownloadTask(
+      appName,
+      versionForm.value.bundleId,
+      versionForm.value.appId,
+      ver,
+      row.versionId,
+      row.fileSize
+    )
+    message.success(`已添加下载任务: ${appName} (${ver})`)
+    activeTab.value = 'download'
+  } catch (err: any) {
+    message.error(`添加下载失败: ${err}`)
+  }
+}
 
 const filteredVersions = computed(() => {
   const f = versionForm.value.filter.trim().toLowerCase()
@@ -1166,22 +1242,33 @@ async function handleListVersions() {
   }
 }
 
-async function querySingleVersionMetadata(row: VersionItem) {
-  row.isQuerying = true
-  isAnyOperationRunning.value = true
-  statusText.value = `正在查询版本 ID ${row.versionId} 的版本详情...`
+async function cancellableSleep(ms: number, stopRef: { value: boolean }): Promise<boolean> {
+  const start = Date.now()
+  while (Date.now() - start < ms) {
+    if (stopRef.value) return false
+    await new Promise(r => setTimeout(r, 20))
+  }
+  return !stopRef.value
+}
 
+async function fetchItemMetadata(index: number): Promise<string> {
+  if (index < 0 || index >= versionItems.value.length) return ''
+  const item = versionItems.value[index]
+  if (item.displayVersion && item.displayVersion !== '未查询') {
+    return item.displayVersion
+  }
+  item.isQuerying = true
   try {
-    const res = await GetVersionMetadata(versionForm.value.bundleId, row.versionId, versionForm.value.appId)
-    row.displayVersion = res.displayVersion
-    row.fileSize = res.displayFileSize
-    row.releaseDate = res.releaseDate ? new Date(res.releaseDate).toLocaleDateString() : '-'
-    statusText.value = `版本 ID ${row.versionId} 对应版本号: ${res.displayVersion} (体积: ${res.displayFileSize}, 发布日期: ${row.releaseDate})`
-  } catch (err: any) {
-    message.error(`查询版本详情失败: ${err}`)
+    const res = await GetVersionMetadata(versionForm.value.bundleId, item.versionId, versionForm.value.appId)
+    item.displayVersion = res.displayVersion
+    item.fileSize = res.displayFileSize
+    item.releaseDate = res.releaseDate ? new Date(res.releaseDate).toLocaleDateString() : '-'
+    return item.displayVersion
+  } catch (err) {
+    console.warn(`查询构建 ID ${item.versionId} 失败:`, err)
+    return ''
   } finally {
-    row.isQuerying = false
-    isAnyOperationRunning.value = false
+    item.isQuerying = false
   }
 }
 
@@ -1189,6 +1276,7 @@ async function runBatchQuery(count: number) {
   isBatchQuerying.value = true
   shouldStopBatchQuery.value = false
   isAnyOperationRunning.value = true
+  statusText.value = `正在批量查询前 ${count} 个历史版本号...`
 
   try {
     for (let i = 0; i < count; i++) {
@@ -1202,15 +1290,10 @@ async function runBatchQuery(count: number) {
       if (item.displayVersion !== '未查询') continue
 
       statusText.value = `批量查询中 (${i + 1}/${count}): ${item.versionId}...`
-      try {
-        const res = await GetVersionMetadata(versionForm.value.bundleId, item.versionId, versionForm.value.appId)
-        item.displayVersion = res.displayVersion
-        item.fileSize = res.displayFileSize
-        item.releaseDate = res.releaseDate ? new Date(res.releaseDate).toLocaleDateString() : '-'
-      } catch {
-        // Continue
-      }
-      await new Promise(r => setTimeout(r, 150))
+      await fetchItemMetadata(i)
+
+      if (shouldStopBatchQuery.value) break
+      if (!await cancellableSleep(120, shouldStopBatchQuery)) break
     }
 
     if (!shouldStopBatchQuery.value) {
@@ -1287,61 +1370,112 @@ async function runTargetQuery(targetVersion: string) {
   isTargetQuerying.value = true
   shouldStopTargetQuery.value = false
   isAnyOperationRunning.value = true
-  statusText.value = `正在自动查询目标版本: ${targetVersion}...`
+  statusText.value = `启动跨步加速查询目标版本: ${targetVersion}...`
 
+  const total = versionItems.value.length
+  const step = Math.max(2, targetQueryStep.value || 6)
   let found = false
   let foundItem: VersionItem | null = null
 
   try {
-    const total = versionItems.value.length
-    for (let i = 0; i < total; i++) {
-      if (shouldStopTargetQuery.value) {
-        statusText.value = `已停止查询指定版本 (${targetVersion})。`
-        message.info('已停止查询指定版本')
-        break
-      }
-
-      const item = versionItems.value[i]
-
-      // 1. 如果该版本此前已查询过
-      if (item.displayVersion !== '未查询') {
-        if (isVersionMatch(item.displayVersion, targetVersion)) {
-          found = true
-          foundItem = item
-          break
-        }
-        continue
-      }
-
-      // 2. 发起单条元数据查询
-      statusText.value = `正在查询 (${i + 1}/${total}): 构建 ID ${item.versionId}，寻找版本 ${targetVersion}...`
-      try {
-        const res = await GetVersionMetadata(versionForm.value.bundleId, item.versionId, versionForm.value.appId)
-        item.displayVersion = res.displayVersion
-        item.fileSize = res.displayFileSize
-        item.releaseDate = res.releaseDate ? new Date(res.releaseDate).toLocaleDateString() : '-'
-
-        if (isVersionMatch(item.displayVersion, targetVersion)) {
-          found = true
-          foundItem = item
-          break
-        }
-      } catch (err: any) {
-        console.warn(`查询构建 ID ${item.versionId} 失败:`, err)
-      }
-
-      // 每次查询间隔 150ms 防限流
-      await new Promise(r => setTimeout(r, 150))
+    // 步骤 1: 先查询第 0 个（最新版本）
+    statusText.value = `[跨步探测] 查询最新版本 (1/${total})...`
+    const v0 = await fetchItemMetadata(0)
+    if (shouldStopTargetQuery.value) {
+      statusText.value = `已停止查询指定版本 (${targetVersion})。`
+      return
     }
 
-    if (found && foundItem) {
-      statusText.value = `🎯 已找到目标版本 ${foundItem.displayVersion} (构建 ID: ${foundItem.versionId})！`
+    if (v0 && isVersionMatch(v0, targetVersion)) {
+      found = true
+      foundItem = versionItems.value[0]
+    } else if (v0 && compareVersions(v0, targetVersion) < 0) {
+      // 最新版本都已经小于目标版本，说明目标版本比最新版还要新，不存在
+      statusText.value = `当前最新版本 (${v0}) 小于目标版本 ${targetVersion}，历史版本中不存在该版本。`
+      message.warning(`当前最新版本为 ${v0}，未找到更高版本 ${targetVersion}`)
+      return
+    }
+
+    if (!found) {
+      let prevIndex = 0
+      let currIndex = 0
+
+      // 步骤 2: 按步长跨步跳跃向前探测 (列表从上到下单调递减)
+      while (currIndex < total - 1 && !shouldStopTargetQuery.value) {
+        prevIndex = currIndex
+        currIndex = Math.min(currIndex + step, total - 1)
+
+        statusText.value = `[跨步探测] 跳跃检查第 ${currIndex + 1}/${total} 个版本 (构建 ID: ${versionItems.value[currIndex].versionId})...`
+        const vCurr = await fetchItemMetadata(currIndex)
+
+        if (shouldStopTargetQuery.value) break
+        if (!await cancellableSleep(120, shouldStopTargetQuery)) break
+
+        if (vCurr && isVersionMatch(vCurr, targetVersion)) {
+          found = true
+          foundItem = versionItems.value[currIndex]
+          break
+        }
+
+        // 核心判断：当前探测版本小于目标版本，说明已经跳过了目标所在区间！
+        if (vCurr && compareVersions(vCurr, targetVersion) < 0) {
+          statusText.value = `⚡ 当前版本 (${vCurr}) < 目标 (${targetVersion})，立即向回查找区间 [${prevIndex + 2} ~ ${currIndex}]...`
+
+          // 步骤 3: 往回找（从 currIndex - 1 倒查到 prevIndex + 1）
+          for (let b = currIndex - 1; b > prevIndex; b--) {
+            if (shouldStopTargetQuery.value) break
+
+            statusText.value = `[向回查找] 正在精确核对第 ${b + 1}/${total} 个版本 (构建 ID: ${versionItems.value[b].versionId})...`
+            const vBack = await fetchItemMetadata(b)
+
+            if (shouldStopTargetQuery.value) break
+            if (!await cancellableSleep(120, shouldStopTargetQuery)) break
+
+            if (vBack && isVersionMatch(vBack, targetVersion)) {
+              found = true
+              foundItem = versionItems.value[b]
+              break
+            }
+
+            // 若往回找时已经找到了比 target 大的版本，说明该区间内版本已跨越且无完全匹配项
+            if (vBack && compareVersions(vBack, targetVersion) > 0) {
+              break
+            }
+          }
+          // 回溯结束跳出主循环
+          break
+        }
+
+        // 已到达列表末尾但还没小于目标
+        if (currIndex === total - 1) {
+          for (let b = currIndex - 1; b > prevIndex; b--) {
+            if (shouldStopTargetQuery.value) break
+            statusText.value = `[末段向回查找] 正在核对第 ${b + 1}/${total} 个版本...`
+            const vBack = await fetchItemMetadata(b)
+            if (shouldStopTargetQuery.value) break
+            if (!await cancellableSleep(120, shouldStopTargetQuery)) break
+
+            if (vBack && isVersionMatch(vBack, targetVersion)) {
+              found = true
+              foundItem = versionItems.value[b]
+              break
+            }
+          }
+          break
+        }
+      }
+    }
+
+    if (shouldStopTargetQuery.value) {
+      statusText.value = `已停止查询指定版本 (${targetVersion})。`
+      message.info('已停止查询指定版本')
+    } else if (found && foundItem) {
+      statusText.value = `🎯 已命中目标版本 ${foundItem.displayVersion} (构建 ID: ${foundItem.versionId})！`
       message.success(`已查询到指定版本 ${foundItem.displayVersion}！`)
-      // 自动筛选定位到该版本，方便用户下载
       versionForm.value.filter = targetVersion
-    } else if (!shouldStopTargetQuery.value) {
-      statusText.value = `已查询全部 ${total} 个记录，未找到版本号: ${targetVersion}`
-      message.warning(`已查询全部 ${total} 个版本记录，未找到指定版本号: ${targetVersion}`)
+    } else {
+      statusText.value = `查询完成，未在历史记录中找到指定版本: ${targetVersion}`
+      message.warning(`已完成跨步与回溯检索，未找到版本号: ${targetVersion}`)
     }
   } catch (err: any) {
     statusText.value = `查询指定版本失败: ${err}`
@@ -1350,25 +1484,6 @@ async function runTargetQuery(targetVersion: string) {
     isTargetQuerying.value = false
     shouldStopTargetQuery.value = false
     isAnyOperationRunning.value = false
-  }
-}
-
-async function downloadFromVersions(row: VersionItem) {
-  const appName = versionForm.value.appName || versionForm.value.bundleId
-  const ver = row.displayVersion !== '未查询' ? row.displayVersion : (row.versionId ? `Build ${row.versionId}` : '最新版')
-  try {
-    await AddDownloadTask(
-      appName,
-      versionForm.value.bundleId,
-      versionForm.value.appId,
-      ver,
-      row.versionId,
-      row.fileSize
-    )
-    message.success(`已添加下载任务: ${appName} (${ver})`)
-    activeTab.value = 'download'
-  } catch (err: any) {
-    message.error(`添加下载失败: ${err}`)
   }
 }
 
