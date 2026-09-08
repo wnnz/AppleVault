@@ -218,7 +218,7 @@
                     <template #icon v-if="isTargetQuerying">
                       <n-spin size="small" />
                     </template>
-                    {{ isTargetQuerying ? '⏹️ 停止查询' : '🎯 查询到指定版本' }}
+                    {{ isTargetQuerying ? '⏹️ 停止查询' : '🎯 二分查找指定版本' }}
                   </n-button>
                 </div>
 
@@ -309,9 +309,6 @@
                             {{ formatTaskBytes(task.currBytes) }} / {{ formatTaskBytes(task.totalBytes) }}
                           </span>
                           <span v-else-if="task.fileSize && task.fileSize !== '-'" class="task-size">大小: {{ task.fileSize }}</span>
-                          <span v-if="task.status === 'completed' && task.outputPath" class="task-path" :title="task.outputPath">
-                            保存至: {{ task.outputPath }}
-                          </span>
                           <span v-if="task.status === 'error'" class="task-err-msg">
                             错误: {{ task.errorMessage }}
                           </span>
@@ -329,9 +326,6 @@
                       </n-button>
                       <n-button v-if="task.status === 'completed'" size="tiny" type="primary" @click="handleInstallFromTask(task.outputPath)">
                         📲 安装
-                      </n-button>
-                      <n-button v-if="task.status === 'completed'" size="tiny" secondary @click="handleOpenDir(task.outputPath)">
-                        所在目录
                       </n-button>
                       <n-button v-if="task.status === 'error' || task.status === 'canceled'" size="tiny" secondary @click="handleRetryTask(task)">
                         重试
@@ -540,9 +534,16 @@
               <div class="form-group">
                 <label class="field-label">默认 IPA 下载保存目录:</label>
                 <n-input-group>
-                  <n-input v-model:value="settings.defaultDownloadDir" placeholder="默认保存目录" size="medium" />
-                  <n-button secondary size="medium" @click="handleSelectDefaultDir">浏览...</n-button>
+                  <n-input
+                    v-model:value="settings.defaultDownloadDir"
+                    placeholder="程序数据目录: data/downloads"
+                    size="medium"
+                    readonly
+                    disabled
+                  />
+                  <n-button secondary size="medium" @click="handleOpenDefaultDownloadDir">📁 打开目录</n-button>
                 </n-input-group>
+                <div class="field-tip">* 下载路径已默认固定为程序根目录下的 data/downloads 目录，不可修改。</div>
               </div>
 
               <!-- Default Platform -->
@@ -620,10 +621,10 @@
     </n-modal>
 
     <!-- 6. Target Version Modal Dialog -->
-    <n-modal v-model:show="showTargetVersionModal" preset="card" title="🎯 跨步加速查询指定版本" style="width: 460px;">
+    <n-modal v-model:show="showTargetVersionModal" preset="card" title="🎯 二分查找指定版本" style="width: 460px;">
       <div class="target-version-dialog-body">
         <p style="margin-bottom: 12px; font-size: 13px; color: #666; line-height: 1.6;">
-          请输入目标版本号（例如：<code>10.2.80</code> 或 <code>8.0.0</code>）。程序采用<b>跨步跳跃与回溯加速算法</b>，每隔若干版本探测一次，当版本小于目标时自动向回精确锁定，大幅缩短查询耗时。
+          请输入目标版本号（例如：<code>10.2.80</code> 或 <code>8.0.0</code>）。程序将在全部历史版本记录中采用<b>全局二分查找算法 (Binary Search)</b>，对数级对半逼近，只需数次请求即可快速锁定目标版本。
         </p>
         <n-input
           ref="targetVersionInputRef"
@@ -634,10 +635,6 @@
           autofocus
           @keydown.enter="confirmStartTargetQuery"
         />
-        <div style="margin-top: 14px; display: flex; align-items: center; justify-content: space-between;">
-          <span style="font-size: 13px; color: #555;">跳跃步长 (每隔几个版本探测):</span>
-          <n-input-number v-model:value="targetQueryStep" :min="2" :max="30" size="small" style="width: 110px;" />
-        </div>
         <div style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px;">
           <n-button secondary @click="showTargetVersionModal = false">取消</n-button>
           <n-button type="primary" :disabled="!targetVersionInput.trim()" @click="confirmStartTargetQuery">
@@ -721,7 +718,7 @@ const tableMaxHeight = ref(320)
 // Settings
 const settings = ref<main.Settings>({
   keychainPassphrase: '123456',
-  defaultDownloadDir: 'D:\\Downloads',
+  defaultDownloadDir: 'data/downloads',
   defaultPlatform: 'iphone',
   enableProxy: true,
   proxyUrl: 'http://127.0.0.1:10808',
@@ -763,7 +760,7 @@ const twoFAInputRef = ref()
 // Search State
 const isSearching = ref(false)
 const searchForm = ref({
-  term: '支付宝',
+  term: '',
   limit: 10,
   platform: 'iphone'
 })
@@ -798,11 +795,10 @@ const shouldStopTargetQuery = ref(false)
 const showTargetVersionModal = ref(false)
 const targetVersionInput = ref('')
 const targetVersionInputRef = ref<any>(null)
-const targetQueryStep = ref<number>(6)
 const versionForm = ref({
-  bundleId: 'com.alipay.iphoneclient',
+  bundleId: '',
   appId: 0,
-  appName: '支付宝',
+  appName: '',
   filter: ''
 })
 
@@ -962,12 +958,13 @@ const isInstallingIPA = ref(false)
 const selectedIPAFileName = computed(() => selectedIPAPath.value.split(/[\\/]/).pop() || selectedIPAPath.value)
 const selectedDevice = computed(() => devices.value.find(device => device.udid === selectedDeviceUDID.value))
 const deviceOptions = computed(() => devices.value.map(device => {
-  const modelShort = device.productType.includes(' (') ? device.productType.split(' (')[0] : device.productType
+  const modelShort = device.productType
   const osPrefix = device.productType.toLowerCase().includes('ipad') ? 'iPadOS' : 'iOS'
   const versionStr = device.productVersion ? `${osPrefix} ${device.productVersion}` : ''
-  const details = [modelShort, versionStr, device.connectionType]
-    .filter(Boolean)
-    .join(' · ')
+  const details = (device.name === device.productType
+    ? [versionStr, device.connectionType]
+    : [modelShort, versionStr, device.connectionType]
+  ).filter(Boolean).join(' · ')
   return {
     label: details ? `${device.name} (${details})` : device.name,
     value: device.udid
@@ -1216,6 +1213,8 @@ function selectAppForVersions(app: main.AppItem) {
   versionForm.value.appName = app.name
   versionForm.value.bundleId = app.bundleID
   versionForm.value.appId = app.id
+  versionForm.value.filter = ''
+  targetVersionInput.value = ''
   activeTab.value = 'versions'
   handleListVersions()
 }
@@ -1428,16 +1427,18 @@ async function runTargetQuery(targetVersion: string) {
   isTargetQuerying.value = true
   shouldStopTargetQuery.value = false
   isAnyOperationRunning.value = true
-  statusText.value = `启动跨步加速查询目标版本: ${targetVersion}...`
+  statusText.value = `启动二分查找目标版本: ${targetVersion}...`
 
   const total = versionItems.value.length
-  const step = Math.max(2, targetQueryStep.value || 6)
   let found = false
   let foundItem: VersionItem | null = null
 
   try {
-    // 步骤 1: 先查询第 0 个（最新版本）
-    statusText.value = `[跨步探测] 查询最新版本 (1/${total})...`
+    let low = 0
+    let high = total - 1
+
+    // 步骤 1: 边界快速检查 - 最新版本 (索引 0，版本最大)
+    statusText.value = `[二分查找] 检查最新版本 (1/${total})...`
     const v0 = await fetchItemMetadata(0)
     if (shouldStopTargetQuery.value) {
       statusText.value = `已停止查询指定版本 (${targetVersion})。`
@@ -1452,74 +1453,59 @@ async function runTargetQuery(targetVersion: string) {
       statusText.value = `当前最新版本 (${v0}) 小于目标版本 ${targetVersion}，历史版本中不存在该版本。`
       message.warning(`当前最新版本为 ${v0}，未找到更高版本 ${targetVersion}`)
       return
+    } else {
+      low = 1
     }
 
+    // 步骤 2: 边界快速检查 - 最老版本 (索引 total - 1，版本最小)
+    if (!found && high >= low) {
+      statusText.value = `[二分查找] 检查最老版本 (${total}/${total})...`
+      const vLast = await fetchItemMetadata(high)
+      if (shouldStopTargetQuery.value) {
+        statusText.value = `已停止查询指定版本 (${targetVersion})。`
+        return
+      }
+
+      if (vLast && isVersionMatch(vLast, targetVersion)) {
+        found = true
+        foundItem = versionItems.value[high]
+      } else if (vLast && compareVersions(vLast, targetVersion) > 0) {
+        // 最老版本都已经大于目标版本，说明目标版本比历史上最早的版本还要老，不存在
+        statusText.value = `当前最老版本 (${vLast}) 大于目标版本 ${targetVersion}，历史版本中不存在该版本。`
+        message.warning(`当前最老版本为 ${vLast}，未找到更低版本 ${targetVersion}`)
+        return
+      } else {
+        high = high - 1
+      }
+    }
+
+    // 步骤 3: 全局二分查找 (区间 [low, high]，列表单调递减: 下标越小版本越新)
     if (!found) {
-      let prevIndex = 0
-      let currIndex = 0
-
-      // 步骤 2: 按步长跨步跳跃向前探测 (列表从上到下单调递减)
-      while (currIndex < total - 1 && !shouldStopTargetQuery.value) {
-        prevIndex = currIndex
-        currIndex = Math.min(currIndex + step, total - 1)
-
-        statusText.value = `[跨步探测] 跳跃检查第 ${currIndex + 1}/${total} 个版本 (构建 ID: ${versionItems.value[currIndex].versionId})...`
-        const vCurr = await fetchItemMetadata(currIndex)
+      while (low <= high && !shouldStopTargetQuery.value) {
+        const mid = Math.floor((low + high) / 2)
+        statusText.value = `[二分查找] 正在核对第 ${mid + 1}/${total} 个版本 (构建 ID: ${versionItems.value[mid].versionId}，二分区间: [${low + 1} ~ ${high + 1}])...`
+        const vMid = await fetchItemMetadata(mid)
 
         if (shouldStopTargetQuery.value) break
         if (!await cancellableSleep(120, shouldStopTargetQuery)) break
 
-        if (vCurr && isVersionMatch(vCurr, targetVersion)) {
+        if (vMid && isVersionMatch(vMid, targetVersion)) {
           found = true
-          foundItem = versionItems.value[currIndex]
+          foundItem = versionItems.value[mid]
           break
         }
 
-        // 核心判断：当前探测版本小于目标版本，说明已经跳过了目标所在区间！
-        if (vCurr && compareVersions(vCurr, targetVersion) < 0) {
-          statusText.value = `⚡ 当前版本 (${vCurr}) < 目标 (${targetVersion})，立即向回查找区间 [${prevIndex + 2} ~ ${currIndex}]...`
-
-          // 步骤 3: 往回找（从 currIndex - 1 倒查到 prevIndex + 1）
-          for (let b = currIndex - 1; b > prevIndex; b--) {
-            if (shouldStopTargetQuery.value) break
-
-            statusText.value = `[向回查找] 正在精确核对第 ${b + 1}/${total} 个版本 (构建 ID: ${versionItems.value[b].versionId})...`
-            const vBack = await fetchItemMetadata(b)
-
-            if (shouldStopTargetQuery.value) break
-            if (!await cancellableSleep(120, shouldStopTargetQuery)) break
-
-            if (vBack && isVersionMatch(vBack, targetVersion)) {
-              found = true
-              foundItem = versionItems.value[b]
-              break
-            }
-
-            // 若往回找时已经找到了比 target 大的版本，说明该区间内版本已跨越且无完全匹配项
-            if (vBack && compareVersions(vBack, targetVersion) > 0) {
-              break
-            }
+        if (vMid) {
+          if (compareVersions(vMid, targetVersion) < 0) {
+            // 当前版本小于目标版本：当前版本太旧，目标版本更新，索引应在左半区 (更小下标处)
+            high = mid - 1
+          } else {
+            // 当前版本大于目标版本：当前版本太新，目标版本更旧，索引应在右半区 (更大下标处)
+            low = mid + 1
           }
-          // 回溯结束跳出主循环
-          break
-        }
-
-        // 已到达列表末尾但还没小于目标
-        if (currIndex === total - 1) {
-          for (let b = currIndex - 1; b > prevIndex; b--) {
-            if (shouldStopTargetQuery.value) break
-            statusText.value = `[末段向回查找] 正在核对第 ${b + 1}/${total} 个版本...`
-            const vBack = await fetchItemMetadata(b)
-            if (shouldStopTargetQuery.value) break
-            if (!await cancellableSleep(120, shouldStopTargetQuery)) break
-
-            if (vBack && isVersionMatch(vBack, targetVersion)) {
-              found = true
-              foundItem = versionItems.value[b]
-              break
-            }
-          }
-          break
+        } else {
+          // 极罕见未获取到元数据情况，向右推进防止死循环
+          low++
         }
       }
     }
@@ -1532,8 +1518,8 @@ async function runTargetQuery(targetVersion: string) {
       message.success(`已查询到指定版本 ${foundItem.displayVersion}！`)
       versionForm.value.filter = targetVersion
     } else {
-      statusText.value = `查询完成，未在历史记录中找到指定版本: ${targetVersion}`
-      message.warning(`已完成跨步与回溯检索，未找到版本号: ${targetVersion}`)
+      statusText.value = `二分查找完成，未在历史记录中找到指定版本: ${targetVersion}`
+      message.warning(`已完成全局二分查找，未找到版本号: ${targetVersion}`)
     }
   } catch (err: any) {
     statusText.value = `查询指定版本失败: ${err}`
@@ -1591,7 +1577,7 @@ async function handleClearCompleted() {
 }
 
 function handleOpenDefaultDownloadDir() {
-  OpenInExplorer(settings.value.defaultDownloadDir || 'D:\\Downloads')
+  OpenInExplorer(settings.value.defaultDownloadDir || '')
 }
 
 async function handleCancelTask(id: string) {

@@ -32,10 +32,9 @@ type App struct {
 }
 
 func NewApp() *App {
-	return &App{
+	app := &App{
 		settings: Settings{
 			KeychainPassphrase: "123456",
-			DefaultDownloadDir: "D:\\Downloads",
 			DefaultPlatform:    "iphone",
 			EnableProxy:        true,
 			ProxyUrl:           "http://127.0.0.1:10808",
@@ -43,6 +42,8 @@ func NewApp() *App {
 		tasks:       make([]*DownloadTask, 0),
 		taskCancels: make(map[string]context.CancelFunc),
 	}
+	app.settings.DefaultDownloadDir = app.getDownloadsDir()
+	return app
 }
 
 func (a *App) startup(ctx context.Context) {
@@ -62,6 +63,12 @@ func (a *App) getDataDir() string {
 	dataDir := filepath.Join(baseDir, "data")
 	_ = os.MkdirAll(dataDir, 0755)
 	return dataDir
+}
+
+func (a *App) getDownloadsDir() string {
+	downloadsDir := filepath.Join(a.getDataDir(), "downloads")
+	_ = os.MkdirAll(downloadsDir, 0755)
+	return downloadsDir
 }
 
 func (a *App) getSettingsFilePath() string {
@@ -134,9 +141,8 @@ func (a *App) loadSettings() {
 	if a.settings.ProxyUrl == "" {
 		a.settings.ProxyUrl = "http://127.0.0.1:10808"
 	}
-	if a.settings.DefaultDownloadDir == "" {
-		a.settings.DefaultDownloadDir = "D:\\Downloads"
-	}
+	// 下载路径固定为 data/downloads，不可修改
+	a.settings.DefaultDownloadDir = a.getDownloadsDir()
 	if a.settings.DefaultPlatform == "" {
 		a.settings.DefaultPlatform = "iphone"
 	}
@@ -425,12 +431,14 @@ func (a *App) GetSettings() Settings {
 	a.settingsMu.RLock()
 	defer a.settingsMu.RUnlock()
 	s := a.settings
+	s.DefaultDownloadDir = a.getDownloadsDir()
 	s.IpaToolPath = a.resolveIpaToolPath()
 	return s
 }
 
 func (a *App) SaveSettings(s Settings) error {
 	a.settingsMu.Lock()
+	s.DefaultDownloadDir = a.getDownloadsDir()
 	a.settings = s
 	a.settings.IpaToolPath = a.resolveIpaToolPath()
 	data, err := json.MarshalIndent(a.settings, "", "  ")
@@ -476,6 +484,9 @@ func (a *App) TestProxy(proxyUrl string) ProxyTestResult {
 }
 
 func (a *App) OpenInExplorer(targetPath string) error {
+	if strings.TrimSpace(targetPath) == "" {
+		targetPath = a.getDownloadsDir()
+	}
 	if fi, err := os.Stat(targetPath); err == nil {
 		if fi.IsDir() {
 			return exec.Command("explorer", targetPath).Start()
@@ -686,6 +697,8 @@ func (a *App) Download(bundleId string, appId int64, versionId, outputPath, plat
 	}
 	if strings.TrimSpace(outputPath) != "" {
 		args = append(args, "-o", outputPath)
+	} else {
+		args = append(args, "-o", a.getDownloadsDir())
 	}
 	if strings.TrimSpace(platform) != "" {
 		args = append(args, "--platform", platform)
@@ -789,12 +802,13 @@ func (a *App) runDownloadTask(task *DownloadTask) {
 	}()
 
 	a.settingsMu.RLock()
-	outDir := a.settings.DefaultDownloadDir
 	platform := a.settings.DefaultPlatform
 	passphrase := a.settings.KeychainPassphrase
 	enableProxy := a.settings.EnableProxy
 	proxyUrl := a.settings.ProxyUrl
 	a.settingsMu.RUnlock()
+
+	outDir := a.getDownloadsDir()
 
 	args := []string{"download", "-b", task.BundleID, "--purchase", "--format", "json", "--non-interactive"}
 	if task.VersionID != "" {

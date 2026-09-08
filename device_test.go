@@ -26,8 +26,8 @@ func TestParseDeviceList(t *testing.T) {
 	if device.Name != "测试 iPhone" {
 		t.Errorf("Name = %q", device.Name)
 	}
-	if device.ProductType != "iPhone 15 (iPhone15,4)" {
-		t.Errorf("ProductType = %q", device.ProductType)
+	if device.ProductType != "iPhone15,4" {
+		t.Errorf("ProductType = %q, want 'iPhone15,4'", device.ProductType)
 	}
 	if device.ProductVersion != "18.6" {
 		t.Errorf("ProductVersion = %q", device.ProductVersion)
@@ -53,15 +53,15 @@ func TestParseDeviceListRealIosDetails(t *testing.T) {
 	if device.UDID != "000081300006486A0E52001C" {
 		t.Errorf("UDID = %q", device.UDID)
 	}
-	// 不能为 "iPhone OS"，应解析为友好的型号中文名
+	// 不能为 "iPhone OS"，应回退为原始硬件标识符
 	if device.Name == "iPhone OS" {
 		t.Errorf("Name should not be %q", device.Name)
 	}
-	if device.Name != "iPad Air 13 英寸 (M2)" {
-		t.Errorf("Name = %q, want 'iPad Air 13 英寸 (M2)'", device.Name)
+	if device.Name != "iPad16,2" {
+		t.Errorf("Name = %q, want 'iPad16,2'", device.Name)
 	}
-	if device.ProductType != "iPad Air 13 英寸 (M2) (iPad16,2)" {
-		t.Errorf("ProductType = %q, want 'iPad Air 13 英寸 (M2) (iPad16,2)'", device.ProductType)
+	if device.ProductType != "iPad16,2" {
+		t.Errorf("ProductType = %q, want 'iPad16,2'", device.ProductType)
 	}
 	if device.ProductVersion != "26.6.1" {
 		t.Errorf("ProductVersion = %q", device.ProductVersion)
