@@ -283,14 +283,15 @@
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
+                            <DataGridTextColumn Header="文件体积 (大小)" Binding="{Binding DisplayFileSize}" Width="120" />
                             <DataGridTextColumn Header="发布日期" Binding="{Binding ReleaseDate}" Width="160" />
                             <DataGridTemplateColumn Header="操作" Width="220">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal">
-                                            <Button Content="查询版本号" Style="{StaticResource SecondaryButtonStyle}" 
+                                            <Button Content="查询详情" Style="{StaticResource SecondaryButtonStyle}" 
                                                     Command="{Binding DataContext.QuerySelectedVersionMetadataCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
-                                                    Padding="8,3" FontSize="11" Margin="0,0,6,0"/>
+                                                    Padding="8,3" FontSize="11" Margin="0,0,6,0" ToolTip="查询该版本的具体版本号、文件体积和发布时间"/>
                                             <Button Content="一键下载此版本" Style="{StaticResource PrimaryButtonStyle}" 
                                                     Command="{Binding DataContext.DownloadSelectedVersionCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
                                                     CommandParameter="{Binding}" Padding="8,3" FontSize="11"/>

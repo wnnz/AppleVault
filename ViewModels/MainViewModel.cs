@@ -495,6 +495,7 @@ public class MainViewModel : ViewModelBase
         {
             return item.VersionId.Contains(FilterVersionText, StringComparison.OrdinalIgnoreCase)
                 || item.DisplayVersion.Contains(FilterVersionText, StringComparison.OrdinalIgnoreCase)
+                || item.DisplayFileSize.Contains(FilterVersionText, StringComparison.OrdinalIgnoreCase)
                 || item.ReleaseDate.Contains(FilterVersionText, StringComparison.OrdinalIgnoreCase);
         }
         return true;
@@ -564,8 +565,9 @@ public class MainViewModel : ViewModelBase
             {
                 item.DisplayVersion = meta.DisplayVersion;
                 item.ReleaseDate = meta.ReleaseDate;
+                item.FileSize = meta.FileSize;
                 _filteredVersionItemsView.Refresh();
-                StatusMessage = $"版本 ID {item.VersionId} 对应版本号: {meta.DisplayVersion} (发布日期: {meta.ReleaseDate})";
+                StatusMessage = $"版本 ID {item.VersionId} 对应版本号: {meta.DisplayVersion} (体积: {item.DisplayFileSize}, 发布日期: {meta.ReleaseDate})";
             }
             else
             {
@@ -605,6 +607,7 @@ public class MainViewModel : ViewModelBase
                 {
                     item.DisplayVersion = meta.DisplayVersion;
                     item.ReleaseDate = meta.ReleaseDate;
+                    item.FileSize = meta.FileSize;
                     _filteredVersionItemsView.Refresh();
                 }
 

@@ -84,6 +84,9 @@ public class VersionMetadataResult
     [JsonPropertyName("releaseDate")]
     public string ReleaseDate { get; set; } = string.Empty;
 
+    [JsonPropertyName("fileSize")]
+    public long FileSize { get; set; }
+
     [JsonPropertyName("success")]
     public bool Success { get; set; }
 }
@@ -114,7 +117,18 @@ public class AppVersionItem
     public string VersionId { get; set; } = string.Empty;
     public string DisplayVersion { get; set; } = "未查询";
     public string ReleaseDate { get; set; } = "-";
+    public long FileSize { get; set; }
+    public string DisplayFileSize => FileSize <= 0 ? "-" : FormatBytes(FileSize);
     public bool IsQuerying { get; set; }
+
+    public static string FormatBytes(long bytes)
+    {
+        if (bytes <= 0) return "-";
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        if (bytes < 1024 * 1024 * 1024) return $"{bytes / (1024.0 * 1024.0):F2} MB";
+        return $"{bytes / (1024.0 * 1024.0 * 1024.0):F2} GB";
+    }
 }
 
 public class AppSettings
