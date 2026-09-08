@@ -544,7 +544,7 @@ const isClearing = ref(false)
 const isLoggingIn = ref(false)
 
 const loginForm = ref({
-  email: 'wzheng1996@live.com',
+  email: '',
   password: ''
 })
 
@@ -1004,37 +1004,47 @@ async function querySingleVersionMetadata(row: VersionItem) {
   }
 }
 
-async function handleBatchQuery() {
+async function runBatchQuery(count: number) {
+  isBatchQuerying.value = true
+  isAnyOperationRunning.value = true
+
+  try {
+    for (let i = 0; i < count; i++) {
+      const item = versionItems.value[i]
+      if (item.displayVersion !== '未查询') continue
+
+      statusText.value = `批量查询中 (${i + 1}/${count}): ${item.versionId}...`
+      try {
+        const res = await GetVersionMetadata(versionForm.value.bundleId, item.versionId, versionForm.value.appId)
+        item.displayVersion = res.displayVersion
+        item.fileSize = res.displayFileSize
+        item.releaseDate = res.releaseDate ? new Date(res.releaseDate).toLocaleDateString() : '-'
+      } catch {
+        // Continue
+      }
+      await new Promise(r => setTimeout(r, 150))
+    }
+
+    statusText.value = '批量版本查询完成。'
+    message.success('批量查询完成')
+  } catch (err: any) {
+    statusText.value = `批量版本查询失败: ${err}`
+    message.error(`批量查询失败: ${err}`)
+  } finally {
+    isBatchQuerying.value = false
+    isAnyOperationRunning.value = false
+  }
+}
+
+function handleBatchQuery() {
   const count = Math.min(versionItems.value.length, 30)
   dialog.info({
     title: '批量查询确认',
     content: `即将批量查询前 ${count} 个版本的详细版本号（每秒约查询 2 个），是否继续？`,
     positiveText: '开始查询',
     negativeText: '取消',
-    onPositiveClick: async () => {
-      isBatchQuerying.value = true
-      isAnyOperationRunning.value = true
-
-      for (let i = 0; i < count; i++) {
-        const item = versionItems.value[i]
-        if (item.displayVersion !== '未查询') continue
-
-        statusText.value = `批量查询中 (${i + 1}/${count}): ${item.versionId}...`
-        try {
-          const res = await GetVersionMetadata(versionForm.value.bundleId, item.versionId, versionForm.value.appId)
-          item.displayVersion = res.displayVersion
-          item.fileSize = res.displayFileSize
-          item.releaseDate = res.releaseDate ? new Date(res.releaseDate).toLocaleDateString() : '-'
-        } catch {
-          // Continue
-        }
-        await new Promise(r => setTimeout(r, 150))
-      }
-
-      isBatchQuerying.value = false
-      isAnyOperationRunning.value = false
-      statusText.value = '批量版本查询完成。'
-      message.success('批量查询完成')
+    onPositiveClick: () => {
+      void runBatchQuery(count)
     }
   })
 }
