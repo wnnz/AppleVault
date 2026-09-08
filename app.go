@@ -47,18 +47,76 @@ func NewApp() *App {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	a.ensureDataMigration()
 	a.loadSettings()
+	a.loadTasks()
+}
+
+func (a *App) getDataDir() string {
+	var baseDir string
+	if exe, err := os.Executable(); err == nil {
+		baseDir = filepath.Dir(exe)
+	} else {
+		baseDir, _ = os.Getwd()
+	}
+	dataDir := filepath.Join(baseDir, "data")
+	_ = os.MkdirAll(dataDir, 0755)
+	return dataDir
 }
 
 func (a *App) getSettingsFilePath() string {
-	appData := os.Getenv("APPDATA")
-	if appData == "" {
-		home, _ := os.UserHomeDir()
-		appData = filepath.Join(home, ".config")
+	return filepath.Join(a.getDataDir(), "settings.json")
+}
+
+func (a *App) getTasksFilePath() string {
+	return filepath.Join(a.getDataDir(), "tasks.json")
+}
+
+func (a *App) ensureDataMigration() {
+	dataDir := a.getDataDir()
+
+	// 1. 迁移旧 APPDATA 下的 settings.json
+	newSettings := filepath.Join(dataDir, "settings.json")
+	if _, err := os.Stat(newSettings); os.IsNotExist(err) {
+		appData := os.Getenv("APPDATA")
+		if appData != "" {
+			oldSettings := filepath.Join(appData, "IPAToolGUI", "settings.json")
+			if oldData, err := os.ReadFile(oldSettings); err == nil {
+				_ = os.WriteFile(newSettings, oldData, 0644)
+			}
+		}
 	}
-	dir := filepath.Join(appData, "IPAToolGUI")
-	_ = os.MkdirAll(dir, 0755)
-	return filepath.Join(dir, "settings.json")
+
+	// 2. 迁移旧 ~/.ipatool 下的登录与钥匙串信息
+	newIpatoolDir := filepath.Join(dataDir, ".ipatool")
+	if _, err := os.Stat(newIpatoolDir); os.IsNotExist(err) {
+		if home, err := os.UserHomeDir(); err == nil {
+			oldIpatoolDir := filepath.Join(home, ".ipatool")
+			if info, err := os.Stat(oldIpatoolDir); err == nil && info.IsDir() {
+				copyDir(oldIpatoolDir, newIpatoolDir)
+			}
+		}
+	}
+}
+
+func copyDir(src, dst string) {
+	_ = os.MkdirAll(dst, 0755)
+	entries, err := os.ReadDir(src)
+	if err != nil {
+		return
+	}
+	for _, entry := range entries {
+		srcPath := filepath.Join(src, entry.Name())
+		dstPath := filepath.Join(dst, entry.Name())
+		if entry.IsDir() {
+			copyDir(srcPath, dstPath)
+		} else {
+			data, err := os.ReadFile(srcPath)
+			if err == nil {
+				_ = os.WriteFile(dstPath, data, 0644)
+			}
+		}
+	}
 }
 
 func (a *App) loadSettings() {
@@ -86,28 +144,73 @@ func (a *App) loadSettings() {
 	a.settings.IpaToolPath = a.resolveIpaToolPath()
 }
 
+func (a *App) loadTasks() {
+	a.tasksMu.Lock()
+	defer a.tasksMu.Unlock()
+
+	p := a.getTasksFilePath()
+	data, err := os.ReadFile(p)
+	if err != nil {
+		return
+	}
+
+	var list []*DownloadTask
+	if err := json.Unmarshal(data, &list); err == nil {
+		for _, t := range list {
+			if t.Status == "downloading" || t.Status == "pending" {
+				t.Status = "canceled"
+				t.Speed = "已中断"
+			}
+		}
+		a.tasks = list
+	}
+}
+
+func (a *App) saveTasksLocked() {
+	p := a.getTasksFilePath()
+	data, err := json.MarshalIndent(a.tasks, "", "  ")
+	if err == nil {
+		_ = os.WriteFile(p, data, 0644)
+	}
+}
+
 func (a *App) resolveIpaToolPath() string {
-	// 1. Same directory as current executable
+	// 1. 同程序目录下的 tools 目录、bin 目录与根目录
 	if exe, err := os.Executable(); err == nil {
 		dir := filepath.Dir(exe)
+		pTools := filepath.Join(dir, "tools", "ipatool.exe")
+		if _, err := os.Stat(pTools); err == nil {
+			return pTools
+		}
+		pBin := filepath.Join(dir, "bin", "ipatool.exe")
+		if _, err := os.Stat(pBin); err == nil {
+			return pBin
+		}
 		p := filepath.Join(dir, "ipatool.exe")
 		if _, err := os.Stat(p); err == nil {
 			return p
 		}
 	}
 
-	// 2. Current working directory
+	// 2. 当前工作目录下的 tools、bin 或根目录
 	if cwd, err := os.Getwd(); err == nil {
+		pTools := filepath.Join(cwd, "tools", "ipatool.exe")
+		if _, err := os.Stat(pTools); err == nil {
+			return pTools
+		}
+		pBin := filepath.Join(cwd, "bin", "ipatool.exe")
+		if _, err := os.Stat(pBin); err == nil {
+			return pBin
+		}
 		p := filepath.Join(cwd, "ipatool.exe")
 		if _, err := os.Stat(p); err == nil {
 			return p
 		}
 	}
 
-	// 3. Known project directory
-	devP := "D:\\Dev\\IPAToolGUI\\ipatool.exe"
-	if _, err := os.Stat(devP); err == nil {
-		return devP
+	// 3. 系统 PATH
+	if p, err := exec.LookPath("ipatool.exe"); err == nil {
+		return p
 	}
 
 	return "ipatool.exe"
@@ -118,6 +221,54 @@ func (a *App) emitLog(message string) {
 		timestamp := time.Now().Format("15:04:05")
 		runtime.EventsEmit(a.ctx, "log", fmt.Sprintf("[%s] %s", timestamp, message))
 	}
+}
+
+func (a *App) buildIpaToolCmd(ctx context.Context, exePath string, cmdArgs []string, enableProxy bool, proxyUrl string) *exec.Cmd {
+	cmd := exec.CommandContext(ctx, exePath, cmdArgs...)
+	setSysProcAttr(cmd)
+
+	dataDir := a.getDataDir()
+	drive := filepath.VolumeName(dataDir)
+	pathNoVolume := strings.TrimPrefix(dataDir, drive)
+	if drive == "" {
+		drive = "C:"
+	}
+
+	env := os.Environ()
+	filtered := make([]string, 0, len(env)+12)
+	for _, e := range env {
+		upper := strings.ToUpper(e)
+		if strings.HasPrefix(upper, "USERPROFILE=") ||
+			strings.HasPrefix(upper, "HOME=") ||
+			strings.HasPrefix(upper, "HOMEDRIVE=") ||
+			strings.HasPrefix(upper, "HOMEPATH=") {
+			continue
+		}
+		filtered = append(filtered, e)
+	}
+
+	filtered = append(filtered,
+		"USERPROFILE="+dataDir,
+		"HOME="+dataDir,
+		"HOMEDRIVE="+drive,
+		"HOMEPATH="+pathNoVolume,
+	)
+
+	if enableProxy && strings.TrimSpace(proxyUrl) != "" {
+		proxy := strings.TrimSpace(proxyUrl)
+		filtered = append(filtered,
+			"HTTP_PROXY="+proxy,
+			"HTTPS_PROXY="+proxy,
+			"ALL_PROXY="+proxy,
+			"http_proxy="+proxy,
+			"https_proxy="+proxy,
+			"all_proxy="+proxy,
+		)
+		a.emitLog(fmt.Sprintf("[网络代理] 已启用: %s", proxy))
+	}
+
+	cmd.Env = filtered
+	return cmd
 }
 
 func (a *App) runIpaTool(ctx context.Context, args ...string) (string, error) {
@@ -156,23 +307,7 @@ func (a *App) runIpaTool(ctx context.Context, args ...string) (string, error) {
 		cmdArgs = append(cmdArgs, "--keychain-passphrase", passphrase)
 	}
 
-	cmd := exec.CommandContext(ctx, exePath, cmdArgs...)
-	setSysProcAttr(cmd)
-
-	// Configure Environment Variables
-	cmd.Env = os.Environ()
-	if enableProxy && strings.TrimSpace(proxyUrl) != "" {
-		proxy := strings.TrimSpace(proxyUrl)
-		cmd.Env = append(cmd.Env,
-			"HTTP_PROXY="+proxy,
-			"HTTPS_PROXY="+proxy,
-			"ALL_PROXY="+proxy,
-			"http_proxy="+proxy,
-			"https_proxy="+proxy,
-			"all_proxy="+proxy,
-		)
-		a.emitLog(fmt.Sprintf("[网络代理] 已启用: %s", proxy))
-	}
+	cmd := a.buildIpaToolCmd(ctx, exePath, cmdArgs, enableProxy, proxyUrl)
 
 	// Mask passphrase in logs
 	displayArgs := make([]string, len(cmdArgs))
@@ -364,6 +499,9 @@ func (a *App) CancelRunningCommand() {
 func (a *App) startCommandContext() context.Context {
 	a.cancelMu.Lock()
 	defer a.cancelMu.Unlock()
+	if a.cancelFn != nil {
+		a.cancelFn()
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	a.cancelFn = cancel
 	return ctx
@@ -441,13 +579,14 @@ func (a *App) Revoke() (bool, error) {
 }
 
 func (a *App) ClearKeychainCache() error {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return err
-	}
-	p := filepath.Join(home, ".ipatool")
+	dataDir := a.getDataDir()
+	p := filepath.Join(dataDir, ".ipatool")
 	if _, err := os.Stat(p); err == nil {
-		return os.RemoveAll(p)
+		_ = os.RemoveAll(p)
+	}
+	if home, err := os.UserHomeDir(); err == nil {
+		oldP := filepath.Join(home, ".ipatool")
+		_ = os.RemoveAll(oldP)
 	}
 	return nil
 }
@@ -626,6 +765,7 @@ func (a *App) AddDownloadTask(appName, bundleId string, appId int64, version, ve
 	}
 
 	a.tasks = append([]*DownloadTask{task}, a.tasks...)
+	a.saveTasksLocked()
 	go a.runDownloadTask(task)
 
 	return task, nil
@@ -637,6 +777,7 @@ func (a *App) runDownloadTask(task *DownloadTask) {
 	a.taskCancels[task.ID] = cancel
 	task.Status = "downloading"
 	task.Speed = "连接中..."
+	a.saveTasksLocked()
 	a.tasksMu.Unlock()
 
 	a.emitTaskUpdated(task)
@@ -670,21 +811,7 @@ func (a *App) runDownloadTask(task *DownloadTask) {
 	}
 
 	exePath := a.resolveIpaToolPath()
-	cmd := exec.CommandContext(ctx, exePath, args...)
-	setSysProcAttr(cmd)
-
-	cmd.Env = os.Environ()
-	if enableProxy && strings.TrimSpace(proxyUrl) != "" {
-		proxy := strings.TrimSpace(proxyUrl)
-		cmd.Env = append(cmd.Env,
-			"HTTP_PROXY="+proxy,
-			"HTTPS_PROXY="+proxy,
-			"ALL_PROXY="+proxy,
-			"http_proxy="+proxy,
-			"https_proxy="+proxy,
-			"all_proxy="+proxy,
-		)
-	}
+	cmd := a.buildIpaToolCmd(ctx, exePath, args, enableProxy, proxyUrl)
 
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
@@ -760,6 +887,7 @@ func (a *App) runDownloadTask(task *DownloadTask) {
 		a.tasksMu.Lock()
 		task.Status = "canceled"
 		task.Speed = "已取消"
+		a.saveTasksLocked()
 		a.tasksMu.Unlock()
 		a.emitTaskUpdated(task)
 		return
@@ -784,6 +912,7 @@ func (a *App) runDownloadTask(task *DownloadTask) {
 	if parseErr == nil && res.Output != "" {
 		task.OutputPath = res.Output
 	}
+	a.saveTasksLocked()
 	a.tasksMu.Unlock()
 	a.emitTaskUpdated(task)
 }
@@ -793,6 +922,7 @@ func (a *App) failTask(task *DownloadTask, msg string) {
 	task.Status = "error"
 	task.ErrorMessage = msg
 	task.Speed = "下载失败"
+	a.saveTasksLocked()
 	a.tasksMu.Unlock()
 	a.emitTaskUpdated(task)
 }
@@ -817,6 +947,15 @@ func (a *App) CancelDownloadTask(id string) {
 	if cancel, ok := a.taskCancels[id]; ok {
 		cancel()
 	}
+	for _, t := range a.tasks {
+		if t.ID == id && (t.Status == "downloading" || t.Status == "pending") {
+			t.Status = "canceled"
+			t.Speed = "已取消"
+			a.saveTasksLocked()
+			a.emitTaskUpdated(t)
+			break
+		}
+	}
 }
 
 func (a *App) DeleteDownloadTask(id string) {
@@ -832,6 +971,7 @@ func (a *App) DeleteDownloadTask(id string) {
 			break
 		}
 	}
+	a.saveTasksLocked()
 	if a.ctx != nil {
 		runtime.EventsEmit(a.ctx, "download-tasks-reload")
 	}
@@ -846,6 +986,7 @@ func (a *App) ClearCompletedDownloadTasks() {
 		}
 	}
 	a.tasks = active
+	a.saveTasksLocked()
 	a.tasksMu.Unlock()
 	if a.ctx != nil {
 		runtime.EventsEmit(a.ctx, "download-tasks-reload")

@@ -66,6 +66,22 @@ type ProxyTestResult struct {
 	Message string `json:"message"`
 }
 
+// DeviceInfo 描述一台可供 IPA 安装使用的已连接苹果设备。
+type DeviceInfo struct {
+	UDID           string `json:"udid"`
+	Name           string `json:"name"`
+	ProductType    string `json:"productType"`
+	ProductVersion string `json:"productVersion"`
+	ConnectionType string `json:"connectionType"`
+}
+
+// InstallResult 描述 IPA 安装命令的执行结果。
+type InstallResult struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Output  string `json:"output"`
+}
+
 type DownloadTask struct {
 	ID           string `json:"id"`
 	AppName      string `json:"appName"`

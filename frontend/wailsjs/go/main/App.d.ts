@@ -24,6 +24,10 @@ export function GetSettings():Promise<main.Settings>;
 
 export function GetVersionMetadata(arg1:string,arg2:string,arg3:number):Promise<main.VersionMetadataResult>;
 
+export function InstallIPA(arg1:string,arg2:string):Promise<main.InstallResult>;
+
+export function ListDevices():Promise<Array<main.DeviceInfo>>;
+
 export function ListPurchases(arg1:number,arg2:number):Promise<main.PurchasedResult>;
 
 export function ListVersions(arg1:string,arg2:number):Promise<main.VersionsResult>;
@@ -41,5 +45,7 @@ export function SaveSettings(arg1:main.Settings):Promise<void>;
 export function Search(arg1:string,arg2:number,arg3:string):Promise<main.SearchResult>;
 
 export function SelectDirectory(arg1:string,arg2:string):Promise<string>;
+
+export function SelectIPA():Promise<string>;
 
 export function TestProxy(arg1:string):Promise<main.ProxyTestResult>;

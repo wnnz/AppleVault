@@ -132,6 +132,42 @@ export namespace main {
 		    return a;
 		}
 	}
+	export class DeviceInfo {
+	    udid: string;
+	    name: string;
+	    productType: string;
+	    productVersion: string;
+	    connectionType: string;
+
+	    static createFrom(source: any = {}) {
+	        return new DeviceInfo(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.udid = source["udid"];
+	        this.name = source["name"];
+	        this.productType = source["productType"];
+	        this.productVersion = source["productVersion"];
+	        this.connectionType = source["connectionType"];
+	    }
+	}
+	export class InstallResult {
+	    success: boolean;
+	    message: string;
+	    output: string;
+
+	    static createFrom(source: any = {}) {
+	        return new InstallResult(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.success = source["success"];
+	        this.message = source["message"];
+	        this.output = source["output"];
+	    }
+	}
 	export class ProxyTestResult {
 	    success: boolean;
 	    message: string;

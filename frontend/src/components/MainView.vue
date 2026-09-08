@@ -4,8 +4,9 @@
     <header class="top-header">
       <div class="header-brand">
         <span class="brand-emoji">🍎</span>
-        <span class="brand-title">IPATool GUI</span>
-        <span class="brand-subtitle">— 苹果 App Store 官方正版 / 历史旧版 IPA 下载</span>
+        <span class="brand-title">果仓助手</span>
+        <span class="brand-badge">v1.0</span>
+        <span class="brand-subtitle">— AppleVault 苹果 App Store 正版与历史版本下载</span>
       </div>
 
       <div class="header-tools">
@@ -26,6 +27,11 @@
         <!-- Refresh Account Button -->
         <n-button size="small" secondary @click="() => refreshAccount(false)" :loading="isAccountLoading">
           刷新状态
+        </n-button>
+
+        <!-- Toggle Console Logs -->
+        <n-button size="small" secondary @click="toggleLogs" :title="showLogs ? '收起底部日志控制台' : '展开底部日志控制台'">
+          📜 日志
         </n-button>
 
         <!-- Theme Switcher -->
@@ -99,7 +105,41 @@
           </div>
         </n-tab-pane>
 
-        <!-- TAB 2: 搜索应用 -->
+        <!-- TAB 2: 已购应用 -->
+        <n-tab-pane name="purchased" tab="📦 已购应用">
+          <div class="tab-table-container">
+            <div class="fluent-card toolbar-card">
+              <div class="purchased-toolbar">
+                <n-button type="primary" size="medium" :loading="isPurchasedLoading" @click="loadPurchases">
+                  刷新已购列表
+                </n-button>
+
+                <div class="pagination-area">
+                  <n-button secondary size="small" :disabled="purchasedPage <= 1" @click="prevPurchasedPage">
+                    上一页
+                  </n-button>
+                  <span class="pagination-info">第 {{ purchasedPage }} 页 (共 {{ purchasedTotal }} 个应用)</span>
+                  <n-button secondary size="small" :disabled="purchasedPage * 20 >= purchasedTotal" @click="nextPurchasedPage">
+                    下一页
+                  </n-button>
+                </div>
+              </div>
+            </div>
+
+            <div class="fluent-card table-card">
+              <n-data-table
+                :columns="purchasedColumns"
+                :data="purchasedApps"
+                :loading="isPurchasedLoading"
+                size="small"
+                flex-height
+                style="height: 100%;"
+              />
+            </div>
+          </div>
+        </n-tab-pane>
+
+        <!-- TAB 3: 搜索应用 -->
         <n-tab-pane name="search" tab="🔍 搜索应用">
           <div class="tab-table-container">
             <!-- Search Toolbar Card -->
@@ -138,7 +178,7 @@
           </div>
         </n-tab-pane>
 
-        <!-- TAB 3: 历史版本 -->
+        <!-- TAB 4: 历史版本 -->
         <n-tab-pane name="versions" tab="📜 历史版本">
           <div class="tab-table-container">
             <!-- Versions Toolbar Card -->
@@ -146,18 +186,41 @@
               <div class="version-toolbar-rows">
                 <div class="toolbar-row">
                   <span class="label-inline">目标 Bundle ID:</span>
-                  <n-input v-model:value="versionForm.bundleId" placeholder="例如: com.alipay.iphoneclient" style="width: 320px;" size="medium" @keydown.enter="handleListVersions" />
-                  <n-button type="primary" size="medium" :loading="isListingVersions" @click="handleListVersions">
+                  <n-input v-model:value="versionForm.bundleId" placeholder="例如: com.alipay.iphoneclient" style="width: 300px;" size="medium" @keydown.enter="handleListVersions" />
+                  <n-button
+                    type="primary"
+                    size="medium"
+                    :loading="isListingVersions"
+                    :disabled="isListingVersions || isBatchQuerying || isTargetQuerying"
+                    @click="handleListVersions"
+                  >
                     获取历史版本列表
                   </n-button>
-                  <n-button secondary size="medium" :disabled="versionItems.length === 0" :loading="isBatchQuerying" @click="handleBatchQuery">
-                    批量查询前 30 个版本号
+                  <n-button
+                    :type="isBatchQuerying ? 'warning' : 'default'"
+                    :secondary="!isBatchQuerying"
+                    size="medium"
+                    :disabled="versionItems.length === 0 || isListingVersions || isTargetQuerying"
+                    :loading="isBatchQuerying"
+                    @click="handleBatchQueryClick"
+                  >
+                    {{ isBatchQuerying ? '⏹️ 停止查询' : '批量查询前 30 个版本号' }}
+                  </n-button>
+                  <n-button
+                    :type="isTargetQuerying ? 'error' : 'default'"
+                    :secondary="!isTargetQuerying"
+                    size="medium"
+                    :disabled="versionItems.length === 0 || isListingVersions || isBatchQuerying"
+                    :loading="isTargetQuerying"
+                    @click="handleTargetQueryClick"
+                  >
+                    {{ isTargetQuerying ? '⏹️ 停止查询' : '🎯 查询到指定版本' }}
                   </n-button>
                 </div>
 
                 <div class="toolbar-row mt-2">
                   <span class="label-inline">筛选版本 (输入版本号如 10.2.96、体积或构建 ID):</span>
-                  <n-input v-model:value="versionForm.filter" placeholder="实时过滤筛选..." style="width: 280px;" size="small" />
+                  <n-input v-model:value="versionForm.filter" placeholder="实时过滤筛选..." style="width: 280px;" size="small" clearable />
                   <span class="count-tag">共 {{ filteredVersions.length }} / {{ versionItems.length }} 个版本记录</span>
                 </div>
               </div>
@@ -178,7 +241,7 @@
           </div>
         </n-tab-pane>
 
-        <!-- TAB 4: 下载中心 -->
+        <!-- TAB 5: 下载中心 -->
         <n-tab-pane name="download" tab="⬇️ 下载中心">
           <div class="tab-table-container">
             <div class="fluent-card toolbar-card">
@@ -260,8 +323,8 @@
                       <n-button v-if="task.status === 'downloading'" size="tiny" type="error" secondary @click="handleCancelTask(task.id)">
                         取消
                       </n-button>
-                      <n-button v-if="task.status === 'completed'" size="tiny" type="primary" @click="handleOpenFile(task.outputPath)">
-                        打开文件
+                      <n-button v-if="task.status === 'completed'" size="tiny" type="primary" @click="handleInstallFromTask(task.outputPath)">
+                        📲 安装
                       </n-button>
                       <n-button v-if="task.status === 'completed'" size="tiny" secondary @click="handleOpenDir(task.outputPath)">
                         所在目录
@@ -280,41 +343,90 @@
           </div>
         </n-tab-pane>
 
-        <!-- TAB 5: 已购应用 -->
-        <n-tab-pane name="purchased" tab="📦 已购应用">
-          <div class="tab-table-container">
-            <div class="fluent-card toolbar-card">
-              <div class="purchased-toolbar">
-                <n-button type="primary" size="medium" :loading="isPurchasedLoading" @click="loadPurchases">
-                  刷新已购列表
-                </n-button>
+        <!-- TAB 6: IPA 安装 -->
+        <n-tab-pane name="installer" tab="📲 IPA 安装">
+          <div class="tab-scroll-container">
+            <div class="installer-layout">
+              <div class="fluent-card">
+                <h3 class="card-title">选择 IPA 安装包</h3>
+                <div
+                  class="ipa-drop-zone"
+                  :class="{ 'has-file': !!selectedIPAPath }"
+                  @click="handleSelectIPA"
+                >
+                  <div class="drop-icon">{{ selectedIPAPath ? '✅' : '📦' }}</div>
+                  <div class="drop-title">{{ selectedIPAPath ? selectedIPAFileName : '点击选择或拖放 IPA 文件到此处' }}</div>
+                  <div class="drop-subtitle" :title="selectedIPAPath">
+                    {{ selectedIPAPath || '仅支持 .ipa 文件' }}
+                  </div>
+                </div>
+                <n-input-group class="mt-3">
+                  <n-input :value="selectedIPAPath" readonly placeholder="尚未选择 IPA 文件" />
+                  <n-button secondary @click="handleSelectIPA">浏览...</n-button>
+                </n-input-group>
+              </div>
 
-                <div class="pagination-area">
-                  <n-button secondary size="small" :disabled="purchasedPage <= 1" @click="prevPurchasedPage">
-                    上一页
-                  </n-button>
-                  <span class="pagination-info">第 {{ purchasedPage }} 页 (共 {{ purchasedTotal }} 个应用)</span>
-                  <n-button secondary size="small" :disabled="purchasedPage * 20 >= purchasedTotal" @click="nextPurchasedPage">
-                    下一页
+              <div class="fluent-card">
+                <div class="installer-card-header">
+                  <h3 class="card-title">选择已连接的苹果设备</h3>
+                  <n-button secondary size="small" :loading="isLoadingDevices" :disabled="isInstallingIPA" @click="loadConnectedDevices">
+                    刷新设备
                   </n-button>
                 </div>
+
+                <n-select
+                  v-model:value="selectedDeviceUDID"
+                  :options="deviceOptions"
+                  :loading="isLoadingDevices"
+                  :disabled="isInstallingIPA"
+                  placeholder="请选择设备"
+                  size="large"
+                />
+
+                <div v-if="selectedDevice" class="device-detail-card">
+                  <div class="key-value-row">
+                    <span class="row-label">设备名称:</span>
+                    <span class="row-value font-bold">{{ selectedDevice.name }}</span>
+                  </div>
+                  <div class="key-value-row">
+                    <span class="row-label">设备型号:</span>
+                    <span class="row-value">{{ selectedDevice.productType || '-' }}</span>
+                  </div>
+                  <div class="key-value-row">
+                    <span class="row-label">系统版本:</span>
+                    <span class="row-value">{{ selectedDevice.productVersion || '-' }}</span>
+                  </div>
+                  <div class="key-value-row">
+                    <span class="row-label">连接方式:</span>
+                    <span class="row-value">{{ selectedDevice.connectionType || '-' }}</span>
+                  </div>
+                  <div class="key-value-row">
+                    <span class="row-label">UDID:</span>
+                    <span class="row-value break-all">{{ selectedDevice.udid }}</span>
+                  </div>
+                </div>
+                <n-empty v-else-if="!isLoadingDevices && devices.length === 0" description="未发现设备，请连接并解锁设备后刷新" class="device-empty" />
               </div>
             </div>
 
-            <div class="fluent-card table-card">
-              <n-data-table
-                :columns="purchasedColumns"
-                :data="purchasedApps"
-                :loading="isPurchasedLoading"
-                size="small"
-                flex-height
-                style="height: 100%;"
-              />
+            <div class="fluent-card installer-action-card">
+              <div class="notice-box notice-warning">
+                安装前请确保设备已解锁并信任此电脑，Windows 已安装 Apple Mobile Device 驱动，且 IPA 具有适用于目标设备的有效签名。
+              </div>
+              <n-button
+                type="primary"
+                size="large"
+                :disabled="!selectedIPAPath || !selectedDeviceUDID || isLoadingDevices"
+                :loading="isInstallingIPA"
+                @click="handleInstallIPA"
+              >
+                {{ isInstallingIPA ? '正在安装...' : '安装 IPA 到所选设备' }}
+              </n-button>
             </div>
           </div>
         </n-tab-pane>
 
-        <!-- TAB 6: 设置 -->
+        <!-- TAB 7: 设置 -->
         <n-tab-pane name="settings" tab="⚙️ 全局设置">
           <div class="tab-scroll-container">
             <div class="fluent-card centered-card">
@@ -322,12 +434,12 @@
 
               <!-- Engine Status Card -->
               <div class="form-group">
-                <label class="field-label">内置 ipatool 引擎状态:</label>
+                <label class="field-label">内置 ipatool / go-ios 引擎状态:</label>
                 <div class="status-box">
                   <div class="status-left">
                     <div class="flex-align-center mb-1">
                       <span class="indicator-dot dot-active"></span>
-                      <span class="font-bold text-sm">已自动加载程序同目录下的 ipatool.exe</span>
+                      <span class="font-bold text-sm">已加载依赖引擎 (支持 tools/ 独立目录与主程序同目录)</span>
                     </div>
                     <div class="text-xs text-gray-sub">{{ settings.ipaToolPath }}</div>
                   </div>
@@ -380,10 +492,11 @@
                 <n-select v-model:value="settings.defaultPlatform" :options="platformOptions" size="medium" />
               </div>
 
-              <div class="mt-4">
+              <div class="mt-4 flex-align-center" style="justify-content: space-between;">
                 <n-button type="primary" size="large" @click="handleSaveSettings" style="height: 38px; padding: 0 24px;">
                   💾 保存并应用设置
                 </n-button>
+                <span class="text-xs text-gray-sub">果仓助手 (AppleVault) v1.0 · Wails v2 + Go + Vue 3</span>
               </div>
             </div>
           </div>
@@ -393,10 +506,10 @@
     </main>
 
     <!-- 3. Bottom GridSplitter Divider -->
-    <div class="panel-divider"></div>
+    <div v-if="showLogs" class="panel-divider"></div>
 
     <!-- 4. Bottom Real-time Logs Console Drawer -->
-    <footer class="console-drawer">
+    <footer class="console-drawer" :class="{ 'collapsed': !showLogs }">
       <!-- Status Header -->
       <div class="console-header">
         <div class="console-status-left">
@@ -408,14 +521,17 @@
           <n-button v-if="isAnyOperationRunning" size="tiny" type="error" @click="handleCancel" class="mr-2">
             取消当前操作
           </n-button>
-          <n-button size="tiny" secondary class="btn-clear-log" @click="clearLogs">
+          <n-button v-if="showLogs" size="tiny" secondary class="btn-clear-log mr-2" @click="clearLogs">
             清空日志
+          </n-button>
+          <n-button size="tiny" secondary class="btn-toggle-log" @click="toggleLogs">
+            {{ showLogs ? '🔽 收起日志' : '📜 展开日志' }}
           </n-button>
         </div>
       </div>
 
       <!-- Log Output Box -->
-      <div ref="logContainerRef" class="console-screen">
+      <div v-show="showLogs" ref="logContainerRef" class="console-screen">
         <div v-for="(log, idx) in logLines" :key="idx" class="console-line" :class="{ 'line-error': log.includes('[ERR]') }">
           {{ log }}
         </div>
@@ -443,11 +559,35 @@
         </div>
       </div>
     </n-modal>
+
+    <!-- 6. Target Version Modal Dialog -->
+    <n-modal v-model:show="showTargetVersionModal" preset="card" title="🎯 查询到指定版本" style="width: 440px;">
+      <div class="target-version-dialog-body">
+        <p style="margin-bottom: 12px; font-size: 13px; color: #666; line-height: 1.6;">
+          请输入目标版本号（例如：<code>10.2.80</code> 或 <code>8.0.0</code>）。程序将从最新版本开始自动逐个查询详情，直到匹配到该版本或全部查询完毕。
+        </p>
+        <n-input
+          ref="targetVersionInputRef"
+          v-model:value="targetVersionInput"
+          placeholder="例如: 10.2.80"
+          size="medium"
+          clearable
+          autofocus
+          @keydown.enter="confirmStartTargetQuery"
+        />
+        <div style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px;">
+          <n-button secondary @click="showTargetVersionModal = false">取消</n-button>
+          <n-button type="primary" :disabled="!targetVersionInput.trim()" @click="confirmStartTargetQuery">
+            确定开始查询
+          </n-button>
+        </div>
+      </div>
+    </n-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, h } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, h } from 'vue'
 import {
   useMessage,
   useDialog,
@@ -495,9 +635,12 @@ import {
   SelectDirectory,
   TestProxy,
   OpenInExplorer,
-  CancelRunningCommand
+  CancelRunningCommand,
+  SelectIPA,
+  ListDevices,
+  InstallIPA
 } from '../../wailsjs/go/main/App'
-import { EventsOn } from '../../wailsjs/runtime/runtime'
+import { EventsOn, OnFileDrop, OnFileDropOff } from '../../wailsjs/runtime/runtime'
 import { main } from '../../wailsjs/go/models'
 
 const props = defineProps<{ isDark: boolean }>()
@@ -585,6 +728,12 @@ const searchColumns = [
 // Versions State
 const isListingVersions = ref(false)
 const isBatchQuerying = ref(false)
+const shouldStopBatchQuery = ref(false)
+const isTargetQuerying = ref(false)
+const shouldStopTargetQuery = ref(false)
+const showTargetVersionModal = ref(false)
+const targetVersionInput = ref('')
+const targetVersionInputRef = ref<any>(null)
 const versionForm = ref({
   bundleId: 'com.alipay.iphoneclient',
   appId: 0,
@@ -598,6 +747,13 @@ interface VersionItem {
   fileSize: string
   releaseDate: string
   isQuerying?: boolean
+}
+
+function isVersionMatch(actual: string, target: string): boolean {
+  if (!actual || actual === '未查询') return false
+  const a = actual.trim().toLowerCase().replace(/^v/, '')
+  const t = target.trim().toLowerCase().replace(/^v/, '')
+  return a === t
 }
 
 const versionItems = ref<VersionItem[]>([])
@@ -637,6 +793,7 @@ const versionColumns = [
         h(NButton, {
           size: 'tiny',
           secondary: true,
+          disabled: isListingVersions.value || isBatchQuerying.value || isTargetQuerying.value,
           loading: row.isQuerying,
           onClick: () => querySingleVersionMetadata(row)
         }, () => '查询详情'),
@@ -665,6 +822,24 @@ const purchasedPage = ref(1)
 const purchasedTotal = ref(0)
 const purchasedApps = ref<main.AppItem[]>([])
 
+// IPA Installer State
+const selectedIPAPath = ref('')
+const devices = ref<main.DeviceInfo[]>([])
+const selectedDeviceUDID = ref<string | null>(null)
+const isLoadingDevices = ref(false)
+const isInstallingIPA = ref(false)
+const selectedIPAFileName = computed(() => selectedIPAPath.value.split(/[\\/]/).pop() || selectedIPAPath.value)
+const selectedDevice = computed(() => devices.value.find(device => device.udid === selectedDeviceUDID.value))
+const deviceOptions = computed(() => devices.value.map(device => {
+  const details = [device.productType, device.productVersion ? `iOS ${device.productVersion}` : '', device.connectionType]
+    .filter(Boolean)
+    .join(' · ')
+  return {
+    label: details ? `${device.name} (${details})` : device.name,
+    value: device.udid
+  }
+}))
+
 const purchasedColumns = [
   { title: '应用名称', key: 'name', width: 220, ellipsis: true },
   { title: 'Bundle Identifier', key: 'bundleID', width: 220, ellipsis: true },
@@ -687,8 +862,14 @@ const purchasedColumns = [
 const isTestingProxy = ref(false)
 
 // Logs State
+const showLogs = ref<boolean>(localStorage.getItem('apple_vault_show_logs') === 'true')
 const logLines = ref<string[]>([])
 const logContainerRef = ref<HTMLElement | null>(null)
+
+function toggleLogs() {
+  showLogs.value = !showLogs.value
+  localStorage.setItem('apple_vault_show_logs', String(showLogs.value))
+}
 
 function appendLog(line: string) {
   logLines.value.push(line)
@@ -1006,10 +1187,17 @@ async function querySingleVersionMetadata(row: VersionItem) {
 
 async function runBatchQuery(count: number) {
   isBatchQuerying.value = true
+  shouldStopBatchQuery.value = false
   isAnyOperationRunning.value = true
 
   try {
     for (let i = 0; i < count; i++) {
+      if (shouldStopBatchQuery.value) {
+        statusText.value = '批量版本查询已手动停止。'
+        message.info('批量查询已停止')
+        break
+      }
+
       const item = versionItems.value[i]
       if (item.displayVersion !== '未查询') continue
 
@@ -1025,15 +1213,31 @@ async function runBatchQuery(count: number) {
       await new Promise(r => setTimeout(r, 150))
     }
 
-    statusText.value = '批量版本查询完成。'
-    message.success('批量查询完成')
+    if (!shouldStopBatchQuery.value) {
+      statusText.value = '批量版本查询完成。'
+      message.success('批量查询完成')
+    }
   } catch (err: any) {
     statusText.value = `批量版本查询失败: ${err}`
     message.error(`批量查询失败: ${err}`)
   } finally {
     isBatchQuerying.value = false
+    shouldStopBatchQuery.value = false
     isAnyOperationRunning.value = false
   }
+}
+
+function handleBatchQueryClick() {
+  if (isBatchQuerying.value) {
+    stopBatchQuery()
+    return
+  }
+  handleBatchQuery()
+}
+
+function stopBatchQuery() {
+  shouldStopBatchQuery.value = true
+  statusText.value = '正在停止批量查询...'
 }
 
 function handleBatchQuery() {
@@ -1047,6 +1251,106 @@ function handleBatchQuery() {
       void runBatchQuery(count)
     }
   })
+}
+
+function handleTargetQueryClick() {
+  if (isTargetQuerying.value) {
+    stopTargetQuery()
+    return
+  }
+  if (versionItems.value.length === 0) {
+    message.warning('请先点击「获取历史版本列表」')
+    return
+  }
+  showTargetVersionModal.value = true
+  nextTick(() => {
+    targetVersionInputRef.value?.focus()
+  })
+}
+
+function stopTargetQuery() {
+  shouldStopTargetQuery.value = true
+  statusText.value = '正在停止指定版本查询...'
+}
+
+function confirmStartTargetQuery() {
+  const target = targetVersionInput.value.trim()
+  if (!target) {
+    message.warning('请输入目标版本号')
+    return
+  }
+  showTargetVersionModal.value = false
+  void runTargetQuery(target)
+}
+
+async function runTargetQuery(targetVersion: string) {
+  isTargetQuerying.value = true
+  shouldStopTargetQuery.value = false
+  isAnyOperationRunning.value = true
+  statusText.value = `正在自动查询目标版本: ${targetVersion}...`
+
+  let found = false
+  let foundItem: VersionItem | null = null
+
+  try {
+    const total = versionItems.value.length
+    for (let i = 0; i < total; i++) {
+      if (shouldStopTargetQuery.value) {
+        statusText.value = `已停止查询指定版本 (${targetVersion})。`
+        message.info('已停止查询指定版本')
+        break
+      }
+
+      const item = versionItems.value[i]
+
+      // 1. 如果该版本此前已查询过
+      if (item.displayVersion !== '未查询') {
+        if (isVersionMatch(item.displayVersion, targetVersion)) {
+          found = true
+          foundItem = item
+          break
+        }
+        continue
+      }
+
+      // 2. 发起单条元数据查询
+      statusText.value = `正在查询 (${i + 1}/${total}): 构建 ID ${item.versionId}，寻找版本 ${targetVersion}...`
+      try {
+        const res = await GetVersionMetadata(versionForm.value.bundleId, item.versionId, versionForm.value.appId)
+        item.displayVersion = res.displayVersion
+        item.fileSize = res.displayFileSize
+        item.releaseDate = res.releaseDate ? new Date(res.releaseDate).toLocaleDateString() : '-'
+
+        if (isVersionMatch(item.displayVersion, targetVersion)) {
+          found = true
+          foundItem = item
+          break
+        }
+      } catch (err: any) {
+        console.warn(`查询构建 ID ${item.versionId} 失败:`, err)
+      }
+
+      // 每次查询间隔 150ms 防限流
+      await new Promise(r => setTimeout(r, 150))
+    }
+
+    if (found && foundItem) {
+      statusText.value = `🎯 已找到目标版本 ${foundItem.displayVersion} (构建 ID: ${foundItem.versionId})！`
+      message.success(`已查询到指定版本 ${foundItem.displayVersion}！`)
+      // 自动筛选定位到该版本，方便用户下载
+      versionForm.value.filter = targetVersion
+    } else if (!shouldStopTargetQuery.value) {
+      statusText.value = `已查询全部 ${total} 个记录，未找到版本号: ${targetVersion}`
+      message.warning(`已查询全部 ${total} 个版本记录，未找到指定版本号: ${targetVersion}`)
+    }
+  } catch (err: any) {
+    statusText.value = `查询指定版本失败: ${err}`
+    message.error(`查询失败: ${err}`)
+  } finally {
+    isTargetQuerying.value = false
+    shouldStopTargetQuery.value = false
+    isAnyOperationRunning.value = false
+  }
 }
 
 async function downloadFromVersions(row: VersionItem) {
@@ -1135,6 +1439,19 @@ async function handleDeleteTask(id: string) {
   }
 }
 
+function handleInstallFromTask(outputPath: string) {
+  if (!outputPath) {
+    message.warning('未找到下载的 IPA 文件路径')
+    return
+  }
+  selectedIPAPath.value = outputPath
+  activeTab.value = 'installer'
+  statusText.value = `已选定安装包: ${outputPath}`
+  if (devices.value.length === 0 && !isLoadingDevices.value) {
+    void loadConnectedDevices()
+  }
+}
+
 function handleOpenFile(path: string) {
   if (!path) return
   OpenInExplorer(path)
@@ -1158,6 +1475,87 @@ async function handleRetryTask(task: main.DownloadTask) {
     message.success(`已重新添加任务「${task.appName}」`)
   } catch (err: any) {
     message.error(`重试失败: ${err}`)
+  }
+}
+
+// IPA Installer
+function useIPAPath(paths: string[]) {
+  const ipaPath = paths.find(path => path.toLowerCase().endsWith('.ipa'))
+  if (!ipaPath) {
+    message.warning('请拖放 .ipa 格式的安装包')
+    return
+  }
+  selectedIPAPath.value = ipaPath
+  activeTab.value = 'installer'
+  statusText.value = `已选择 IPA: ${ipaPath}`
+}
+
+async function handleSelectIPA() {
+  try {
+    const path = await SelectIPA()
+    if (path) {
+      useIPAPath([path])
+    }
+  } catch (err: any) {
+    message.error(`选择 IPA 失败: ${err}`)
+  }
+}
+
+async function loadConnectedDevices() {
+  isLoadingDevices.value = true
+  isAnyOperationRunning.value = true
+  statusText.value = '正在检测已连接的苹果设备...'
+  try {
+    const result = await ListDevices()
+    devices.value = result || []
+    if (!devices.value.some(device => device.udid === selectedDeviceUDID.value)) {
+      selectedDeviceUDID.value = devices.value.length === 1 ? devices.value[0].udid : null
+    }
+    if (devices.value.length === 0) {
+      statusText.value = '未发现可用苹果设备'
+      message.warning('未发现设备，请确认设备已连接、解锁并信任此电脑')
+    } else {
+      statusText.value = `发现 ${devices.value.length} 台可用设备`
+    }
+  } catch (err: any) {
+    devices.value = []
+    selectedDeviceUDID.value = null
+    statusText.value = '设备检测失败'
+    message.error(`设备检测失败: ${err}`)
+  } finally {
+    isLoadingDevices.value = false
+    isAnyOperationRunning.value = false
+  }
+}
+
+async function handleInstallIPA() {
+  if (!selectedIPAPath.value) {
+    message.warning('请先选择 IPA 文件')
+    return
+  }
+  if (!selectedDeviceUDID.value) {
+    message.warning('请选择要安装的苹果设备')
+    return
+  }
+
+  isInstallingIPA.value = true
+  isAnyOperationRunning.value = true
+  statusText.value = `正在安装 ${selectedIPAFileName.value}...`
+  try {
+    const result = await InstallIPA(selectedIPAPath.value, selectedDeviceUDID.value)
+    if (result.success) {
+      statusText.value = result.message
+      message.success(result.message)
+    } else {
+      statusText.value = 'IPA 安装失败'
+      message.error(result.message || 'IPA 安装失败')
+    }
+  } catch (err: any) {
+    statusText.value = 'IPA 安装失败'
+    message.error(`IPA 安装失败: ${err}`)
+  } finally {
+    isInstallingIPA.value = false
+    isAnyOperationRunning.value = false
   }
 }
 
@@ -1236,6 +1634,8 @@ async function handleSaveSettings() {
 }
 
 function handleCancel() {
+  shouldStopBatchQuery.value = true
+  shouldStopTargetQuery.value = true
   CancelRunningCommand()
   isAnyOperationRunning.value = false
 }
@@ -1245,6 +1645,10 @@ onMounted(() => {
   loadSettings()
   refreshAccount(true)
   loadDownloadTasks()
+
+  OnFileDrop((_x: number, _y: number, paths: string[]) => {
+    useIPAPath(paths)
+  }, true)
 
   EventsOn('log', (msg: string) => {
     appendLog(msg)
@@ -1262,6 +1666,10 @@ onMounted(() => {
   EventsOn('download-tasks-reload', () => {
     loadDownloadTasks()
   })
+})
+
+onBeforeUnmount(() => {
+  OnFileDropOff()
 })
 </script>
 
@@ -1313,6 +1721,23 @@ onMounted(() => {
   font-weight: bold;
   color: #0078d4;
   margin-right: 8px;
+}
+
+.brand-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background-color: rgba(0, 120, 212, 0.12);
+  color: #0078d4;
+  margin-right: 2px;
+  line-height: 1.4;
+  vertical-align: middle;
+}
+
+.dark-mode .brand-badge {
+  background-color: rgba(0, 120, 212, 0.25);
+  color: #4daafc;
 }
 
 .brand-subtitle {
@@ -1473,6 +1898,121 @@ onMounted(() => {
 .centered-card {
   max-width: 700px;
   margin: 0 auto;
+}
+
+.installer-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.installer-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.installer-card-header .card-title {
+  margin-bottom: 0;
+}
+
+.ipa-drop-zone {
+  --wails-drop-target: drop;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  border: 2px dashed #93c5fd;
+  border-radius: 8px;
+  background-color: #eff6ff;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.ipa-drop-zone:hover,
+.ipa-drop-zone.has-file {
+  border-color: #0078d4;
+  background-color: #dbeafe;
+}
+
+.dark-mode .ipa-drop-zone {
+  border-color: #2563eb;
+  background-color: #172554;
+}
+
+.dark-mode .ipa-drop-zone:hover,
+.dark-mode .ipa-drop-zone.has-file {
+  border-color: #60a5fa;
+  background-color: #1e3a8a;
+}
+
+.drop-icon {
+  font-size: 42px;
+  margin-bottom: 10px;
+}
+
+.drop-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.drop-subtitle {
+  max-width: 100%;
+  margin-top: 8px;
+  overflow: hidden;
+  color: #6b7280;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dark-mode .drop-subtitle {
+  color: #bfdbfe;
+}
+
+.device-detail-card {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background-color: #f9fafb;
+}
+
+.dark-mode .device-detail-card {
+  border-color: #3f3f46;
+  background-color: #27272a;
+}
+
+.device-detail-card .key-value-row:last-child {
+  margin-bottom: 0;
+}
+
+.device-empty {
+  padding: 24px 0;
+}
+
+.installer-action-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.installer-action-card .notice-box {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+@media (max-width: 1000px) {
+  .installer-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Form Styles */
@@ -1703,17 +2243,41 @@ onMounted(() => {
   flex-direction: column;
   background-color: #1e1e1e;
   flex-shrink: 0;
+  transition: height 0.2s ease;
+}
+
+.console-drawer.collapsed {
+  height: 28px;
+  background-color: #f9fafb;
+}
+
+.dark-mode .console-drawer.collapsed {
+  background-color: #18181b;
 }
 
 .console-header {
-  height: 32px;
+  height: 28px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 14px;
-  background-color: #252526;
-  border-bottom: 1px solid #333333;
+  padding: 0 12px;
+  background-color: #f3f4f6;
+  border-top: 1px solid #e5e7eb;
   flex-shrink: 0;
+  font-size: 12px;
+  transition: background-color 0.2s ease;
+}
+
+.dark-mode .console-header {
+  background-color: #27272a;
+  border-top-color: #3f3f46;
+}
+
+.console-drawer:not(.collapsed) .console-header {
+  height: 32px;
+  background-color: #252526;
+  border-top-color: #333333;
+  border-bottom: 1px solid #333333;
 }
 
 .console-status-left {
@@ -1723,13 +2287,29 @@ onMounted(() => {
 }
 
 .status-prefix {
-  color: #858585;
+  color: #6b7280;
   margin-right: 6px;
 }
 
+.dark-mode .status-prefix {
+  color: #9ca3af;
+}
+
+.console-drawer:not(.collapsed) .status-prefix {
+  color: #858585;
+}
+
 .status-val {
-  color: #cccccc;
+  color: #374151;
   font-weight: 600;
+}
+
+.dark-mode .status-val {
+  color: #e4e4e7;
+}
+
+.console-drawer:not(.collapsed) .status-val {
+  color: #cccccc;
 }
 
 .console-actions-right {
@@ -1737,7 +2317,20 @@ onMounted(() => {
   align-items: center;
 }
 
+.btn-toggle-log {
+  font-size: 11px !important;
+  height: 20px !important;
+  padding: 0 6px !important;
+}
+
 .btn-clear-log {
+  font-size: 11px !important;
+  height: 20px !important;
+  padding: 0 6px !important;
+}
+
+.console-drawer:not(.collapsed) .btn-clear-log,
+.console-drawer:not(.collapsed) .btn-toggle-log {
   background-color: #333333 !important;
   color: #cccccc !important;
   border: none !important;

@@ -46,6 +46,14 @@ export function GetVersionMetadata(arg1, arg2, arg3) {
   return window['go']['main']['App']['GetVersionMetadata'](arg1, arg2, arg3);
 }
 
+export function InstallIPA(arg1, arg2) {
+  return window['go']['main']['App']['InstallIPA'](arg1, arg2);
+}
+
+export function ListDevices() {
+  return window['go']['main']['App']['ListDevices']();
+}
+
 export function ListPurchases(arg1, arg2) {
   return window['go']['main']['App']['ListPurchases'](arg1, arg2);
 }
@@ -80,6 +88,10 @@ export function Search(arg1, arg2, arg3) {
 
 export function SelectDirectory(arg1, arg2) {
   return window['go']['main']['App']['SelectDirectory'](arg1, arg2);
+}
+
+export function SelectIPA() {
+  return window['go']['main']['App']['SelectIPA']();
 }
 
 export function TestProxy(arg1) {

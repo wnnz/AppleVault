@@ -16,7 +16,7 @@ func main() {
 	app := NewApp()
 
 	err := wails.Run(&options.App{
-		Title:     "IPATool GUI - 苹果 App Store 官方正版 / 历史版本 IPA 下载",
+		Title:     "果仓助手 (AppleVault) v1.0 - 苹果 App Store 官方正版 / 历史版本 IPA 下载",
 		Width:     1120,
 		Height:    800,
 		MinWidth:  960,
@@ -25,7 +25,10 @@ func main() {
 			Assets: assets,
 		},
 		BackgroundColour: &options.RGBA{R: 245, G: 247, B: 250, A: 1},
-		OnStartup:        app.startup,
+		DragAndDrop: &options.DragAndDrop{
+			EnableFileDrop: true,
+		},
+		OnStartup: app.startup,
 		Bind: []interface{}{
 			app,
 		},
