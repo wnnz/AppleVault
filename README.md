@@ -2,6 +2,12 @@
 
 基于 **Go + Wails v2 + Vue 3 + Naive UI** 开发的现代化、高性能 Apple App Store 正版应用与历史版本 IPA 下载管理工具。
 
+## 🙏 致谢与依赖
+
+本项目使用了开源项目 [majd/ipatool](https://github.com/majd/ipatool) 提供的 App Store 账号认证、应用搜索、已购应用查询及 IPA 下载等底层能力，并在此基础上提供 Windows 图形界面、下载任务管理和交互功能。
+
+感谢 `ipatool` 项目作者及所有贡献者。本项目是独立的第三方 GUI 项目，与 Apple Inc. 无隶属或官方关联；`ipatool` 的版权和许可遵循其原项目声明。
+
 ---
 
 ## 🌟 核心特性
