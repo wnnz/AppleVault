@@ -150,6 +150,7 @@ func (a *App) runIpaTool(ctx context.Context, args ...string) (string, error) {
 	}
 
 	cmd := exec.CommandContext(ctx, exePath, cmdArgs...)
+	setSysProcAttr(cmd)
 
 	// Configure Environment Variables
 	cmd.Env = os.Environ()
