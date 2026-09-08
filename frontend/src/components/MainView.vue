@@ -25,7 +25,7 @@
         </div>
 
         <!-- Refresh Account Button -->
-        <n-button size="small" secondary @click="refreshAccount" :loading="isAccountLoading">
+        <n-button size="small" secondary @click="() => refreshAccount(false)" :loading="isAccountLoading">
           刷新状态
         </n-button>
 
@@ -507,7 +507,7 @@ const emit = defineEmits<{ (e: 'toggleTheme'): void }>()
 const message = useMessage()
 const dialog = useDialog()
 
-const activeTab = ref('versions')
+const activeTab = ref('account')
 const isAnyOperationRunning = ref(false)
 const statusText = ref('就绪')
 const tableMaxHeight = ref(320)
@@ -724,16 +724,25 @@ async function onProxyToggle(val: boolean) {
   message.info(val ? '已开启网络代理' : '已关闭网络代理')
 }
 
-async function refreshAccount() {
+async function refreshAccount(autoNavigate = false) {
   isAccountLoading.value = true
   statusText.value = '正在获取账号信息...'
   try {
     const res = await GetAccountInfo()
     account.value = res
-    statusText.value = res.success ? `已登录: ${res.name} (${res.email})` : '未检测到已登录的 Apple ID'
+    if (res.success && res.email) {
+      statusText.value = `已登录: ${res.name} (${res.email})`
+      if (autoNavigate) {
+        activeTab.value = 'search'
+      }
+    } else {
+      statusText.value = '未检测到已登录的 Apple ID'
+      activeTab.value = 'account'
+    }
   } catch (err: any) {
     account.value = { name: '', email: '', success: false }
     statusText.value = '未登录'
+    activeTab.value = 'account'
   } finally {
     isAccountLoading.value = false
   }
@@ -766,6 +775,7 @@ async function handleLogin() {
       message.success(`登录成功: ${res.account.name}`)
       loginForm.value.password = ''
       statusText.value = `登录成功: ${res.account.name}`
+      activeTab.value = 'search'
     } else {
       message.error(`登录失败: ${res.errorMessage}`)
       statusText.value = `登录失败: ${res.errorMessage}`
@@ -797,6 +807,7 @@ async function confirm2FA() {
       loginForm.value.password = ''
       twoFACode.value = ''
       statusText.value = `登录成功: ${res.account.name}`
+      activeTab.value = 'search'
     } else {
       message.error(`2FA 验证失败: ${res.errorMessage}`)
       statusText.value = `验证失败: ${res.errorMessage}`
@@ -830,6 +841,7 @@ async function handleRevoke() {
           account.value = { name: '', email: '', success: false }
           message.success('已成功注销登录凭据')
           statusText.value = '已退出登录'
+          activeTab.value = 'account'
         }
       } catch (err: any) {
         message.error(`注销失败: ${err}`)
@@ -1222,7 +1234,7 @@ function handleCancel() {
 // Lifecycle
 onMounted(() => {
   loadSettings()
-  refreshAccount()
+  refreshAccount(true)
   loadDownloadTasks()
 
   EventsOn('log', (msg: string) => {
