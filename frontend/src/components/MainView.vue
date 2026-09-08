@@ -132,7 +132,8 @@
                 :loading="isSearching"
                 :pagination="{ pageSize: 10 }"
                 size="small"
-                :max-height="tableMaxHeight"
+                flex-height
+                style="height: 100%;"
               />
             </div>
           </div>
@@ -170,7 +171,8 @@
                 :data="filteredVersions"
                 :loading="isListingVersions"
                 :virtual-scroll="true"
-                :max-height="tableMaxHeight"
+                flex-height
+                style="height: 100%;"
                 size="small"
               />
             </div>
@@ -262,7 +264,8 @@
                 :data="purchasedApps"
                 :loading="isPurchasedLoading"
                 size="small"
-                :max-height="tableMaxHeight"
+                flex-height
+                style="height: 100%;"
               />
             </div>
           </div>
@@ -402,7 +405,30 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick, h } from 'vue'
-import { useMessage, useDialog, NButton, NTag, NSpace } from 'naive-ui'
+import {
+  useMessage,
+  useDialog,
+  NButton,
+  NTag,
+  NSpace,
+  NTabs,
+  NTabPane,
+  NCard,
+  NInput,
+  NInputGroup,
+  NSelect,
+  NSwitch,
+  NModal,
+  NAlert,
+  NCheckbox,
+  NSpin,
+  NPagination,
+  NDataTable,
+  NGrid,
+  NGridItem,
+  NForm,
+  NFormItem
+} from 'naive-ui'
 import {
   GetAccountInfo,
   Login,
@@ -1227,22 +1253,48 @@ onMounted(() => {
 .main-body {
   flex: 1;
   overflow: hidden;
-  padding: 12px 18px 4px 18px;
+  padding: 8px 18px 4px 18px;
   display: flex;
   flex-direction: column;
+}
+
+:deep(.custom-tabs) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+:deep(.custom-tabs > .n-tabs-nav) {
+  padding-bottom: 4px;
+  flex-shrink: 0;
+}
+
+:deep(.custom-tabs > .n-tabs-pane-wrapper) {
+  flex: 1;
+  overflow: hidden;
+}
+
+:deep(.custom-tabs > .n-tabs-pane-wrapper > .n-tab-pane) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
 }
 
 .tab-scroll-container {
-  height: calc(100vh - 300px);
+  flex: 1;
+  height: 100%;
   overflow-y: auto;
-  padding-top: 8px;
+  padding: 8px 2px 14px 2px;
 }
 
 .tab-table-container {
-  height: calc(100vh - 300px);
+  flex: 1;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  padding-top: 8px;
+  overflow: hidden;
+  padding: 8px 2px 4px 2px;
 }
 
 /* Cards */
