@@ -318,7 +318,7 @@
                         </div>
                         <div class="task-meta-right">
                           <span class="task-pct font-bold">{{ task.progress }}%</span>
-                          <span class="task-time ml-2 text-gray-sub">{{ task.createdAt }}</span>
+                          <span class="task-time text-gray-sub">{{ task.createdAt }}</span>
                         </div>
                       </div>
                     </div>
@@ -2318,6 +2318,7 @@ onBeforeUnmount(() => {
 }
 
 .mr-2 { margin-right: 8px; }
+.ml-2 { margin-left: 8px; }
 .mt-2 { margin-top: 8px; }
 .mt-3 { margin-top: 12px; }
 .mt-4 { margin-top: 16px; }
@@ -2653,13 +2654,27 @@ onBeforeUnmount(() => {
 
 .task-meta-right {
   display: flex;
-  align-items: center;
+  align-items: baseline;
+  gap: 8px;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .task-pct {
   color: #0078d4;
   font-size: 12px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.task-time {
+  font-size: 11px;
+  color: #6b7280;
+  line-height: 1;
+}
+
+.dark-mode .task-time {
+  color: #9ca3af;
 }
 
 .task-actions {
