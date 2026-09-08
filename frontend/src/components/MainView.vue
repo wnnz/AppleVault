@@ -907,7 +907,10 @@ const isInstallingIPA = ref(false)
 const selectedIPAFileName = computed(() => selectedIPAPath.value.split(/[\\/]/).pop() || selectedIPAPath.value)
 const selectedDevice = computed(() => devices.value.find(device => device.udid === selectedDeviceUDID.value))
 const deviceOptions = computed(() => devices.value.map(device => {
-  const details = [device.productType, device.productVersion ? `iOS ${device.productVersion}` : '', device.connectionType]
+  const modelShort = device.productType.includes(' (') ? device.productType.split(' (')[0] : device.productType
+  const osPrefix = device.productType.toLowerCase().includes('ipad') ? 'iPadOS' : 'iOS'
+  const versionStr = device.productVersion ? `${osPrefix} ${device.productVersion}` : ''
+  const details = [modelShort, versionStr, device.connectionType]
     .filter(Boolean)
     .join(' · ')
   return {
