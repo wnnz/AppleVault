@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -24,6 +25,10 @@ type App struct {
 	settingsMu sync.RWMutex
 	cancelMu   sync.Mutex
 	cancelFn   context.CancelFunc
+
+	tasksMu     sync.RWMutex
+	tasks       []*DownloadTask
+	taskCancels map[string]context.CancelFunc
 }
 
 func NewApp() *App {
@@ -35,6 +40,8 @@ func NewApp() *App {
 			EnableProxy:        true,
 			ProxyUrl:           "http://127.0.0.1:10808",
 		},
+		tasks:       make([]*DownloadTask, 0),
+		taskCancels: make(map[string]context.CancelFunc),
 	}
 }
 
@@ -588,4 +595,259 @@ func (a *App) ListPurchases(page, limit int) (PurchasedResult, error) {
 	}
 
 	return res, nil
+}
+
+// --- Download Task Manager ---
+
+func (a *App) AddDownloadTask(appName, bundleId string, appId int64, version, versionId, fileSize string) (*DownloadTask, error) {
+	a.tasksMu.Lock()
+	defer a.tasksMu.Unlock()
+
+	id := fmt.Sprintf("%d", time.Now().UnixNano())
+	if strings.TrimSpace(appName) == "" {
+		appName = bundleId
+	}
+	if strings.TrimSpace(version) == "" || version == "未查询" {
+		version = "最新版"
+	}
+
+	task := &DownloadTask{
+		ID:        id,
+		AppName:   appName,
+		BundleID:  bundleId,
+		AppID:     appId,
+		Version:   version,
+		VersionID: versionId,
+		FileSize:  fileSize,
+		Status:    "pending",
+		Speed:     "等待下载",
+		Progress:  0,
+		CreatedAt: time.Now().Format("15:04:05"),
+	}
+
+	a.tasks = append([]*DownloadTask{task}, a.tasks...)
+	go a.runDownloadTask(task)
+
+	return task, nil
+}
+
+func (a *App) runDownloadTask(task *DownloadTask) {
+	ctx, cancel := context.WithCancel(context.Background())
+	a.tasksMu.Lock()
+	a.taskCancels[task.ID] = cancel
+	task.Status = "downloading"
+	task.Speed = "连接中..."
+	a.tasksMu.Unlock()
+
+	a.emitTaskUpdated(task)
+
+	defer func() {
+		a.tasksMu.Lock()
+		delete(a.taskCancels, task.ID)
+		a.tasksMu.Unlock()
+	}()
+
+	a.settingsMu.RLock()
+	outDir := a.settings.DefaultDownloadDir
+	platform := a.settings.DefaultPlatform
+	passphrase := a.settings.KeychainPassphrase
+	enableProxy := a.settings.EnableProxy
+	proxyUrl := a.settings.ProxyUrl
+	a.settingsMu.RUnlock()
+
+	args := []string{"download", "-b", task.BundleID, "--purchase", "--format", "json", "--non-interactive"}
+	if task.VersionID != "" {
+		args = append(args, "--external-version-id", task.VersionID)
+	}
+	if outDir != "" {
+		args = append(args, "-o", outDir)
+	}
+	if platform != "" {
+		args = append(args, "--platform", platform)
+	}
+	if passphrase != "" {
+		args = append(args, "--keychain-passphrase", passphrase)
+	}
+
+	exePath := a.resolveIpaToolPath()
+	cmd := exec.CommandContext(ctx, exePath, args...)
+	setSysProcAttr(cmd)
+
+	cmd.Env = os.Environ()
+	if enableProxy && strings.TrimSpace(proxyUrl) != "" {
+		proxy := strings.TrimSpace(proxyUrl)
+		cmd.Env = append(cmd.Env,
+			"HTTP_PROXY="+proxy,
+			"HTTPS_PROXY="+proxy,
+			"ALL_PROXY="+proxy,
+			"http_proxy="+proxy,
+			"https_proxy="+proxy,
+			"all_proxy="+proxy,
+		)
+	}
+
+	stdoutPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		a.failTask(task, err.Error())
+		return
+	}
+	stderrPipe, err := cmd.StderrPipe()
+	if err != nil {
+		a.failTask(task, err.Error())
+		return
+	}
+
+	if err := cmd.Start(); err != nil {
+		a.failTask(task, err.Error())
+		return
+	}
+
+	var stdoutLines []string
+	var stderrLines []string
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	progressRegex := regexp.MustCompile(`"event":"download-progress","current":(\d+),"total":(\d+),"speed":(\d+)`)
+
+	go func() {
+		defer wg.Done()
+		scanner := bufio.NewScanner(stdoutPipe)
+		for scanner.Scan() {
+			line := scanner.Text()
+			stdoutLines = append(stdoutLines, line)
+			a.emitLog(line)
+
+			if matches := progressRegex.FindStringSubmatch(line); len(matches) > 3 {
+				curr, _ := strconv.ParseInt(matches[1], 10, 64)
+				tot, _ := strconv.ParseInt(matches[2], 10, 64)
+				spd, _ := strconv.ParseInt(matches[3], 10, 64)
+
+				a.tasksMu.Lock()
+				task.CurrBytes = curr
+				task.TotalBytes = tot
+				if tot > 0 {
+					task.Progress = int(float64(curr) / float64(tot) * 100)
+				}
+				if spd > 0 {
+					task.Speed = formatBytes(spd) + "/s"
+				} else {
+					task.Speed = "处理中..."
+				}
+				a.tasksMu.Unlock()
+
+				a.emitTaskUpdated(task)
+			}
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		scanner := bufio.NewScanner(stderrPipe)
+		for scanner.Scan() {
+			line := scanner.Text()
+			stderrLines = append(stderrLines, line)
+			a.emitLog("[ERR] " + line)
+		}
+	}()
+
+	wg.Wait()
+	cmdErr := cmd.Wait()
+
+	stdout := strings.Join(stdoutLines, "\n")
+	stderr := strings.Join(stderrLines, "\n")
+
+	if ctx.Err() != nil {
+		a.tasksMu.Lock()
+		task.Status = "canceled"
+		task.Speed = "已取消"
+		a.tasksMu.Unlock()
+		a.emitTaskUpdated(task)
+		return
+	}
+
+	if cmdErr != nil {
+		allOutput := stderr + "\n" + stdout
+		re := regexp.MustCompile(`error="([^"]+)"`)
+		errMsg := cmdErr.Error()
+		if matches := re.FindStringSubmatch(allOutput); len(matches) > 1 {
+			errMsg = matches[1]
+		}
+		a.failTask(task, errMsg)
+		return
+	}
+
+	res, parseErr := parseJSONFromOutput[DownloadResult](stdout)
+	a.tasksMu.Lock()
+	task.Status = "completed"
+	task.Progress = 100
+	task.Speed = "已完成"
+	if parseErr == nil && res.Output != "" {
+		task.OutputPath = res.Output
+	}
+	a.tasksMu.Unlock()
+	a.emitTaskUpdated(task)
+}
+
+func (a *App) failTask(task *DownloadTask, msg string) {
+	a.tasksMu.Lock()
+	task.Status = "error"
+	task.ErrorMessage = msg
+	task.Speed = "下载失败"
+	a.tasksMu.Unlock()
+	a.emitTaskUpdated(task)
+}
+
+func (a *App) emitTaskUpdated(task *DownloadTask) {
+	if a.ctx != nil {
+		runtime.EventsEmit(a.ctx, "download-task-updated", task)
+	}
+}
+
+func (a *App) GetDownloadTasks() []*DownloadTask {
+	a.tasksMu.RLock()
+	defer a.tasksMu.RUnlock()
+	res := make([]*DownloadTask, len(a.tasks))
+	copy(res, a.tasks)
+	return res
+}
+
+func (a *App) CancelDownloadTask(id string) {
+	a.tasksMu.Lock()
+	defer a.tasksMu.Unlock()
+	if cancel, ok := a.taskCancels[id]; ok {
+		cancel()
+	}
+}
+
+func (a *App) DeleteDownloadTask(id string) {
+	a.tasksMu.Lock()
+	defer a.tasksMu.Unlock()
+	if cancel, ok := a.taskCancels[id]; ok {
+		cancel()
+		delete(a.taskCancels, id)
+	}
+	for i, t := range a.tasks {
+		if t.ID == id {
+			a.tasks = append(a.tasks[:i], a.tasks[i+1:]...)
+			break
+		}
+	}
+	if a.ctx != nil {
+		runtime.EventsEmit(a.ctx, "download-tasks-reload")
+	}
+}
+
+func (a *App) ClearCompletedDownloadTasks() {
+	a.tasksMu.Lock()
+	active := make([]*DownloadTask, 0)
+	for _, t := range a.tasks {
+		if t.Status == "downloading" || t.Status == "pending" {
+			active = append(active, t)
+		}
+	}
+	a.tasks = active
+	a.tasksMu.Unlock()
+	if a.ctx != nil {
+		runtime.EventsEmit(a.ctx, "download-tasks-reload")
+	}
 }

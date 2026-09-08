@@ -56,6 +56,46 @@ export namespace main {
 	        this.success = source["success"];
 	    }
 	}
+	export class DownloadTask {
+	    id: string;
+	    appName: string;
+	    bundleID: string;
+	    appId: number;
+	    version: string;
+	    versionId: string;
+	    fileSize: string;
+	    totalBytes: number;
+	    currBytes: number;
+	    progress: number;
+	    speed: string;
+	    status: string;
+	    outputPath: string;
+	    errorMessage: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DownloadTask(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.appName = source["appName"];
+	        this.bundleID = source["bundleID"];
+	        this.appId = source["appId"];
+	        this.version = source["version"];
+	        this.versionId = source["versionId"];
+	        this.fileSize = source["fileSize"];
+	        this.totalBytes = source["totalBytes"];
+	        this.currBytes = source["currBytes"];
+	        this.progress = source["progress"];
+	        this.speed = source["speed"];
+	        this.status = source["status"];
+	        this.outputPath = source["outputPath"];
+	        this.errorMessage = source["errorMessage"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
 	export class LoginResult {
 	    success: boolean;
 	    requires2FA: boolean;

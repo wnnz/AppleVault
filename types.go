@@ -66,6 +66,24 @@ type ProxyTestResult struct {
 	Message string `json:"message"`
 }
 
+type DownloadTask struct {
+	ID           string `json:"id"`
+	AppName      string `json:"appName"`
+	BundleID     string `json:"bundleID"`
+	AppID        int64  `json:"appId"`
+	Version      string `json:"version"`
+	VersionID    string `json:"versionId"`
+	FileSize     string `json:"fileSize"`
+	TotalBytes   int64  `json:"totalBytes"`
+	CurrBytes    int64  `json:"currBytes"`
+	Progress     int    `json:"progress"`
+	Speed        string `json:"speed"`
+	Status       string `json:"status"` // "pending", "downloading", "completed", "error", "canceled"
+	OutputPath   string `json:"outputPath"`
+	ErrorMessage string `json:"errorMessage"`
+	CreatedAt    string `json:"createdAt"`
+}
+
 type Settings struct {
 	KeychainPassphrase string `json:"keychainPassphrase"`
 	DefaultDownloadDir string `json:"defaultDownloadDir"`

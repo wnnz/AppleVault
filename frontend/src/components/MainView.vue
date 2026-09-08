@@ -181,57 +181,101 @@
 
         <!-- TAB 4: 下载中心 -->
         <n-tab-pane name="download" tab="⬇️ 下载中心">
-          <div class="tab-scroll-container">
-            <div class="fluent-card centered-card">
-              <h3 class="card-title">IPA 下载设置</h3>
+          <div class="tab-table-container">
+            <div class="fluent-card toolbar-card">
+              <div class="purchased-toolbar">
+                <div class="flex-align-center">
+                  <span class="font-bold text-sm mr-2">下载任务列表</span>
+                  <n-tag type="info" size="small" round>
+                    共 {{ downloadTasks.length }} 个任务 ({{ activeTaskCount }} 个进行中，{{ completedTaskCount }} 个已完成)
+                  </n-tag>
+                </div>
 
-              <div class="form-group">
-                <label class="field-label">Bundle Identifier (应用包名):</label>
-                <n-input v-model:value="downloadForm.bundleId" placeholder="例如: com.alipay.iphoneclient" size="medium" />
+                <div class="btn-group-row">
+                  <n-button secondary size="small" :disabled="completedTaskCount === 0" @click="handleClearCompleted">
+                    清空已完成
+                  </n-button>
+                  <n-button secondary size="small" @click="handleOpenDefaultDownloadDir">
+                    📁 打开下载目录
+                  </n-button>
+                </div>
+              </div>
+            </div>
+
+            <div class="fluent-card table-card" style="padding: 12px; overflow-y: auto;">
+              <div v-if="downloadTasks.length === 0" class="empty-tasks-box">
+                <n-empty description="暂无下载任务。请在「应用搜索」或「历史版本」中点击下载直接添加！">
+                  <template #icon>
+                    <span style="font-size: 36px;">⬇️</span>
+                  </template>
+                </n-empty>
               </div>
 
-              <div class="form-group">
-                <label class="field-label">App ID (可选，若已填写 Bundle ID 可留空):</label>
-                <n-input v-model:value="downloadForm.appId" placeholder="若已填写 Bundle ID 可留空" size="medium" />
-              </div>
+              <div v-else class="task-items-list">
+                <div v-for="task in downloadTasks" :key="task.id" class="task-card">
+                  <div class="task-main">
+                    <div class="task-info">
+                      <div class="task-title-row">
+                        <span class="task-app-name">{{ task.appName }}</span>
+                        <n-tag size="small" type="success" :bordered="false" round class="task-ver-tag">
+                          {{ task.version }}
+                        </n-tag>
+                        <span class="task-bundle-id">{{ task.bundleID }}</span>
+                        <span v-if="task.versionId" class="task-build-id">Build: {{ task.versionId }}</span>
+                      </div>
 
-              <div class="form-group">
-                <label class="field-label">历史版本构建 ID (External Version ID，留空下载最新版):</label>
-                <n-input v-model:value="downloadForm.versionId" placeholder="例如: 851864107 (支付宝 10.2.96)" size="medium" />
-                <div class="field-tip">* 如需下载特定旧版本（如支付宝 10.2.96），在此填入对应历史构建 ID（如 851864107）</div>
-              </div>
+                      <div class="task-progress-bar">
+                        <n-progress
+                          type="line"
+                          :percentage="task.progress"
+                          :status="getTaskProgressStatus(task.status)"
+                          :show-indicator="false"
+                          :height="8"
+                          border-radius="4"
+                        />
+                      </div>
 
-              <div class="form-group">
-                <label class="field-label">目标平台:</label>
-                <n-select v-model:value="downloadForm.platform" :options="platformOptions" size="medium" />
-              </div>
+                      <div class="task-meta-row">
+                        <div class="task-meta-left">
+                          <span class="task-badge-status" :class="'badge-' + task.status">{{ getTaskStatusText(task.status) }}</span>
+                          <span v-if="task.status === 'downloading'" class="task-speed font-semibold">{{ task.speed }}</span>
+                          <span v-if="task.status === 'downloading' && task.totalBytes > 0" class="task-bytes">
+                            {{ formatTaskBytes(task.currBytes) }} / {{ formatTaskBytes(task.totalBytes) }}
+                          </span>
+                          <span v-else-if="task.fileSize && task.fileSize !== '-'" class="task-size">大小: {{ task.fileSize }}</span>
+                          <span v-if="task.status === 'completed' && task.outputPath" class="task-path" :title="task.outputPath">
+                            保存至: {{ task.outputPath }}
+                          </span>
+                          <span v-if="task.status === 'error'" class="task-err-msg">
+                            错误: {{ task.errorMessage }}
+                          </span>
+                        </div>
+                        <div class="task-meta-right">
+                          <span class="task-pct font-bold">{{ task.progress }}%</span>
+                          <span class="task-time ml-2 text-gray-sub">{{ task.createdAt }}</span>
+                        </div>
+                      </div>
+                    </div>
 
-              <div class="form-group">
-                <label class="field-label">保存保存目录:</label>
-                <n-input-group>
-                  <n-input v-model:value="downloadForm.outputPath" placeholder="选择保存目录" size="medium" />
-                  <n-button secondary size="medium" @click="handleSelectDir">浏览...</n-button>
-                </n-input-group>
-              </div>
-
-              <div class="form-group">
-                <n-checkbox v-model:checked="downloadForm.purchase">
-                  若账号未购买该应用，自动获取免费购买凭证 (--purchase)
-                </n-checkbox>
-              </div>
-
-              <div class="btn-group-row mt-3">
-                <n-button type="primary" size="large" :loading="isDownloading" @click="handleStartDownload" style="height: 40px; padding: 0 24px;">
-                  🚀 开始下载 IPA 包
-                </n-button>
-                <n-button secondary size="large" @click="handleOpenOutputDir" style="height: 40px; padding: 0 20px;">
-                  📁 打开下载目录
-                </n-button>
-              </div>
-
-              <div v-if="lastDownloadedPath" class="notice-box notice-success mt-4">
-                <div class="font-bold mb-1">最近下载完成文件：</div>
-                <div class="text-xs break-all">{{ lastDownloadedPath }}</div>
+                    <div class="task-actions">
+                      <n-button v-if="task.status === 'downloading'" size="tiny" type="error" secondary @click="handleCancelTask(task.id)">
+                        取消
+                      </n-button>
+                      <n-button v-if="task.status === 'completed'" size="tiny" type="primary" @click="handleOpenFile(task.outputPath)">
+                        打开文件
+                      </n-button>
+                      <n-button v-if="task.status === 'completed'" size="tiny" secondary @click="handleOpenDir(task.outputPath)">
+                        所在目录
+                      </n-button>
+                      <n-button v-if="task.status === 'error' || task.status === 'canceled'" size="tiny" secondary @click="handleRetryTask(task)">
+                        重试
+                      </n-button>
+                      <n-button size="tiny" quaternary @click="handleDeleteTask(task.id)">
+                        删除
+                      </n-button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -427,9 +471,16 @@ import {
   NGrid,
   NGridItem,
   NForm,
-  NFormItem
+  NFormItem,
+  NProgress,
+  NEmpty
 } from 'naive-ui'
 import {
+  AddDownloadTask,
+  GetDownloadTasks,
+  CancelDownloadTask,
+  DeleteDownloadTask,
+  ClearCompletedDownloadTasks,
   GetAccountInfo,
   Login,
   Revoke,
@@ -525,7 +576,7 @@ const searchColumns = [
     render(row: main.AppItem) {
       return h(NSpace, { size: 6 }, () => [
         h(NButton, { size: 'tiny', type: 'primary', onClick: () => selectAppForVersions(row) }, () => '历史版本'),
-        h(NButton, { size: 'tiny', secondary: true, onClick: () => selectAppForDownload(row) }, () => '直接下载'),
+        h(NButton, { size: 'tiny', secondary: true, onClick: () => downloadFromSearch(row) }, () => '直接下载'),
         h(NButton, { size: 'tiny', secondary: true, onClick: () => handlePurchaseApp(row.bundleID) }, () => '获取许可')
       ])
     }
@@ -538,6 +589,7 @@ const isBatchQuerying = ref(false)
 const versionForm = ref({
   bundleId: 'com.alipay.iphoneclient',
   appId: 0,
+  appName: '支付宝',
   filter: ''
 })
 
@@ -592,24 +644,21 @@ const versionColumns = [
         h(NButton, {
           size: 'tiny',
           type: 'primary',
-          onClick: () => pickVersionForDownload(row.versionId)
+          onClick: () => downloadFromVersions(row)
         }, () => '一键下载此版本')
       ])
     }
   }
 ]
 
-// Download State
-const isDownloading = ref(false)
-const lastDownloadedPath = ref('')
-const downloadForm = ref({
-  bundleId: 'com.alipay.iphoneclient',
-  appId: '',
-  versionId: '851864107',
-  platform: 'iphone',
-  outputPath: 'D:\\Downloads',
-  purchase: true
-})
+// Download Tasks Manager State
+const downloadTasks = ref<main.DownloadTask[]>([])
+const activeTaskCount = computed(() =>
+  downloadTasks.value.filter(t => t.status === 'downloading' || t.status === 'pending').length
+)
+const completedTaskCount = computed(() =>
+  downloadTasks.value.filter(t => t.status === 'completed').length
+)
 
 // Purchased State
 const isPurchasedLoading = ref(false)
@@ -629,7 +678,7 @@ const purchasedColumns = [
     render(row: main.AppItem) {
       return h(NSpace, { size: 6 }, () => [
         h(NButton, { size: 'tiny', type: 'primary', onClick: () => selectAppForVersions(row) }, () => '历史版本'),
-        h(NButton, { size: 'tiny', secondary: true, onClick: () => selectAppForDownload(row) }, () => '直接下载')
+        h(NButton, { size: 'tiny', secondary: true, onClick: () => downloadFromPurchased(row) }, () => '直接下载')
       ])
     }
   }
@@ -664,8 +713,6 @@ async function loadSettings() {
   try {
     const s = await GetSettings()
     settings.value = s
-    downloadForm.value.outputPath = s.defaultDownloadDir || 'D:\\Downloads'
-    downloadForm.value.platform = s.defaultPlatform || 'iphone'
   } catch (err: any) {
     console.error(err)
   }
@@ -840,17 +887,45 @@ async function handleSearch() {
 }
 
 function selectAppForVersions(app: main.AppItem) {
+  versionForm.value.appName = app.name
   versionForm.value.bundleId = app.bundleID
   versionForm.value.appId = app.id
   activeTab.value = 'versions'
   handleListVersions()
 }
 
-function selectAppForDownload(app: main.AppItem) {
-  downloadForm.value.bundleId = app.bundleID
-  downloadForm.value.appId = String(app.id)
-  downloadForm.value.versionId = ''
-  activeTab.value = 'download'
+async function downloadFromSearch(app: main.AppItem) {
+  try {
+    await AddDownloadTask(
+      app.name,
+      app.bundleID,
+      app.id,
+      app.version || '最新版',
+      '',
+      ''
+    )
+    message.success(`已添加任务「${app.name}」到下载中心`)
+    activeTab.value = 'download'
+  } catch (err: any) {
+    message.error(`添加下载失败: ${err}`)
+  }
+}
+
+async function downloadFromPurchased(app: main.AppItem) {
+  try {
+    await AddDownloadTask(
+      app.name,
+      app.bundleID,
+      app.id,
+      app.version || '最新版',
+      '',
+      ''
+    )
+    message.success(`已添加任务「${app.name}」到下载中心`)
+    activeTab.value = 'download'
+  } catch (err: any) {
+    message.error(`添加下载失败: ${err}`)
+  }
 }
 
 async function handlePurchaseApp(bundleId: string) {
@@ -953,73 +1028,115 @@ async function handleBatchQuery() {
   })
 }
 
-function pickVersionForDownload(verId: string) {
-  downloadForm.value.bundleId = versionForm.value.bundleId
-  downloadForm.value.versionId = verId
-  activeTab.value = 'download'
-}
-
-// Download
-async function handleSelectDir() {
+async function downloadFromVersions(row: VersionItem) {
+  const appName = versionForm.value.appName || versionForm.value.bundleId
+  const ver = row.displayVersion !== '未查询' ? row.displayVersion : (row.versionId ? `Build ${row.versionId}` : '最新版')
   try {
-    const dir = await SelectDirectory('选择 IPA 文件保存目录', downloadForm.value.outputPath)
-    if (dir) {
-      downloadForm.value.outputPath = dir
-    }
-  } catch (err: any) {
-    console.error(err)
-  }
-}
-
-async function handleStartDownload() {
-  if (!downloadForm.value.bundleId) {
-    message.warning('请输入 Bundle ID')
-    return
-  }
-
-  isDownloading.value = true
-  isAnyOperationRunning.value = true
-  const verLabel = downloadForm.value.versionId ? `指定版本 ID: ${downloadForm.value.versionId}` : '最新版本'
-  statusText.value = `正在下载 ${downloadForm.value.bundleId} (${verLabel})...`
-
-  try {
-    const res = await Download(
-      downloadForm.value.bundleId,
-      Number(downloadForm.value.appId) || 0,
-      downloadForm.value.versionId,
-      downloadForm.value.outputPath,
-      downloadForm.value.platform,
-      downloadForm.value.purchase
+    await AddDownloadTask(
+      appName,
+      versionForm.value.bundleId,
+      versionForm.value.appId,
+      ver,
+      row.versionId,
+      row.fileSize
     )
-    if (res.success) {
-      lastDownloadedPath.value = res.output
-      statusText.value = `下载成功！文件路径: ${res.output}`
-      dialog.success({
-        title: '下载完成',
-        content: `下载成功！\n保存路径: ${res.output}\n\n是否立即打开所在文件夹？`,
-        positiveText: '打开所在目录',
-        negativeText: '关闭',
-        onPositiveClick: () => {
-          OpenInExplorer(res.output)
-        }
-      })
-    } else {
-      message.error('下载未完成')
-    }
+    message.success(`已添加下载任务: ${appName} (${ver})`)
+    activeTab.value = 'download'
   } catch (err: any) {
-    message.error(`下载失败: ${err}`)
-    statusText.value = '下载失败'
-  } finally {
-    isDownloading.value = false
-    isAnyOperationRunning.value = false
+    message.error(`添加下载失败: ${err}`)
   }
 }
 
-function handleOpenOutputDir() {
-  if (lastDownloadedPath.value) {
-    OpenInExplorer(lastDownloadedPath.value)
-  } else {
-    OpenInExplorer(downloadForm.value.outputPath)
+// Download Tasks Operations
+async function loadDownloadTasks() {
+  try {
+    const list = await GetDownloadTasks()
+    downloadTasks.value = list || []
+  } catch (err: any) {
+    console.error('加载任务失败:', err)
+  }
+}
+
+function getTaskProgressStatus(status: string) {
+  if (status === 'completed') return 'success'
+  if (status === 'error') return 'error'
+  return 'info'
+}
+
+function getTaskStatusText(status: string) {
+  switch (status) {
+    case 'pending': return '等待中'
+    case 'downloading': return '下载中'
+    case 'completed': return '已完成'
+    case 'error': return '下载失败'
+    case 'canceled': return '已取消'
+    default: return status
+  }
+}
+
+function formatTaskBytes(bytes: number): string {
+  if (!bytes || bytes <= 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i]
+}
+
+async function handleClearCompleted() {
+  try {
+    await ClearCompletedDownloadTasks()
+    await loadDownloadTasks()
+    message.success('已清空所有已完成任务记录')
+  } catch (err: any) {
+    message.error(`操作失败: ${err}`)
+  }
+}
+
+function handleOpenDefaultDownloadDir() {
+  OpenInExplorer(settings.value.defaultDownloadDir || 'D:\\Downloads')
+}
+
+async function handleCancelTask(id: string) {
+  try {
+    await CancelDownloadTask(id)
+    message.info('正在取消下载任务...')
+  } catch (err: any) {
+    message.error(`取消失败: ${err}`)
+  }
+}
+
+async function handleDeleteTask(id: string) {
+  try {
+    await DeleteDownloadTask(id)
+    await loadDownloadTasks()
+  } catch (err: any) {
+    message.error(`删除失败: ${err}`)
+  }
+}
+
+function handleOpenFile(path: string) {
+  if (!path) return
+  OpenInExplorer(path)
+}
+
+function handleOpenDir(path: string) {
+  if (!path) return
+  OpenInExplorer(path)
+}
+
+async function handleRetryTask(task: main.DownloadTask) {
+  try {
+    await AddDownloadTask(
+      task.appName,
+      task.bundleID,
+      task.appId,
+      task.version,
+      task.versionId,
+      task.fileSize
+    )
+    message.success(`已重新添加任务「${task.appName}」`)
+  } catch (err: any) {
+    message.error(`重试失败: ${err}`)
   }
 }
 
@@ -1063,7 +1180,6 @@ async function handleSelectDefaultDir() {
     const dir = await SelectDirectory('选择默认下载保存目录', settings.value.defaultDownloadDir)
     if (dir) {
       settings.value.defaultDownloadDir = dir
-      downloadForm.value.outputPath = dir
     }
   } catch (err: any) {
     console.error(err)
@@ -1092,8 +1208,6 @@ async function handleTestProxy() {
 async function handleSaveSettings() {
   try {
     await SaveSettings(settings.value)
-    downloadForm.value.outputPath = settings.value.defaultDownloadDir
-    downloadForm.value.platform = settings.value.defaultPlatform
     message.success('设置已保存并生效！')
   } catch (err: any) {
     message.error(`保存失败: ${err}`)
@@ -1109,9 +1223,23 @@ function handleCancel() {
 onMounted(() => {
   loadSettings()
   refreshAccount()
+  loadDownloadTasks()
 
   EventsOn('log', (msg: string) => {
     appendLog(msg)
+  })
+
+  EventsOn('download-task-updated', (updatedTask: main.DownloadTask) => {
+    const idx = downloadTasks.value.findIndex(t => t.id === updatedTask.id)
+    if (idx !== -1) {
+      downloadTasks.value[idx] = updatedTask
+    } else {
+      downloadTasks.value.unshift(updatedTask)
+    }
+  })
+
+  EventsOn('download-tasks-reload', () => {
+    loadDownloadTasks()
   })
 })
 </script>
@@ -1652,5 +1780,177 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+/* Task Manager Styles */
+.empty-tasks-box {
+  padding: 60px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.task-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.task-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background-color: #ffffff;
+  padding: 12px 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.dark-mode .task-card {
+  border-color: #333338;
+  background-color: #26262a;
+}
+
+.task-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.task-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.task-app-name {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.task-ver-tag {
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.task-bundle-id {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.task-build-id {
+  font-size: 11px;
+  color: #9ca3af;
+  background: #f3f4f6;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.dark-mode .task-build-id {
+  background: #18181b;
+  color: #a1a1aa;
+}
+
+.task-progress-bar {
+  margin-bottom: 6px;
+}
+
+.task-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.dark-mode .task-meta-row {
+  color: #9ca3af;
+}
+
+.task-meta-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-badge-status {
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.badge-pending {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.badge-downloading {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.badge-completed {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.badge-error {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.badge-canceled {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.task-speed {
+  color: #0078d4;
+}
+
+.task-bytes {
+  color: #4b5563;
+}
+
+.dark-mode .task-bytes {
+  color: #a1a1aa;
+}
+
+.task-path {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-err-msg {
+  color: #ef4444;
+}
+
+.task-meta-right {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.task-pct {
+  color: #0078d4;
+  font-size: 12px;
+}
+
+.task-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 </style>
