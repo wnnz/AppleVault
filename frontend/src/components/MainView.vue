@@ -5,7 +5,6 @@
       <div class="header-brand">
         <span class="brand-emoji">🍎</span>
         <span class="brand-title">IPATool GUI</span>
-        <span class="version-badge">v2.5.0 Support</span>
         <span class="brand-subtitle">— 苹果 App Store 官方正版 / 历史旧版 IPA 下载</span>
       </div>
 
@@ -1303,21 +1302,7 @@ onMounted(() => {
   font-size: 18px;
   font-weight: bold;
   color: #0078d4;
-  margin-right: 12px;
-}
-
-.version-badge {
-  background-color: #e0f2fe;
-  color: #0369a1;
-  font-weight: 600;
-  font-size: 11px;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.dark-mode .version-badge {
-  background-color: #0c4a6e;
-  color: #7dd3fc;
+  margin-right: 8px;
 }
 
 .brand-subtitle {
