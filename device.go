@@ -90,7 +90,7 @@ func (a *App) InstallIPA(ipaPath, udid string) (InstallResult, error) {
 		return InstallResult{}, fmt.Errorf("请选择要安装的苹果设备")
 	}
 
-	a.emitLog(fmt.Sprintf("开始安装 IPA 到设备 %s: %s", udid, absolutePath))
+	a.emitLog(fmt.Sprintf("开始安装 IPA 到设备 %s: %s（请保持设备屏幕处于点亮解锁状态，切勿息屏休眠）", udid, absolutePath))
 	ctx := a.startCommandContext()
 	output, err := a.runIOSTool(ctx, "install", "--path="+absolutePath, "--udid="+udid)
 	if err != nil {
@@ -574,9 +574,9 @@ func friendlyDeviceToolError(err error) error {
 		strings.Contains(lowerMessage, "not trusted"):
 		return fmt.Errorf("设备尚未信任此电脑或配对失效。请解锁手机屏幕，若弹出「要信任此电脑吗？」请点击「信任」并输入锁屏密码后重试；若未弹出提示，可尝试重新拔插数据线")
 	case strings.Contains(lowerMessage, "no device"), strings.Contains(lowerMessage, "device not found"):
-		return fmt.Errorf("未找到目标设备，请确认设备已连接、解锁并信任此电脑")
+		return fmt.Errorf("未找到目标设备，请确认设备已用数据线连接、点亮屏幕解锁（切勿息屏休眠）并信任此电脑")
 	case strings.Contains(lowerMessage, "password protected"), strings.Contains(lowerMessage, "locked"):
-		return fmt.Errorf("设备处于锁定状态，请点亮并解锁设备屏幕后重试")
+		return fmt.Errorf("设备处于锁屏或息屏休眠状态，请点亮并解锁设备屏幕后重试")
 	case strings.Contains(lowerMessage, "pair"), strings.Contains(lowerMessage, "trust"):
 		return fmt.Errorf("设备尚未信任此电脑，请在设备上完成信任操作后重试")
 	case strings.Contains(lowerMessage, "invalid signature"), strings.Contains(lowerMessage, "applicationverificationfailed"):

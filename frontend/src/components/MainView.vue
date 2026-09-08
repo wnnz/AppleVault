@@ -387,6 +387,11 @@
                   size="large"
                 />
 
+                <div class="device-wake-tip">
+                  <span class="tip-icon">💡</span>
+                  <span>请保持设备屏幕<strong>解锁并常亮</strong>；若设备<strong>息屏休眠</strong>，USB 通信将中断并丢失连接。</span>
+                </div>
+
                 <div v-if="selectedDevice" class="device-detail-card">
                   <div class="key-value-row">
                     <span class="row-label">设备名称:</span>
@@ -409,23 +414,73 @@
                     <span class="row-value break-all">{{ selectedDevice.udid }}</span>
                   </div>
                 </div>
-                <n-empty v-else-if="!isLoadingDevices && devices.length === 0" description="未发现设备，请连接并解锁设备后刷新" class="device-empty" />
+                <div v-else-if="!isLoadingDevices && devices.length === 0" class="device-empty-container">
+                  <n-empty description="未检测到已连接的苹果设备">
+                    <template #extra>
+                      <div class="empty-guide-box">
+                        <div class="empty-guide-title font-bold">排查与连接建议：</div>
+                        <ol class="empty-guide-list">
+                          <li>使用 USB 数据线将设备与电脑直连（避免使用无供电拓展坞）；</li>
+                          <li><strong>点亮设备屏幕并输入密码解锁</strong>（切勿处于锁屏或息屏休眠状态）；</li>
+                          <li>若设备端弹出「要信任此电脑吗？」，请点击<strong>「信任」</strong>；</li>
+                          <li>点击右上角<strong>「刷新设备」</strong>按钮重新识别。</li>
+                        </ol>
+                      </div>
+                    </template>
+                  </n-empty>
+                </div>
               </div>
             </div>
 
             <div class="fluent-card installer-action-card">
-              <div class="notice-box notice-warning">
-                安装前请确保设备已解锁并信任此电脑，Windows 已安装 Apple Mobile Device 驱动，且 IPA 具有适用于目标设备的有效签名。
+              <div class="installer-tips-container">
+                <div class="notice-box notice-warning mb-0">
+                  <div class="notice-header">
+                    <span class="notice-icon">⚠️</span>
+                    <span class="notice-title font-bold">安装与连接重要提醒：</span>
+                  </div>
+                  <ul class="installer-tips-list">
+                    <li>
+                      <strong>保持屏幕解锁常亮</strong>：安装及检测全程，请务必<strong>点亮设备屏幕并解锁</strong>。若设备<strong>息屏休眠</strong>或自动锁屏，iOS 系统将挂起 USB 数据通信导致传输中断失败。
+                    </li>
+                    <li>
+                      <strong>首次信任此电脑</strong>：首次连接请在设备端弹出提示时输入锁屏密码并点击「信任此电脑」；若已信任仍无法识别，可重新拔插数据线。
+                    </li>
+                    <li>
+                      <strong>驱动与线缆要求</strong>：Windows 电脑须已安装 Apple Mobile Device 驱动（可通过安装官方 iTunes 或 Apple 设备获得），请使用原装或具备数据传输功能的优质数据线。
+                    </li>
+                    <li>
+                      <strong>应用签名有效性</strong>：IPA 安装包须具有适用于当前设备的有效签名（本工具下载的正版 IPA 需用登录了同 Apple ID 的设备安装），未签名或证书失效的安装包无法被系统接受。
+                    </li>
+                  </ul>
+                </div>
+
+                <div v-if="isInstallingIPA" class="notice-box notice-info mt-2">
+                  <div class="flex-align-center">
+                    <n-spin size="small" class="mr-2" />
+                    <span class="font-semibold text-blue">正在向设备传输并安装 IPA，请保持设备屏幕处于点亮解锁状态，切勿让设备息屏或断开数据线...</span>
+                  </div>
+                </div>
               </div>
-              <n-button
-                type="primary"
-                size="large"
-                :disabled="!selectedIPAPath || !selectedDeviceUDID || isLoadingDevices"
-                :loading="isInstallingIPA"
-                @click="handleInstallIPA"
-              >
-                {{ isInstallingIPA ? '正在安装...' : '安装 IPA 到所选设备' }}
-              </n-button>
+
+              <div class="installer-btn-wrapper">
+                <n-button
+                  type="primary"
+                  size="large"
+                  :disabled="!selectedIPAPath || !selectedDeviceUDID || isLoadingDevices"
+                  :loading="isInstallingIPA"
+                  class="install-submit-btn"
+                  @click="handleInstallIPA"
+                >
+                  <template #icon>
+                    <span>📲</span>
+                  </template>
+                  {{ isInstallingIPA ? '正在安装中...' : '安装 IPA 到所选设备' }}
+                </n-button>
+                <div class="install-btn-subtip text-xs text-gray-sub">
+                  {{ !selectedIPAPath ? '请先选择 IPA 文件' : (!selectedDeviceUDID ? '请先选择目标设备' : '就绪，点击开始安装') }}
+                </div>
+              </div>
             </div>
           </div>
         </n-tab-pane>
@@ -1658,7 +1713,8 @@ async function handleInstallIPA() {
 
   isInstallingIPA.value = true
   isAnyOperationRunning.value = true
-  statusText.value = `正在安装 ${selectedIPAFileName.value}...`
+  statusText.value = `正在安装 ${selectedIPAFileName.value}（请保持设备屏幕常亮勿息屏）...`
+  message.info('开始安装应用，请确保设备屏幕保持常亮解锁，切勿息屏休眠...')
   try {
     const result = await InstallIPA(selectedIPAPath.value, selectedDeviceUDID.value)
     if (result.success) {
@@ -2111,25 +2167,137 @@ onBeforeUnmount(() => {
   margin-bottom: 0;
 }
 
-.device-empty {
-  padding: 24px 0;
+.device-wake-tip {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #b45309;
+  background-color: #fffbeb;
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid #fef3c7;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.4;
+}
+
+.dark-mode .device-wake-tip {
+  color: #fde68a;
+  background-color: #451a03;
+  border-color: #78350f;
+}
+
+.device-empty-container {
+  padding: 14px 0;
+}
+
+.empty-guide-box {
+  margin-top: 10px;
+  text-align: left;
+  font-size: 12px;
+  color: #4b5563;
+  background: #f9fafb;
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: 1px dashed #e5e7eb;
+}
+
+.dark-mode .empty-guide-box {
+  background: #1f1f23;
+  color: #d4d4d8;
+  border-color: #3f3f46;
+}
+
+.empty-guide-title {
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.dark-mode .empty-guide-title {
+  color: #f4f4f5;
+}
+
+.empty-guide-list {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.6;
 }
 
 .installer-action-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 20px;
 }
 
-.installer-action-card .notice-box {
+.installer-tips-container {
   flex: 1;
-  margin-bottom: 0;
+  min-width: 0;
+}
+
+.notice-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.notice-icon {
+  font-size: 14px;
+}
+
+.installer-tips-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.installer-btn-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.install-submit-btn {
+  height: 48px;
+  padding: 0 28px;
+  font-size: 15px;
+  font-weight: bold;
+}
+
+.text-blue {
+  color: #0078d4;
+}
+
+.dark-mode .text-blue {
+  color: #60a5fa;
+}
+
+.notice-info {
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+}
+
+.dark-mode .notice-info {
+  background-color: #172554;
+  border-color: #1e40af;
+  color: #bfdbfe;
 }
 
 @media (max-width: 1000px) {
   .installer-layout {
     grid-template-columns: 1fr;
+  }
+  .installer-action-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .install-submit-btn {
+    width: 100%;
   }
 }
 
