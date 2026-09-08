@@ -1,343 +1,395 @@
 <template>
-  <div class="main-container" :style="{ background: isDark ? '#18181c' : '#f5f7fa', color: isDark ? '#e0e0e0' : '#1f2225' }">
-    <!-- 1. Top Header -->
-    <header class="header-bar" :style="{ borderColor: isDark ? '#2d2d30' : '#e5e7eb', background: isDark ? '#1f1f23' : '#ffffff' }">
-      <div class="header-left">
-        <span class="logo-emoji">🍎</span>
-        <span class="logo-text">IPATool GUI</span>
-        <n-tag size="small" type="info" :bordered="false" round>Wails v2 + Go 1.26</n-tag>
-        <span class="subtitle">App Store 官方正版 / 历史旧版 IPA 下载</span>
+  <div class="app-layout" :class="{ 'dark-mode': isDark }">
+    <!-- 1. Top Header Bar -->
+    <header class="top-header">
+      <div class="header-brand">
+        <span class="brand-emoji">🍎</span>
+        <span class="brand-title">IPATool GUI</span>
+        <span class="version-badge">v2.5.0 Support</span>
+        <span class="brand-subtitle">— 苹果 App Store 官方正版 / 历史旧版 IPA 下载</span>
       </div>
 
-      <div class="header-right">
-        <!-- Proxy Quick Switch -->
-        <div class="header-badge" :style="{ borderColor: isDark ? '#333' : '#e5e7eb', background: isDark ? '#28282c' : '#f9fafb' }">
-          <n-switch v-model:value="settings.enableProxy" size="small" @update:value="onProxyToggle">
-            <template #checked>代理开</template>
-            <template #unchecked>代理关</template>
-          </n-switch>
-          <span class="badge-text" :title="settings.proxyUrl">{{ settings.proxyUrl }}</span>
+      <div class="header-tools">
+        <!-- Proxy Pill Badge -->
+        <div class="pill-badge" title="全局网络代理设置">
+          <n-switch v-model:value="settings.enableProxy" size="small" @update:value="onProxyToggle" />
+          <span class="pill-label">代理</span>
+          <span class="pill-value text-ellipsis" :title="settings.proxyUrl">{{ settings.proxyUrl }}</span>
         </div>
 
-        <!-- Account Badge -->
-        <div class="header-badge" :style="{ borderColor: isDark ? '#333' : '#e5e7eb', background: isDark ? '#28282c' : '#f9fafb' }">
-          <span class="status-dot" :class="isLoggedIn ? 'dot-online' : 'dot-offline'"></span>
-          <span class="badge-text font-bold">{{ account.name || '未登录' }}</span>
-          <span v-if="account.email" class="badge-subtext">({{ account.email }})</span>
+        <!-- Account Pill Badge -->
+        <div class="pill-badge">
+          <span class="indicator-dot" :class="isLoggedIn ? 'dot-active' : 'dot-inactive'"></span>
+          <span class="pill-value font-bold">{{ account.name || '未登录' }}</span>
+          <span v-if="account.email" class="pill-sub">({{ account.email }})</span>
         </div>
 
-        <n-button size="tiny" secondary @click="refreshAccount" :loading="isAccountLoading">
-          刷新
+        <!-- Refresh Account Button -->
+        <n-button size="small" secondary @click="refreshAccount" :loading="isAccountLoading">
+          刷新状态
         </n-button>
 
-        <!-- Dark Mode Toggle -->
-        <n-button size="small" circle quaternary @click="emit('toggleTheme')">
+        <!-- Theme Switcher -->
+        <n-button size="small" circle quaternary @click="emit('toggleTheme')" :title="isDark ? '切换到亮色模式' : '切换到深色模式'">
           <template #icon>
-            <span>{{ isDark ? '☀️' : '🌙' }}</span>
+            <span style="font-size: 14px;">{{ isDark ? '☀️' : '🌙' }}</span>
           </template>
         </n-button>
       </div>
     </header>
 
-    <!-- 2. Content Tabs -->
-    <main class="content-body">
-      <n-tabs v-model:value="activeTab" type="line" animated>
+    <!-- 2. Main Tab Content Area -->
+    <main class="main-body">
+      <n-tabs v-model:value="activeTab" type="line" animated class="custom-tabs">
+        
         <!-- TAB 1: 账号管理 -->
         <n-tab-pane name="account" tab="👤 账号管理">
-          <div class="tab-pane-content">
-            <n-grid :x-gap="16" :y-gap="16" cols="1 m:2" responsive="screen">
-              <!-- Left: Current Account Info -->
-              <n-grid-item>
-                <n-card title="当前 Apple ID 状态" size="small" hoverable>
-                  <n-space vertical size="large">
-                    <div>
-                      <div class="info-label">账号名称</div>
-                      <div class="info-value font-bold">{{ account.name || '未登录' }}</div>
-                    </div>
-                    <div>
-                      <div class="info-label">Apple ID 邮箱</div>
-                      <div class="info-value">{{ account.email || '未登录' }}</div>
-                    </div>
-                    <n-alert type="info" :show-icon="true" size="small">
-                      使用个人 Apple ID 官方凭据直接从苹果 App Store 官方服务器下载正版包，下载的文件包含您的正版签名，导入设备绝不闪退。
-                    </n-alert>
-                    <n-space>
-                      <n-button type="error" secondary :disabled="!isLoggedIn" @click="handleRevoke" :loading="isRevoking">
-                        退出登录 (Revoke)
-                      </n-button>
-                      <n-button secondary @click="handleClearKeychain" :loading="isClearing">
-                        清空本地密钥缓存
-                      </n-button>
-                    </n-space>
-                  </n-space>
-                </n-card>
-              </n-grid-item>
+          <div class="tab-scroll-container">
+            <div class="two-columns-layout">
+              <!-- Left Card: Current Account Status -->
+              <div class="fluent-card">
+                <h3 class="card-title">当前登录状态</h3>
+                
+                <div class="key-value-row">
+                  <span class="row-label">账号名称:</span>
+                  <span class="row-value font-bold">{{ account.name || '未登录' }}</span>
+                </div>
 
-              <!-- Right: Login Form -->
-              <n-grid-item>
-                <n-card title="登录 Apple ID" size="small" hoverable>
-                  <n-form label-placement="top" size="medium">
-                    <n-form-item label="Apple ID 邮箱:">
-                      <n-input v-model:value="loginForm.email" placeholder="例如: your_apple_id@icloud.com" />
-                    </n-form-item>
-                    <n-form-item label="Apple ID 密码:">
-                      <n-input v-model:value="loginForm.password" type="password" show-password-on="click" placeholder="请输入密码" @keydown.enter="handleLogin" />
-                    </n-form-item>
-                    <n-alert type="warning" :show-icon="true" size="small" class="mb-4">
-                      若账号开启了双重认证（2FA），点击登录后将自动弹出验证码输入窗口，无需在主界面提前输入。
-                    </n-alert>
-                    <n-button type="primary" block size="large" :loading="isLoggingIn" @click="handleLogin">
-                      登 录 Apple ID
-                    </n-button>
-                  </n-form>
-                </n-card>
-              </n-grid-item>
-            </n-grid>
+                <div class="key-value-row">
+                  <span class="row-label">Apple ID:</span>
+                  <span class="row-value">{{ account.email || '未登录' }}</span>
+                </div>
+
+                <div class="notice-box notice-warning">
+                  💡 提示：IPATool 使用你自己的 Apple ID 官方凭据直接从苹果 App Store 服务器下载正版 IPA，下载的文件自带你的个人授权，装入设备不会闪退。
+                </div>
+
+                <div class="btn-group-row">
+                  <n-button type="error" :disabled="!isLoggedIn" @click="handleRevoke" :loading="isRevoking">
+                    退出登录 (Revoke)
+                  </n-button>
+                  <n-button secondary @click="handleClearKeychain" :loading="isClearing" title="删除 ~/.ipatool 目录，解决密码校验失败问题">
+                    清空本地密钥库缓存
+                  </n-button>
+                </div>
+              </div>
+
+              <!-- Right Card: Login Form -->
+              <div class="fluent-card">
+                <h3 class="card-title">登录 Apple ID</h3>
+
+                <div class="form-group">
+                  <label class="field-label">Apple ID 邮箱:</label>
+                  <n-input v-model:value="loginForm.email" placeholder="例如: your_apple_id@icloud.com" size="medium" />
+                </div>
+
+                <div class="form-group">
+                  <label class="field-label">Apple ID 密码:</label>
+                  <n-input v-model:value="loginForm.password" type="password" show-password-on="click" placeholder="请输入密码" size="medium" @keydown.enter="handleLogin" />
+                </div>
+
+                <div class="notice-box notice-gray">
+                  🔒 验证说明：点击登录后，若你的 Apple ID 开启了双重认证（2FA），界面会自动弹出验证码输入弹窗，在手机上确认后输入 6 位验证码即可完成登录。
+                </div>
+
+                <n-button type="primary" block size="large" :loading="isLoggingIn" @click="handleLogin" style="height: 38px;">
+                  登 录 Apple ID
+                </n-button>
+              </div>
+            </div>
           </div>
         </n-tab-pane>
 
-        <!-- TAB 2: 应用搜索 -->
-        <n-tab-pane name="search" tab="🔍 应用搜索">
-          <div class="tab-pane-content">
-            <n-card size="small" class="mb-3">
-              <n-space align="center">
-                <n-input v-model:value="searchForm.term" placeholder="输入应用名称（如: 支付宝、微信、TikTok）" style="width: 320px;" @keydown.enter="handleSearch" />
-                <n-select v-model:value="searchForm.platform" :options="platformOptions" style="width: 130px;" />
-                <n-select v-model:value="searchForm.limit" :options="limitOptions" style="width: 100px;" />
-                <n-button type="primary" :loading="isSearching" @click="handleSearch">
+        <!-- TAB 2: 搜索应用 -->
+        <n-tab-pane name="search" tab="🔍 搜索应用">
+          <div class="tab-table-container">
+            <!-- Search Toolbar Card -->
+            <div class="fluent-card toolbar-card">
+              <div class="search-toolbar">
+                <n-input v-model:value="searchForm.term" placeholder="输入关键词搜索应用（如: 支付宝、微信、TikTok）" class="flex-1" size="medium" @keydown.enter="handleSearch" />
+                
+                <div class="select-wrapper">
+                  <span class="label-inline">平台:</span>
+                  <n-select v-model:value="searchForm.platform" :options="platformOptions" size="medium" style="width: 130px;" />
+                </div>
+
+                <div class="select-wrapper">
+                  <span class="label-inline">数量:</span>
+                  <n-select v-model:value="searchForm.limit" :options="limitOptions" size="medium" style="width: 85px;" />
+                </div>
+
+                <n-button type="primary" size="medium" :loading="isSearching" @click="handleSearch" style="width: 80px;">
                   搜 索
                 </n-button>
-              </n-space>
-            </n-card>
+              </div>
+            </div>
 
-            <n-card size="small" :bordered="false" content-style="padding: 0;">
+            <!-- Search Results Table Card -->
+            <div class="fluent-card table-card">
               <n-data-table
                 :columns="searchColumns"
                 :data="searchResults"
                 :loading="isSearching"
                 :pagination="{ pageSize: 10 }"
                 size="small"
-                :max-height="400"
+                :max-height="tableMaxHeight"
               />
-            </n-card>
+            </div>
           </div>
         </n-tab-pane>
 
         <!-- TAB 3: 历史版本 -->
         <n-tab-pane name="versions" tab="📜 历史版本">
-          <div class="tab-pane-content">
-            <n-card size="small" class="mb-3">
-              <n-space vertical size="medium">
-                <n-space align="center">
-                  <span class="form-label">Bundle ID:</span>
-                  <n-input v-model:value="versionForm.bundleId" placeholder="例如: com.alipay.iphoneclient" style="width: 320px;" @keydown.enter="handleListVersions" />
-                  <n-button type="primary" :loading="isListingVersions" @click="handleListVersions">
+          <div class="tab-table-container">
+            <!-- Versions Toolbar Card -->
+            <div class="fluent-card toolbar-card">
+              <div class="version-toolbar-rows">
+                <div class="toolbar-row">
+                  <span class="label-inline">目标 Bundle ID:</span>
+                  <n-input v-model:value="versionForm.bundleId" placeholder="例如: com.alipay.iphoneclient" style="width: 320px;" size="medium" @keydown.enter="handleListVersions" />
+                  <n-button type="primary" size="medium" :loading="isListingVersions" @click="handleListVersions">
                     获取历史版本列表
                   </n-button>
-                  <n-button secondary :disabled="versionItems.length === 0" :loading="isBatchQuerying" @click="handleBatchQuery">
+                  <n-button secondary size="medium" :disabled="versionItems.length === 0" :loading="isBatchQuerying" @click="handleBatchQuery">
                     批量查询前 30 个版本号
                   </n-button>
-                </n-space>
+                </div>
 
-                <n-space align="center">
-                  <span class="form-label">筛选版本:</span>
-                  <n-input v-model:value="versionForm.filter" placeholder="输入版本号(如 10.2.96)、体积或构建 ID 实时过滤" style="width: 320px;" />
-                  <n-tag type="info" size="small" round>共 {{ filteredVersions.length }} / {{ versionItems.length }} 个版本</n-tag>
-                </n-space>
-              </n-space>
-            </n-card>
+                <div class="toolbar-row mt-2">
+                  <span class="label-inline">筛选版本 (输入版本号如 10.2.96、体积或构建 ID):</span>
+                  <n-input v-model:value="versionForm.filter" placeholder="实时过滤筛选..." style="width: 280px;" size="small" />
+                  <span class="count-tag">共 {{ filteredVersions.length }} / {{ versionItems.length }} 个版本记录</span>
+                </div>
+              </div>
+            </div>
 
-            <n-card size="small" :bordered="false" content-style="padding: 0;">
+            <!-- Versions DataGrid Card -->
+            <div class="fluent-card table-card">
               <n-data-table
                 :columns="versionColumns"
                 :data="filteredVersions"
                 :loading="isListingVersions"
                 :virtual-scroll="true"
-                :max-height="420"
+                :max-height="tableMaxHeight"
                 size="small"
               />
-            </n-card>
+            </div>
           </div>
         </n-tab-pane>
 
         <!-- TAB 4: 下载中心 -->
         <n-tab-pane name="download" tab="⬇️ 下载中心">
-          <div class="tab-pane-content">
-            <n-card size="small" style="max-width: 720px;" hoverable>
-              <n-form label-placement="top" size="medium">
-                <n-form-item label="Bundle Identifier (应用包名):">
-                  <n-input v-model:value="downloadForm.bundleId" placeholder="例如: com.alipay.iphoneclient" />
-                </n-form-item>
+          <div class="tab-scroll-container">
+            <div class="fluent-card centered-card">
+              <h3 class="card-title">IPA 下载设置</h3>
 
-                <n-form-item label="App ID (可选):">
-                  <n-input v-model:value="downloadForm.appId" placeholder="若已填 Bundle ID 可留空" />
-                </n-form-item>
+              <div class="form-group">
+                <label class="field-label">Bundle Identifier (应用包名):</label>
+                <n-input v-model:value="downloadForm.bundleId" placeholder="例如: com.alipay.iphoneclient" size="medium" />
+              </div>
 
-                <n-form-item label="历史版本构建 ID (External Version ID，留空下载最新版):">
-                  <n-input v-model:value="downloadForm.versionId" placeholder="例如: 851864107 (支付宝 10.2.96)" />
-                </n-form-item>
+              <div class="form-group">
+                <label class="field-label">App ID (可选，若已填写 Bundle ID 可留空):</label>
+                <n-input v-model:value="downloadForm.appId" placeholder="若已填写 Bundle ID 可留空" size="medium" />
+              </div>
 
-                <n-form-item label="目标平台:">
-                  <n-select v-model:value="downloadForm.platform" :options="platformOptions" />
-                </n-form-item>
+              <div class="form-group">
+                <label class="field-label">历史版本构建 ID (External Version ID，留空下载最新版):</label>
+                <n-input v-model:value="downloadForm.versionId" placeholder="例如: 851864107 (支付宝 10.2.96)" size="medium" />
+                <div class="field-tip">* 如需下载特定旧版本（如支付宝 10.2.96），在此填入对应历史构建 ID（如 851864107）</div>
+              </div>
 
-                <n-form-item label="保存目录:">
-                  <n-input-group>
-                    <n-input v-model:value="downloadForm.outputPath" placeholder="选择保存目录" />
-                    <n-button secondary @click="handleSelectDir">浏览...</n-button>
-                  </n-input-group>
-                </n-form-item>
+              <div class="form-group">
+                <label class="field-label">目标平台:</label>
+                <n-select v-model:value="downloadForm.platform" :options="platformOptions" size="medium" />
+              </div>
 
-                <n-form-item>
-                  <n-checkbox v-model:checked="downloadForm.purchase">
-                    若当前账号未购买该应用，自动获取免费购买凭证 (--purchase)
-                  </n-checkbox>
-                </n-form-item>
+              <div class="form-group">
+                <label class="field-label">保存保存目录:</label>
+                <n-input-group>
+                  <n-input v-model:value="downloadForm.outputPath" placeholder="选择保存目录" size="medium" />
+                  <n-button secondary size="medium" @click="handleSelectDir">浏览...</n-button>
+                </n-input-group>
+              </div>
 
-                <n-space size="large">
-                  <n-button type="primary" size="large" :loading="isDownloading" @click="handleStartDownload">
-                    🚀 开始下载 IPA 包
-                  </n-button>
-                  <n-button size="large" secondary @click="handleOpenOutputDir">
-                    📁 打开保存目录
-                  </n-button>
-                </n-space>
+              <div class="form-group">
+                <n-checkbox v-model:checked="downloadForm.purchase">
+                  若账号未购买该应用，自动获取免费购买凭证 (--purchase)
+                </n-checkbox>
+              </div>
 
-                <div v-if="lastDownloadedPath" class="mt-4">
-                  <n-alert type="success" title="最近下载成功：" size="small">
-                    {{ lastDownloadedPath }}
-                  </n-alert>
-                </div>
-              </n-form>
-            </n-card>
+              <div class="btn-group-row mt-3">
+                <n-button type="primary" size="large" :loading="isDownloading" @click="handleStartDownload" style="height: 40px; padding: 0 24px;">
+                  🚀 开始下载 IPA 包
+                </n-button>
+                <n-button secondary size="large" @click="handleOpenOutputDir" style="height: 40px; padding: 0 20px;">
+                  📁 打开下载目录
+                </n-button>
+              </div>
+
+              <div v-if="lastDownloadedPath" class="notice-box notice-success mt-4">
+                <div class="font-bold mb-1">最近下载完成文件：</div>
+                <div class="text-xs break-all">{{ lastDownloadedPath }}</div>
+              </div>
+            </div>
           </div>
         </n-tab-pane>
 
         <!-- TAB 5: 已购应用 -->
         <n-tab-pane name="purchased" tab="📦 已购应用">
-          <div class="tab-pane-content">
-            <n-card size="small" class="mb-3">
-              <n-space justify="space-between" align="center">
-                <n-button type="primary" :loading="isPurchasedLoading" @click="loadPurchases">
-                  刷新已购应用列表
+          <div class="tab-table-container">
+            <div class="fluent-card toolbar-card">
+              <div class="purchased-toolbar">
+                <n-button type="primary" size="medium" :loading="isPurchasedLoading" @click="loadPurchases">
+                  刷新已购列表
                 </n-button>
-                <n-pagination
-                  v-model:page="purchasedPage"
-                  :page-size="20"
-                  :item-count="purchasedTotal"
-                  @update:page="loadPurchases"
-                />
-              </n-space>
-            </n-card>
 
-            <n-card size="small" :bordered="false" content-style="padding: 0;">
+                <div class="pagination-area">
+                  <n-button secondary size="small" :disabled="purchasedPage <= 1" @click="prevPurchasedPage">
+                    上一页
+                  </n-button>
+                  <span class="pagination-info">第 {{ purchasedPage }} 页 (共 {{ purchasedTotal }} 个应用)</span>
+                  <n-button secondary size="small" :disabled="purchasedPage * 20 >= purchasedTotal" @click="nextPurchasedPage">
+                    下一页
+                  </n-button>
+                </div>
+              </div>
+            </div>
+
+            <div class="fluent-card table-card">
               <n-data-table
                 :columns="purchasedColumns"
                 :data="purchasedApps"
                 :loading="isPurchasedLoading"
                 size="small"
-                :max-height="420"
+                :max-height="tableMaxHeight"
               />
-            </n-card>
+            </div>
           </div>
         </n-tab-pane>
 
         <!-- TAB 6: 设置 -->
         <n-tab-pane name="settings" tab="⚙️ 全局设置">
-          <div class="tab-pane-content">
-            <n-card size="small" style="max-width: 760px;" hoverable>
-              <n-form label-placement="top" size="medium">
-                <n-form-item label="内置 ipatool 引擎状态:">
-                  <n-alert type="success" size="small" :show-icon="true">
-                    <div>已自动加载程序同目录下的核心引擎</div>
-                    <div class="text-xs mt-1 text-gray-500">{{ settings.ipaToolPath }}</div>
-                  </n-alert>
-                </n-form-item>
+          <div class="tab-scroll-container">
+            <div class="fluent-card centered-card">
+              <h3 class="card-title">全局参数与配置</h3>
 
-                <n-form-item label="网络代理配置 (HTTP / SOCKS5):">
-                  <n-space vertical style="width: 100%;">
-                    <n-checkbox v-model:checked="settings.enableProxy">
-                      启用网络代理 (通过环境变量传递给 ipatool 引擎)
-                    </n-checkbox>
+              <!-- Engine Status Card -->
+              <div class="form-group">
+                <label class="field-label">内置 ipatool 引擎状态:</label>
+                <div class="status-box">
+                  <div class="status-left">
+                    <div class="flex-align-center mb-1">
+                      <span class="indicator-dot dot-active"></span>
+                      <span class="font-bold text-sm">已自动加载程序同目录下的 ipatool.exe</span>
+                    </div>
+                    <div class="text-xs text-gray-sub">{{ settings.ipaToolPath }}</div>
+                  </div>
+                  <n-tag type="success" size="small" round :bordered="false">引擎就绪</n-tag>
+                </div>
+              </div>
+
+              <!-- Passphrase -->
+              <div class="form-group">
+                <label class="field-label">本地密钥库解锁密码 (--keychain-passphrase):</label>
+                <n-input v-model:value="settings.keychainPassphrase" placeholder="输入本地密钥解锁密码（如 123456）" size="medium" />
+                <div class="notice-box notice-green mt-2">
+                  ✅ 核心功能说明：设置此密码后，IPATool 将自动在所有操作（搜索、版本查询、下载等）中以命令行参数传入此密码，彻底规避 Windows 终端下无法输入密码和直接卡死报错的 Bug！
+                </div>
+              </div>
+
+              <!-- Proxy Settings -->
+              <div class="form-group">
+                <label class="field-label">网络代理配置 (HTTP / SOCKS5):</label>
+                <div class="sub-card">
+                  <n-checkbox v-model:checked="settings.enableProxy" class="mb-3">
+                    启用网络代理 (通过环境变量传递给 ipatool 进程)
+                  </n-checkbox>
+
+                  <div class="form-group mb-2">
+                    <label class="field-label text-xs">代理地址 (例如 http://127.0.0.1:10808):</label>
                     <n-input-group>
-                      <n-input v-model:value="settings.proxyUrl" :disabled="!settings.enableProxy" placeholder="例如: http://127.0.0.1:10808" />
-                      <n-button secondary :disabled="!settings.enableProxy" :loading="isTestingProxy" @click="handleTestProxy">
+                      <n-input v-model:value="settings.proxyUrl" :disabled="!settings.enableProxy" placeholder="http://127.0.0.1:10808" size="medium" />
+                      <n-button secondary :disabled="!settings.enableProxy" :loading="isTestingProxy" @click="handleTestProxy" size="medium">
                         测试代理连接
                       </n-button>
                     </n-input-group>
-                    <div class="text-xs text-gray-400">
-                      * 国内访问 Apple App Store 认证服务通常需要开启代理，支持 Clash / v2rayN 等常见本地代理端口。
-                    </div>
-                  </n-space>
-                </n-form-item>
-
-                <n-form-item label="本地密钥库解锁密码 (--keychain-passphrase):">
-                  <n-input v-model:value="settings.keychainPassphrase" placeholder="设置本地保护密码（如 123456）" />
-                  <div class="text-xs text-green-600 mt-1">
-                    ✅ 核心保护：程序会自动以非交互模式注入该参数，彻底解决 Windows 终端卡死与密码校验失败问题。
                   </div>
-                </n-form-item>
+                  <div class="field-tip">* 国内访问 Apple App Store 认证接口通常需要代理，支持 Clash / v2rayN 等常见本地代理端口。</div>
+                </div>
+              </div>
 
-                <n-form-item label="默认 IPA 保存目录:">
-                  <n-input-group>
-                    <n-input v-model:value="settings.defaultDownloadDir" placeholder="默认保存目录" />
-                    <n-button secondary @click="handleSelectDefaultDir">浏览...</n-button>
-                  </n-input-group>
-                </n-form-item>
+              <!-- Default Download Dir -->
+              <div class="form-group">
+                <label class="field-label">默认 IPA 下载保存目录:</label>
+                <n-input-group>
+                  <n-input v-model:value="settings.defaultDownloadDir" placeholder="默认保存目录" size="medium" />
+                  <n-button secondary size="medium" @click="handleSelectDefaultDir">浏览...</n-button>
+                </n-input-group>
+              </div>
 
-                <n-form-item label="默认平台:">
-                  <n-select v-model:value="settings.defaultPlatform" :options="platformOptions" />
-                </n-form-item>
+              <!-- Default Platform -->
+              <div class="form-group">
+                <label class="field-label">默认下载平台:</label>
+                <n-select v-model:value="settings.defaultPlatform" :options="platformOptions" size="medium" />
+              </div>
 
-                <n-button type="primary" size="large" @click="handleSaveSettings">
+              <div class="mt-4">
+                <n-button type="primary" size="large" @click="handleSaveSettings" style="height: 38px; padding: 0 24px;">
                   💾 保存并应用设置
                 </n-button>
-              </n-form>
-            </n-card>
+              </div>
+            </div>
           </div>
         </n-tab-pane>
+
       </n-tabs>
     </main>
 
-    <!-- 3. Bottom Console Logs -->
-    <footer class="console-footer" :style="{ borderColor: isDark ? '#2d2d30' : '#e5e7eb', background: isDark ? '#141416' : '#1e1e20' }">
-      <div class="console-header" :style="{ borderColor: isDark ? '#222' : '#333' }">
-        <div class="console-title">
+    <!-- 3. Bottom GridSplitter Divider -->
+    <div class="panel-divider"></div>
+
+    <!-- 4. Bottom Real-time Logs Console Drawer -->
+    <footer class="console-drawer">
+      <!-- Status Header -->
+      <div class="console-header">
+        <div class="console-status-left">
           <n-spin v-if="isAnyOperationRunning" size="small" class="mr-2" />
-          <span>控制台输出日志</span>
-          <span class="text-xs text-gray-400 ml-2">({{ statusText }})</span>
+          <span class="status-prefix">状态:</span>
+          <span class="status-val">{{ statusText }}</span>
         </div>
-        <div class="console-actions">
-          <n-button v-if="isAnyOperationRunning" size="tiny" type="error" secondary @click="handleCancel">
-            取消操作
+        <div class="console-actions-right">
+          <n-button v-if="isAnyOperationRunning" size="tiny" type="error" @click="handleCancel" class="mr-2">
+            取消当前操作
           </n-button>
-          <n-button size="tiny" quaternary style="color: #ccc;" @click="clearLogs">
+          <n-button size="tiny" secondary class="btn-clear-log" @click="clearLogs">
             清空日志
           </n-button>
         </div>
       </div>
 
-      <div ref="logContainerRef" class="console-content">
-        <div v-for="(log, idx) in logLines" :key="idx" class="log-line" :class="{ 'log-err': log.includes('[ERR]') }">
+      <!-- Log Output Box -->
+      <div ref="logContainerRef" class="console-screen">
+        <div v-for="(log, idx) in logLines" :key="idx" class="console-line" :class="{ 'line-error': log.includes('[ERR]') }">
           {{ log }}
         </div>
       </div>
     </footer>
 
-    <!-- 4. 2FA Modal Dialog -->
-    <n-modal v-model:show="show2FAModal" preset="card" title="🔐 Apple ID 双重认证" style="width: 420px;" :mask-closable="false">
-      <div class="modal-body">
-        <p class="mb-4 text-sm text-gray-600">已向您的受信任 Apple 设备发送了验证码。请输入收到的 6 位验证码以完成登录：</p>
+    <!-- 5. 2FA Modal Dialog -->
+    <n-modal v-model:show="show2FAModal" preset="card" title="🔐 Apple ID 双重认证" style="width: 400px;" :mask-closable="false">
+      <div class="twofa-dialog-body">
+        <p class="twofa-desc">已向你的受信任 Apple 设备发送了验证码。请输入收到的 6 位验证码以继续登录：</p>
         <n-input
           ref="twoFAInputRef"
           v-model:value="twoFACode"
           placeholder="6 位验证码"
           maxlength="6"
           size="large"
-          class="twofa-input"
+          class="twofa-code-input"
           @keydown.enter="confirm2FA"
         />
-        <div class="flex justify-end gap-3 mt-6">
+        <div class="twofa-actions">
           <n-button secondary @click="cancel2FA">取消</n-button>
           <n-button type="primary" :disabled="twoFACode.length !== 6" :loading="isLoggingIn" @click="confirm2FA">
             提交验证
@@ -369,7 +421,7 @@ import {
   OpenInExplorer,
   CancelRunningCommand
 } from '../../wailsjs/go/main/App'
-import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime'
+import { EventsOn } from '../../wailsjs/runtime/runtime'
 import { main } from '../../wailsjs/go/models'
 
 const props = defineProps<{ isDark: boolean }>()
@@ -381,6 +433,7 @@ const dialog = useDialog()
 const activeTab = ref('versions')
 const isAnyOperationRunning = ref(false)
 const statusText = ref('就绪')
+const tableMaxHeight = ref(320)
 
 // Settings
 const settings = ref<main.Settings>({
@@ -435,19 +488,19 @@ const searchResults = ref<main.AppItem[]>([])
 
 const searchColumns = [
   { title: '应用名称', key: 'name', width: 220, ellipsis: true },
-  { title: 'Bundle ID', key: 'bundleID', width: 220, ellipsis: true },
+  { title: 'Bundle Identifier', key: 'bundleID', width: 220, ellipsis: true },
   { title: 'App ID', key: 'id', width: 120 },
-  { title: '最新版本', key: 'version', width: 100 },
+  { title: '最新版本', key: 'version', width: 90 },
   { title: '价格', key: 'displayPrice', width: 80 },
   {
     title: '操作',
     key: 'actions',
-    width: 240,
+    width: 230,
     render(row: main.AppItem) {
-      return h(NSpace, { size: 'small' }, () => [
-        h(NButton, { size: 'tiny', type: 'primary', secondary: true, onClick: () => selectAppForVersions(row) }, () => '历史版本'),
+      return h(NSpace, { size: 6 }, () => [
+        h(NButton, { size: 'tiny', type: 'primary', onClick: () => selectAppForVersions(row) }, () => '历史版本'),
         h(NButton, { size: 'tiny', secondary: true, onClick: () => selectAppForDownload(row) }, () => '直接下载'),
-        h(NButton, { size: 'tiny', tertiary: true, onClick: () => handlePurchaseApp(row.bundleID) }, () => '获取许可')
+        h(NButton, { size: 'tiny', secondary: true, onClick: () => handlePurchaseApp(row.bundleID) }, () => '获取许可')
       ])
     }
   }
@@ -486,35 +539,35 @@ const filteredVersions = computed(() => {
 const versionColumns = [
   { title: '构建 ID (External Version ID)', key: 'versionId', width: 240 },
   {
-    title: '对应版本号',
+    title: '对应版本号 (Display Version)',
     key: 'displayVersion',
-    width: 140,
+    width: 150,
     render(row: VersionItem) {
       if (row.displayVersion === '未查询') {
-        return h('span', { style: 'color: #999; font-style: italic;' }, '未查询')
+        return h('span', { style: 'color: #888; font-style: italic;' }, '未查询')
       }
-      return h('span', { style: 'font-weight: bold; color: #10b981;' }, row.displayVersion)
+      return h('span', { style: 'font-weight: 600; color: #107C41;' }, row.displayVersion)
     }
   },
-  { title: '文件体积 (大小)', key: 'fileSize', width: 140 },
-  { title: '发布日期', key: 'releaseDate', width: 180 },
+  { title: '文件体积 (大小)', key: 'fileSize', width: 130 },
+  { title: '发布日期', key: 'releaseDate', width: 150 },
   {
     title: '操作',
     key: 'actions',
-    width: 200,
+    width: 220,
     render(row: VersionItem) {
-      return h(NSpace, { size: 'small' }, () => [
+      return h(NSpace, { size: 6 }, () => [
         h(NButton, {
           size: 'tiny',
           secondary: true,
           loading: row.isQuerying,
           onClick: () => querySingleVersionMetadata(row)
-        }, () => '查询详情/体积'),
+        }, () => '查询详情'),
         h(NButton, {
           size: 'tiny',
           type: 'primary',
           onClick: () => pickVersionForDownload(row.versionId)
-        }, () => '一键下载此版')
+        }, () => '一键下载此版本')
       ])
     }
   }
@@ -540,17 +593,17 @@ const purchasedApps = ref<main.AppItem[]>([])
 
 const purchasedColumns = [
   { title: '应用名称', key: 'name', width: 220, ellipsis: true },
-  { title: 'Bundle ID', key: 'bundleID', width: 220, ellipsis: true },
+  { title: 'Bundle Identifier', key: 'bundleID', width: 220, ellipsis: true },
   { title: 'App ID', key: 'id', width: 120 },
-  { title: '获取时间', key: 'purchaseDate', width: 180 },
+  { title: '购买/获取时间', key: 'purchaseDate', width: 160 },
   {
     title: '操作',
     key: 'actions',
     width: 180,
     render(row: main.AppItem) {
-      return h(NSpace, { size: 'small' }, () => [
-        h(NButton, { size: 'tiny', type: 'primary', secondary: true, onClick: () => selectAppForVersions(row) }, () => '历史版本'),
-        h(NButton, { size: 'tiny', secondary: true, onClick: () => selectAppForDownload(row) }, () => '下载')
+      return h(NSpace, { size: 6 }, () => [
+        h(NButton, { size: 'tiny', type: 'primary', onClick: () => selectAppForVersions(row) }, () => '历史版本'),
+        h(NButton, { size: 'tiny', secondary: true, onClick: () => selectAppForDownload(row) }, () => '直接下载')
       ])
     }
   }
@@ -565,7 +618,7 @@ const logContainerRef = ref<HTMLElement | null>(null)
 
 function appendLog(line: string) {
   logLines.value.push(line)
-  if (logLines.value.length > 500) {
+  if (logLines.value.length > 600) {
     logLines.value.shift()
   }
   nextTick(() => {
@@ -595,16 +648,16 @@ async function loadSettings() {
 async function onProxyToggle(val: boolean) {
   settings.value.enableProxy = val
   await SaveSettings(settings.value)
-  message.info(val ? '已开启代理' : '已关闭代理')
+  message.info(val ? '已开启网络代理' : '已关闭网络代理')
 }
 
 async function refreshAccount() {
   isAccountLoading.value = true
-  statusText.value = '获取账号信息...'
+  statusText.value = '正在获取账号信息...'
   try {
     const res = await GetAccountInfo()
     account.value = res
-    statusText.value = res.success ? `已登录: ${res.name}` : '未登录'
+    statusText.value = res.success ? `已登录: ${res.name} (${res.email})` : '未检测到已登录的 Apple ID'
   } catch (err: any) {
     account.value = { name: '', email: '', success: false }
     statusText.value = '未登录'
@@ -615,13 +668,13 @@ async function refreshAccount() {
 
 async function handleLogin() {
   if (!loginForm.value.email || !loginForm.value.password) {
-    message.warning('请输入 Apple ID 邮箱与密码')
+    message.warning('请输入 Apple ID 邮箱和密码！')
     return
   }
 
   isLoggingIn.value = true
   isAnyOperationRunning.value = true
-  statusText.value = '正在验证账号与密码...'
+  statusText.value = '正在验证 Apple ID 账号与密码...'
 
   try {
     const res = await Login(loginForm.value.email, loginForm.value.password, '')
@@ -654,20 +707,20 @@ async function handleLogin() {
 
 async function confirm2FA() {
   if (twoFACode.value.length !== 6) {
-    message.warning('请输入 6 位数字验证码')
+    message.warning('请输入正确的 6 位数字验证码！')
     return
   }
 
   isLoggingIn.value = true
   isAnyOperationRunning.value = true
-  statusText.value = '正在提交 2FA 验证码...'
+  statusText.value = '正在提交 2FA 验证码并完成登录...'
 
   try {
     const res = await Login(loginForm.value.email, loginForm.value.password, twoFACode.value)
     if (res.success) {
       show2FAModal.value = false
       account.value = res.account
-      message.success(`登录成功: ${res.account.name}`)
+      message.success(`登录成功！用户: ${res.account.name}`)
       loginForm.value.password = ''
       twoFACode.value = ''
       statusText.value = `登录成功: ${res.account.name}`
@@ -686,13 +739,13 @@ async function confirm2FA() {
 function cancel2FA() {
   show2FAModal.value = false
   twoFACode.value = ''
-  statusText.value = '已取消 2FA 验证'
+  statusText.value = '用户取消了双重认证验证。'
 }
 
 async function handleRevoke() {
   dialog.warning({
-    title: '确认注销',
-    content: '确定要注销当前 Apple ID 凭据并退出登录吗？',
+    title: '确认退出',
+    content: '确定要退出当前账号并清除登录凭据吗？',
     positiveText: '确定退出',
     negativeText: '取消',
     onPositiveClick: async () => {
@@ -702,7 +755,8 @@ async function handleRevoke() {
         const ok = await Revoke()
         if (ok) {
           account.value = { name: '', email: '', success: false }
-          message.success('已注销登录凭据')
+          message.success('已成功注销登录凭据')
+          statusText.value = '已退出登录'
         }
       } catch (err: any) {
         message.error(`注销失败: ${err}`)
@@ -716,18 +770,18 @@ async function handleRevoke() {
 
 async function handleClearKeychain() {
   dialog.warning({
-    title: '清空本地密钥缓存',
-    content: '将删除 ~/.ipatool 目录，解决本地密钥库损坏或校验密码错误的问题。确定清空吗？',
-    positiveText: '确定清空',
+    title: '清空本地密钥库缓存',
+    content: '此操作将删除本地用户目录下的 .ipatool 密钥文件夹 (%USERPROFILE%\\.ipatool)，重置所有本地缓存。确定要清理吗？',
+    positiveText: '确定清理',
     negativeText: '取消',
     onPositiveClick: async () => {
       isClearing.value = true
       try {
         await ClearKeychainCache()
-        message.success('本地密钥缓存已彻底清空')
+        message.success('本地密钥缓存已彻底清除！')
         await refreshAccount()
       } catch (err: any) {
-        message.error(`清空失败: ${err}`)
+        message.error(`清理失败: ${err}`)
       } finally {
         isClearing.value = false
       }
@@ -744,12 +798,12 @@ async function handleSearch() {
 
   isSearching.value = true
   isAnyOperationRunning.value = true
-  statusText.value = `正在搜索: ${searchForm.value.term}...`
+  statusText.value = `正在搜索 "${searchForm.value.term}"...`
 
   try {
     const res = await Search(searchForm.value.term, searchForm.value.limit, searchForm.value.platform)
     searchResults.value = res.apps || []
-    statusText.value = `搜索完成，找到 ${searchResults.value.length} 个应用`
+    statusText.value = `搜索完成，找到 ${searchResults.value.length} 个应用。`
   } catch (err: any) {
     message.error(`搜索失败: ${err}`)
     statusText.value = '搜索失败'
@@ -779,12 +833,12 @@ async function handlePurchaseApp(bundleId: string) {
   try {
     const res = await Purchase(bundleId)
     if (res.alreadyOwned) {
-      message.info('您已拥有该应用的授权凭据，无需重复获取。')
+      message.info('你已经拥有该应用的许可，无需重复购买。')
     } else {
-      message.success('获取授权成功！')
+      message.success('获取免费许可成功！')
     }
   } catch (err: any) {
-    message.error(`获取授权失败: ${err}`)
+    message.error(`获取许可失败: ${err}`)
   } finally {
     isAnyOperationRunning.value = false
   }
@@ -799,7 +853,7 @@ async function handleListVersions() {
 
   isListingVersions.value = true
   isAnyOperationRunning.value = true
-  statusText.value = `正在获取 ${versionForm.value.bundleId} 历史版本...`
+  statusText.value = `正在查询 ${versionForm.value.bundleId} 的历史版本构建 ID 列表...`
 
   try {
     const res = await ListVersions(versionForm.value.bundleId, versionForm.value.appId)
@@ -809,10 +863,10 @@ async function handleListVersions() {
       fileSize: '-',
       releaseDate: '-'
     }))
-    statusText.value = `获取成功，共 ${versionItems.value.length} 个历史版本构建 ID`
+    statusText.value = `共获取到 ${versionItems.value.length} 个历史版本构建 ID。`
   } catch (err: any) {
-    message.error(`获取版本列表失败: ${err}`)
-    statusText.value = '获取版本列表失败'
+    message.error(`查询历史版本失败: ${err}`)
+    statusText.value = '查询历史版本失败'
   } finally {
     isListingVersions.value = false
     isAnyOperationRunning.value = false
@@ -822,16 +876,16 @@ async function handleListVersions() {
 async function querySingleVersionMetadata(row: VersionItem) {
   row.isQuerying = true
   isAnyOperationRunning.value = true
-  statusText.value = `正在查询版本 ID ${row.versionId} 详情...`
+  statusText.value = `正在查询版本 ID ${row.versionId} 的版本详情...`
 
   try {
     const res = await GetVersionMetadata(versionForm.value.bundleId, row.versionId, versionForm.value.appId)
     row.displayVersion = res.displayVersion
     row.fileSize = res.displayFileSize
     row.releaseDate = res.releaseDate ? new Date(res.releaseDate).toLocaleDateString() : '-'
-    statusText.value = `版本 ${row.versionId} -> ${res.displayVersion} (${res.displayFileSize})`
+    statusText.value = `版本 ID ${row.versionId} 对应版本号: ${res.displayVersion} (体积: ${res.displayFileSize}, 发布日期: ${row.releaseDate})`
   } catch (err: any) {
-    message.error(`查询详情失败: ${err}`)
+    message.error(`查询版本详情失败: ${err}`)
   } finally {
     row.isQuerying = false
     isAnyOperationRunning.value = false
@@ -842,7 +896,7 @@ async function handleBatchQuery() {
   const count = Math.min(versionItems.value.length, 30)
   dialog.info({
     title: '批量查询确认',
-    content: `即将批量查询前 ${count} 个历史版本的具体版本号与体积大小，耗时约 15~30 秒，是否继续？`,
+    content: `即将批量查询前 ${count} 个版本的详细版本号（每秒约查询 2 个），是否继续？`,
     positiveText: '开始查询',
     negativeText: '取消',
     onPositiveClick: async () => {
@@ -853,7 +907,7 @@ async function handleBatchQuery() {
         const item = versionItems.value[i]
         if (item.displayVersion !== '未查询') continue
 
-        statusText.value = `批量查询进度 (${i + 1}/${count}): ${item.versionId}...`
+        statusText.value = `批量查询中 (${i + 1}/${count}): ${item.versionId}...`
         try {
           const res = await GetVersionMetadata(versionForm.value.bundleId, item.versionId, versionForm.value.appId)
           item.displayVersion = res.displayVersion
@@ -867,8 +921,8 @@ async function handleBatchQuery() {
 
       isBatchQuerying.value = false
       isAnyOperationRunning.value = false
-      statusText.value = '批量查询完成'
-      message.success('前 30 个版本详情批量查询完毕')
+      statusText.value = '批量版本查询完成。'
+      message.success('批量查询完成')
     }
   })
 }
@@ -899,8 +953,8 @@ async function handleStartDownload() {
 
   isDownloading.value = true
   isAnyOperationRunning.value = true
-  const verDesc = downloadForm.value.versionId ? `版本 ID: ${downloadForm.value.versionId}` : '最新版'
-  statusText.value = `正在下载 ${downloadForm.value.bundleId} (${verDesc})...`
+  const verLabel = downloadForm.value.versionId ? `指定版本 ID: ${downloadForm.value.versionId}` : '最新版本'
+  statusText.value = `正在下载 ${downloadForm.value.bundleId} (${verLabel})...`
 
   try {
     const res = await Download(
@@ -913,10 +967,10 @@ async function handleStartDownload() {
     )
     if (res.success) {
       lastDownloadedPath.value = res.output
-      statusText.value = `下载成功: ${res.output}`
+      statusText.value = `下载成功！文件路径: ${res.output}`
       dialog.success({
-        title: '🎉 下载成功',
-        content: `文件已保存至:\n${res.output}\n\n是否立即打开所在文件夹？`,
+        title: '下载完成',
+        content: `下载成功！\n保存路径: ${res.output}\n\n是否立即打开所在文件夹？`,
         positiveText: '打开所在目录',
         negativeText: '关闭',
         onPositiveClick: () => {
@@ -947,15 +1001,15 @@ function handleOpenOutputDir() {
 async function loadPurchases() {
   isPurchasedLoading.value = true
   isAnyOperationRunning.value = true
-  statusText.value = `加载第 ${purchasedPage.value} 页已购应用...`
+  statusText.value = `正在加载第 ${purchasedPage.value} 页已购应用列表...`
 
   try {
     const res = await ListPurchases(purchasedPage.value, 20)
     purchasedApps.value = res.apps || []
     purchasedTotal.value = res.totalCount || 0
-    statusText.value = `已购应用加载完成 (共 ${res.totalCount} 个)`
+    statusText.value = `已购应用加载完成 (第 ${purchasedPage.value} 页，共 ${res.totalCount} 个)。`
   } catch (err: any) {
-    message.error(`加载已购失败: ${err}`)
+    message.error(`加载已购列表失败: ${err}`)
     statusText.value = '加载失败'
   } finally {
     isPurchasedLoading.value = false
@@ -963,10 +1017,24 @@ async function loadPurchases() {
   }
 }
 
+function prevPurchasedPage() {
+  if (purchasedPage.value > 1) {
+    purchasedPage.value--
+    loadPurchases()
+  }
+}
+
+function nextPurchasedPage() {
+  if (purchasedPage.value * 20 < purchasedTotal.value) {
+    purchasedPage.value++
+    loadPurchases()
+  }
+}
+
 // Settings
 async function handleSelectDefaultDir() {
   try {
-    const dir = await SelectDirectory('选择默认下载目录', settings.value.defaultDownloadDir)
+    const dir = await SelectDirectory('选择默认下载保存目录', settings.value.defaultDownloadDir)
     if (dir) {
       settings.value.defaultDownloadDir = dir
       downloadForm.value.outputPath = dir
@@ -978,12 +1046,15 @@ async function handleSelectDefaultDir() {
 
 async function handleTestProxy() {
   isTestingProxy.value = true
+  statusText.value = '正在测试网络代理连接...'
   try {
     const res = await TestProxy(settings.value.proxyUrl)
     if (res.success) {
       message.success(res.message)
+      statusText.value = '网络代理测试成功！'
     } else {
       message.error(res.message)
+      statusText.value = '网络代理测试失败'
     }
   } catch (err: any) {
     message.error(`测试异常: ${err}`)
@@ -997,7 +1068,7 @@ async function handleSaveSettings() {
     await SaveSettings(settings.value)
     downloadForm.value.outputPath = settings.value.defaultDownloadDir
     downloadForm.value.platform = settings.value.defaultPlatform
-    message.success('全局设置保存成功')
+    message.success('设置已保存并生效！')
   } catch (err: any) {
     message.error(`保存失败: ${err}`)
   }
@@ -1020,158 +1091,514 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.main-container {
+.app-layout {
   display: flex;
   flex-direction: column;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  user-select: none;
+  background-color: #f3f4f6;
+  color: #1f2937;
+  font-family: Segoe UI, "Microsoft YaHei UI", sans-serif;
 }
 
-.header-bar {
+.dark-mode {
+  background-color: #18181b;
+  color: #e4e4e7;
+}
+
+/* 1. Header */
+.top-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 18px;
-  border-bottom: 1px solid;
+  padding: 10px 20px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
   flex-shrink: 0;
 }
 
-.header-left {
+.dark-mode .top-header {
+  background-color: #1f1f23;
+  border-bottom-color: #2e2e32;
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+}
+
+.brand-emoji {
+  font-size: 20px;
+  margin-right: 6px;
+}
+
+.brand-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #0078d4;
+  margin-right: 12px;
+}
+
+.version-badge {
+  background-color: #e0f2fe;
+  color: #0369a1;
+  font-weight: 600;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.dark-mode .version-badge {
+  background-color: #0c4a6e;
+  color: #7dd3fc;
+}
+
+.brand-subtitle {
+  font-size: 13px;
+  color: #6b7280;
+  margin-left: 10px;
+}
+
+.dark-mode .brand-subtitle {
+  color: #9ca3af;
+}
+
+.header-tools {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.logo-emoji {
-  font-size: 20px;
+.pill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 4px 12px;
+  font-size: 12px;
 }
 
-.logo-text {
+.dark-mode .pill-badge {
+  background-color: #27272a;
+  border-color: #3f3f46;
+}
+
+.pill-label {
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.dark-mode .pill-label {
+  color: #a1a1aa;
+}
+
+.pill-value {
+  color: #111827;
+}
+
+.dark-mode .pill-value {
+  color: #f4f4f5;
+}
+
+.pill-sub {
+  color: #6b7280;
+  font-size: 11px;
+}
+
+.indicator-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dot-active {
+  background-color: #10b981;
+}
+
+.dot-inactive {
+  background-color: #ef4444;
+}
+
+/* 2. Main Body Tabs */
+.main-body {
+  flex: 1;
+  overflow: hidden;
+  padding: 12px 18px 4px 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-scroll-container {
+  height: calc(100vh - 300px);
+  overflow-y: auto;
+  padding-top: 8px;
+}
+
+.tab-table-container {
+  height: calc(100vh - 300px);
+  display: flex;
+  flex-direction: column;
+  padding-top: 8px;
+}
+
+/* Cards */
+.fluent-card {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 18px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.dark-mode .fluent-card {
+  background-color: #202023;
+  border-color: #333338;
+}
+
+.toolbar-card {
+  padding: 12px;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.table-card {
+  flex: 1;
+  padding: 0;
+  overflow: hidden;
+}
+
+.card-title {
+  margin: 0 0 14px 0;
   font-size: 16px;
   font-weight: bold;
 }
 
-.subtitle {
-  font-size: 12px;
-  color: #888;
-  margin-left: 6px;
+.two-columns-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
 }
 
-.header-right {
+.centered-card {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+/* Form Styles */
+.form-group {
+  margin-bottom: 12px;
+}
+
+.field-label {
+  display: block;
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.dark-mode .field-label {
+  color: #9ca3af;
+}
+
+.field-tip {
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.key-value-row {
+  display: flex;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.row-label {
+  width: 90px;
+  color: #6b7280;
+}
+
+.dark-mode .row-label {
+  color: #9ca3af;
+}
+
+.row-value {
+  flex: 1;
+}
+
+/* Notice Box */
+.notice-box {
+  padding: 10px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
+.notice-warning {
+  background-color: #fef3c7;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+
+.dark-mode .notice-warning {
+  background-color: #451a03;
+  border-color: #78350f;
+  color: #fde68a;
+}
+
+.notice-gray {
+  background-color: #f3f4f6;
+  color: #4b5563;
+}
+
+.dark-mode .notice-gray {
+  background-color: #27272a;
+  color: #d4d4d8;
+}
+
+.notice-success {
+  background-color: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+}
+
+.dark-mode .notice-success {
+  background-color: #064e3b;
+  border-color: #047857;
+  color: #a7f3d0;
+}
+
+.notice-green {
+  background-color: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+}
+
+.dark-mode .notice-green {
+  background-color: #064e3b;
+  border-color: #047857;
+  color: #a7f3d0;
+}
+
+/* Toolbars */
+.search-toolbar {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.header-badge {
+.version-toolbar-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.toolbar-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
-  border-radius: 14px;
-  border: 1px solid;
-  font-size: 12px;
+  gap: 8px;
 }
 
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+.purchased-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.dot-online {
-  background-color: #10b981;
+.pagination-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.dot-offline {
-  background-color: #ef4444;
-}
-
-.badge-text {
-  font-size: 12px;
-}
-
-.badge-subtext {
-  font-size: 11px;
-  color: #888;
-}
-
-.content-body {
-  flex: 1;
-  padding: 12px 18px;
-  overflow-y: auto;
-}
-
-.tab-pane-content {
-  padding-top: 6px;
-}
-
-.info-label {
-  font-size: 12px;
-  color: #888;
-  margin-bottom: 2px;
-}
-
-.info-value {
-  font-size: 14px;
-}
-
-.form-label {
+.pagination-info {
   font-size: 13px;
+  color: #4b5563;
   font-weight: 500;
 }
 
-.console-footer {
+.label-inline {
+  font-size: 13px;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.select-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.count-tag {
+  font-size: 12px;
+  color: #6b7280;
+  margin-left: 6px;
+}
+
+.btn-group-row {
+  display: flex;
+  gap: 10px;
+}
+
+.sub-card {
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  padding: 12px;
+}
+
+.dark-mode .sub-card {
+  background-color: #1f1f23;
+  border-color: #333338;
+}
+
+.status-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  padding: 10px 14px;
+}
+
+.dark-mode .status-box {
+  background-color: #1f1f23;
+  border-color: #333338;
+}
+
+.flex-align-center {
+  display: flex;
+  align-items: center;
+}
+
+.mr-2 { margin-right: 8px; }
+.mt-2 { margin-top: 8px; }
+.mt-3 { margin-top: 12px; }
+.mt-4 { margin-top: 16px; }
+.mb-1 { margin-bottom: 4px; }
+.mb-2 { margin-bottom: 8px; }
+.mb-3 { margin-bottom: 12px; }
+.flex-1 { flex: 1; }
+.font-bold { font-weight: bold; }
+.font-semibold { font-weight: 600; }
+.text-xs { font-size: 11px; }
+.text-sm { font-size: 13px; }
+.text-gray-sub { color: #6b7280; }
+.break-all { word-break: break-all; }
+
+.text-ellipsis {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 3. Splitter Divider */
+.panel-divider {
+  height: 4px;
+  background-color: #e5e7eb;
+  cursor: ns-resize;
+  flex-shrink: 0;
+}
+
+.dark-mode .panel-divider {
+  background-color: #27272a;
+}
+
+/* 4. Console Drawer */
+.console-drawer {
   height: 180px;
   display: flex;
   flex-direction: column;
-  border-top: 1px solid;
+  background-color: #1e1e1e;
   flex-shrink: 0;
 }
 
 .console-header {
+  height: 32px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 4px 14px;
-  border-bottom: 1px solid;
-  background: rgba(0, 0, 0, 0.15);
+  padding: 0 14px;
+  background-color: #252526;
+  border-bottom: 1px solid #333333;
+  flex-shrink: 0;
 }
 
-.console-title {
+.console-status-left {
+  display: flex;
+  align-items: center;
   font-size: 12px;
+}
+
+.status-prefix {
+  color: #858585;
+  margin-right: 6px;
+}
+
+.status-val {
+  color: #cccccc;
   font-weight: 600;
-  color: #aaa;
+}
+
+.console-actions-right {
   display: flex;
   align-items: center;
 }
 
-.console-content {
-  flex: 1;
-  padding: 8px 14px;
-  overflow-y: auto;
-  font-family: Consolas, "Courier New", monospace;
-  font-size: 11.5px;
-  color: #ccc;
-  line-height: 1.5;
-  background: #18181b;
+.btn-clear-log {
+  background-color: #333333 !important;
+  color: #cccccc !important;
+  border: none !important;
 }
 
-.log-line {
+.console-screen {
+  flex: 1;
+  padding: 8px 12px;
+  overflow-y: auto;
+  font-family: Consolas, Cascadia Code, "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #d4d4d4;
+  background-color: #1e1e1e;
+}
+
+.console-line {
   word-break: break-all;
   white-space: pre-wrap;
 }
 
-.log-err {
+.line-error {
   color: #f87171;
 }
 
-.twofa-input {
+/* 2FA Modal */
+.twofa-dialog-body {
+  padding: 8px 0;
+}
+
+.twofa-desc {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.twofa-code-input {
   text-align: center;
   font-size: 24px;
   font-weight: bold;
-  letter-spacing: 6px;
+  letter-spacing: 8px;
+  margin-bottom: 20px;
+}
+
+.twofa-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 </style>
