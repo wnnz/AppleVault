@@ -615,11 +615,11 @@ const filteredVersions = computed(() => {
 })
 
 const versionColumns = [
-  { title: '构建 ID (External Version ID)', key: 'versionId', width: 240 },
+  { title: '构建 ID', key: 'versionId', width: 220 },
   {
-    title: '对应版本号 (Display Version)',
+    title: '对应版本号',
     key: 'displayVersion',
-    width: 150,
+    width: 140,
     render(row: VersionItem) {
       if (row.displayVersion === '未查询') {
         return h('span', { style: 'color: #888; font-style: italic;' }, '未查询')
@@ -627,7 +627,7 @@ const versionColumns = [
       return h('span', { style: 'font-weight: 600; color: #107C41;' }, row.displayVersion)
     }
   },
-  { title: '文件体积 (大小)', key: 'fileSize', width: 130 },
+  { title: '文件体积', key: 'fileSize', width: 130 },
   { title: '发布日期', key: 'releaseDate', width: 150 },
   {
     title: '操作',
@@ -670,7 +670,7 @@ const purchasedColumns = [
   { title: '应用名称', key: 'name', width: 220, ellipsis: true },
   { title: 'Bundle Identifier', key: 'bundleID', width: 220, ellipsis: true },
   { title: 'App ID', key: 'id', width: 120 },
-  { title: '购买/获取时间', key: 'purchaseDate', width: 160 },
+  { title: '获取时间', key: 'purchaseDate', width: 160 },
   {
     title: '操作',
     key: 'actions',
