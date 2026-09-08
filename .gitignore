@@ -1,22 +1,3 @@
-## Build and Output
-[Bb]in/
-[Oo]bj/
-[Ll]og/
-[Ll]ogs/
-
-## Visual Studio
-.vs/
-*.user
-*.suo
-*.userosscache
-*.sln.docstates
-
-## User-specific / Local
-settings.json
-
-## OS Generated
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-$RECYCLE.BIN/
-.DS_Store
+build/bin
+node_modules
+frontend/dist
