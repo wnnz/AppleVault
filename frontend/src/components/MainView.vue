@@ -4,7 +4,7 @@
     :class="[
       `theme-${effectiveTheme}`,
       isDarkTheme ? 'dark-mode' : 'light-mode',
-      isHanddrawn ? 'handdrawn-mode' : 'minimal-mode'
+      'minimal-mode'
     ]"
   >
     <!-- Left Modern Sidebar -->
@@ -19,7 +19,6 @@
         <div class="brand-text">
           <div class="brand-title-row">
             <div class="brand-name">果仓助手</div>
-            <span v-if="isHanddrawn" class="brand-handdrawn-crown" aria-hidden="true">👑</span>
             <div class="brand-tag">v1.0</div>
           </div>
           <div class="brand-sub">AppleVault</div>
@@ -30,20 +29,12 @@
       <nav class="sidebar-nav">
         <div class="nav-section-title">
           <span>核心功能</span>
-          <span v-if="isHanddrawn" class="nav-title-sparkle" aria-hidden="true">✦</span>
         </div>
         <button
           class="nav-item"
           :class="{ active: activeTab === 'search' }"
           @click="activeTab = 'search'"
         >
-          <span v-if="isHanddrawn" class="nav-doodle-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="10.5" cy="10.5" r="6" />
-              <path d="M15 15l5.5 5.5" stroke-width="2.4" />
-              <path d="M8 8.5a3 3 0 0 1 3-3" stroke-width="1.3" opacity="0.8" />
-            </svg>
-          </span>
           <span class="nav-label">应用搜索</span>
         </button>
 
@@ -52,14 +43,6 @@
           :class="{ active: activeTab === 'versions' }"
           @click="activeTab = 'versions'"
         >
-          <span v-if="isHanddrawn" class="nav-doodle-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="13" r="7.5" />
-              <polyline points="12 9 12 13 15 14.5" stroke-width="2.2" />
-              <path d="M9 3.5h6" stroke-width="2" />
-              <path d="M12 3.5v2" stroke-width="2" />
-            </svg>
-          </span>
           <span class="nav-label">历史版本</span>
         </button>
 
@@ -68,13 +51,6 @@
           :class="{ active: activeTab === 'download' }"
           @click="activeTab = 'download'"
         >
-          <span v-if="isHanddrawn" class="nav-doodle-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M5 16.5c-2.2 0-3.8-1.7-3.8-3.8 0-1.8 1.4-3.4 3.2-3.7.6-3 3.2-5 6.4-5 3.3 0 6 2.2 6.5 5.2 2 .4 3.5 2 3.5 4.1 0 2.3-1.9 4.2-4.2 4.2H5z" />
-              <path d="M12 11.5v6.5" stroke-width="2.2" />
-              <path d="M9.5 15.5l2.5 2.5 2.5-2.5" stroke-width="2.2" />
-            </svg>
-          </span>
           <span class="nav-label">下载中心</span>
           <span v-if="activeTaskCount > 0" class="nav-badge">{{ activeTaskCount }}</span>
         </button>
@@ -84,13 +60,6 @@
           :class="{ active: activeTab === 'purchased' }"
           @click="activeTab = 'purchased'"
         >
-          <span v-if="isHanddrawn" class="nav-doodle-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M6 8h12l1.5 11.5a1.5 1.5 0 0 1-1.5 1.5H6a1.5 1.5 0 0 1-1.5-1.5L6 8z" />
-              <path d="M9 10V6a3 3 0 0 1 6 0v4" stroke-width="2" />
-              <path d="M12 12.5v2.5" stroke-width="1.8" />
-            </svg>
-          </span>
           <span class="nav-label">已购应用</span>
         </button>
 
@@ -99,31 +68,17 @@
           :class="{ active: activeTab === 'installer' }"
           @click="activeTab = 'installer'"
         >
-          <span v-if="isHanddrawn" class="nav-doodle-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="6.5" y="3.5" width="11" height="17" rx="3" />
-              <circle cx="12" cy="17.5" r="1" fill="currentColor" />
-              <line x1="10" y1="6.5" x2="14" y2="6.5" stroke-width="1.6" />
-            </svg>
-          </span>
           <span class="nav-label">设备直装</span>
         </button>
 
         <div class="nav-section-title mt-4">
           <span>偏好与设置</span>
-          <span v-if="isHanddrawn" class="nav-title-sparkle" aria-hidden="true">✦</span>
         </div>
         <button
           class="nav-item"
           :class="{ active: activeTab === 'account' }"
           @click="activeTab = 'account'"
         >
-          <span v-if="isHanddrawn" class="nav-doodle-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="8.5" r="4.2" />
-              <path d="M4.5 19.5c0-3.3 3.3-5.5 7.5-5.5s7.5 2.2 7.5 5.5" />
-            </svg>
-          </span>
           <span class="nav-label">账号中心</span>
           <span class="account-dot" :class="isLoggedIn ? 'dot-online' : 'dot-offline'"></span>
         </button>
@@ -133,12 +88,6 @@
           :class="{ active: activeTab === 'settings' }"
           @click="activeTab = 'settings'"
         >
-          <span v-if="isHanddrawn" class="nav-doodle-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
-          </span>
           <span class="nav-label">系统设置</span>
         </button>
 
@@ -147,35 +96,12 @@
           :class="{ active: activeTab === 'about' }"
           @click="activeTab = 'about'"
         >
-          <span v-if="isHanddrawn" class="nav-doodle-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="8.5" />
-              <line x1="12" y1="11" x2="12" y2="16.5" stroke-width="2.2" />
-              <circle cx="12" cy="7.5" r="1.2" fill="currentColor" />
-            </svg>
-          </span>
           <span class="nav-label">关于软件</span>
         </button>
       </nav>
 
       <!-- Sidebar Footer (Account & Quick Controls) -->
       <div class="sidebar-footer">
-        <!-- 手绘模式小插图 (纯手绘插画贴纸，取代原文字框) -->
-        <div v-if="isHanddrawn" class="handdrawn-sidebar-sticker" aria-hidden="true">
-          <svg viewBox="0 0 140 38" width="140" height="38" fill="none" class="sidebar-sticker-svg">
-            <ellipse cx="68" cy="24" rx="55" ry="9" class="doodle-ground-wash" />
-            <g transform="translate(42, 6)">
-              <path d="M12 7c-4-4-10-1-10 4.5 0 6.5 5 11.5 10 13.5 5-2 10-7 10-13.5C22 6 16 3 12 7z" class="doodle-apple-body" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
-              <path d="M12 7c-.5-3.5 1-5.5 3-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-              <path d="M13 3c2-2.5 5-2 6-.5.5 2-1 3.5-3.5 3.5-1.5 0-2.2-.5-2.5-3z" class="doodle-leaf" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" />
-              <circle cx="8" cy="12" r="1.2" fill="#ffffff" opacity="0.8" />
-            </g>
-            <path d="M82 14l1.2 2.8 2.8 1.2-2.8 1.2-1.2 2.8-1.2-2.8-2.8-1.2 2.8-1.2 1.2-2.8z" class="doodle-star" />
-            <path d="M26 18l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2z" class="doodle-star doodle-star-small" />
-            <circle cx="98" cy="22" r="1.4" class="doodle-sparkle" />
-            <circle cx="18" cy="12" r="1.2" class="doodle-sparkle" />
-          </svg>
-        </div>
 
         <!-- Account Quick Card -->
         <div class="sidebar-account-card" @click="activeTab = 'account'">
@@ -229,8 +155,7 @@
                 class="theme-popover-menu"
                 :class="[
                   `theme-${effectiveTheme}`,
-                  isDarkTheme ? 'is-dark' : 'is-light',
-                  isHanddrawn ? 'is-handdrawn' : 'is-minimal'
+                  isDarkTheme ? 'is-dark' : 'is-light'
                 ]"
               >
                 <div class="theme-popover-header">
@@ -272,33 +197,6 @@
                     </div>
                   </div>
                 </div>
-
-                <!-- 手绘水彩风格 -->
-                <div class="theme-group-label" style="margin-top: 8px;">手绘风格</div>
-                <div class="theme-options-list">
-                  <div
-                    v-for="item in themeList.filter(t => t.category === 'handdrawn')"
-                    :key="item.key"
-                    class="theme-select-item"
-                    :class="{ active: effectiveTheme === item.key }"
-                    @click="selectTheme(item.key)"
-                  >
-                    <div class="theme-color-preview handdrawn-preview" :style="{ background: item.preview.bg, borderColor: item.preview.border }">
-                      <div class="theme-color-card" :style="{ background: item.preview.card, borderColor: item.preview.border }">
-                        <span class="theme-color-dot" :style="{ background: item.preview.accent }"></span>
-                      </div>
-                    </div>
-                    <div class="theme-info-box">
-                      <div class="theme-item-name">{{ item.name }}</div>
-                      <div class="theme-item-desc">{{ item.description }}</div>
-                    </div>
-                    <div v-if="effectiveTheme === item.key" class="theme-check-icon">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="20 6 9 17 4 12"></polyline>
-                      </svg>
-                    </div>
-                  </div>
-                </div>
               </div>
             </n-popover>
           </div>
@@ -308,27 +206,6 @@
 
     <!-- Right Main Workspace -->
     <section class="app-main">
-      <!-- 手绘模式右上角小插图 (可爱水彩云朵与星星) -->
-      <div v-if="isHanddrawn" class="handdrawn-top-doodle" aria-hidden="true">
-        <svg viewBox="0 0 110 46" width="110" height="46" fill="none" class="floating-doodle-svg">
-          <path
-            d="M24 35c-5 0-9-3.8-9-8.5 0-4.2 3.2-7.8 7.5-8.3 1.3-6.2 7-10.7 13.8-10.7 5.8 0 10.8 3.5 13 8.5 2.2-1.3 5-1.8 7.8-1 4.2 1.3 7 5 7.5 9.2 4.2.5 7.4 4 7.4 8.3 0 4.7-4 8.5-9 8.5H24z"
-            class="doodle-cloud-body"
-            stroke="currentColor"
-            stroke-width="1.6"
-            stroke-linejoin="round"
-          />
-          <path d="M29 24c1 1.2 2.5 1.8 4 1.8s3-.6 4-1.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-          <circle cx="27" cy="22" r="1" fill="currentColor" />
-          <circle cx="39" cy="22" r="1" fill="currentColor" />
-          <ellipse cx="25" cy="25" rx="2" ry="1.2" class="doodle-blush" />
-          <ellipse cx="41" cy="25" rx="2" ry="1.2" class="doodle-blush" />
-          <path d="M78 13l1.5 3.5 3.5 1.5-3.5 1.5-1.5 3.5-1.5-3.5-3.5-1.5 3.5-1.5 1.5-3.5z" class="doodle-star" />
-          <path d="M96 23l1 2.2 2.2 1-2.2 1-1 2.2-1-2.2-2.2-1 2.2-1 1-2.2z" class="doodle-star doodle-star-small" />
-          <circle cx="68" cy="9" r="1.2" class="doodle-sparkle" />
-          <circle cx="88" cy="33" r="1" class="doodle-sparkle" />
-        </svg>
-      </div>
 
       <!-- Dynamic View Container -->
       <div class="view-content-wrapper">
@@ -339,7 +216,6 @@
             <div>
               <div class="title-with-badge">
                 <h2 class="view-title">应用搜索</h2>
-                <span v-if="isHanddrawn" class="handdrawn-view-badge" aria-hidden="true"># 随心探索 🔍</span>
               </div>
               <p class="view-desc">在 Apple App Store 全球库中精准检索正版应用信息</p>
             </div>
@@ -403,16 +279,6 @@
             >
               <template #empty>
                 <div class="table-empty-box">
-                  <div v-if="isHanddrawn" class="handdrawn-table-empty-doodle" aria-hidden="true">
-                    <svg viewBox="0 0 92 76" width="76" height="62" fill="none" class="empty-doodle-svg">
-                      <rect x="14" y="16" width="64" height="46" rx="8" class="doodle-paper" stroke="currentColor" stroke-width="1.8" />
-                      <line x1="24" y1="28" x2="52" y2="28" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-                      <line x1="24" y1="38" x2="44" y2="38" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-                      <circle cx="58" cy="40" r="11" class="doodle-ground-wash" stroke="currentColor" stroke-width="2" />
-                      <line x1="66" y1="48" x2="77" y2="59" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
-                      <path d="M22 10l1.2 2.5 2.5 1.2-2.5 1.2-1.2 2.5-1.2-2.5-2.5-1.2 2.5-1.2 1.2-2.5z" class="doodle-star" />
-                    </svg>
-                  </div>
                   <div class="empty-state-title">{{ searchForm.term ? '未找到匹配的应用' : '开启 App Store 探索之旅' }}</div>
                   <div class="empty-state-desc">{{ searchForm.term ? '请尝试更换关键词，或切换不同国家/地区搜索' : '输入应用名称、开发商或拼音，随时开始检索正版应用' }}</div>
                 </div>
@@ -427,7 +293,6 @@
             <div>
               <div class="title-with-badge">
                 <h2 class="view-title">历史版本</h2>
-                <span v-if="isHanddrawn" class="handdrawn-view-badge" aria-hidden="true"># 时光轨迹 ⏳</span>
               </div>
               <p class="view-desc">解析与枚举 App Store 所有历史构建版本，支持快速精准检索</p>
             </div>
@@ -510,15 +375,6 @@
             >
               <template #empty>
                 <div class="table-empty-box">
-                  <div v-if="isHanddrawn" class="handdrawn-table-empty-doodle" aria-hidden="true">
-                    <svg viewBox="0 0 80 72" width="68" height="60" fill="none" class="empty-doodle-svg">
-                      <path d="M24 16h32M24 56h32" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
-                      <path d="M28 16c0 14 24 18 24 20s-24 6-24 20h24c0-14-24-18-24-20s24-6 24-20H28z" class="doodle-paper" stroke="currentColor" stroke-width="1.8" />
-                      <ellipse cx="40" cy="51" rx="8" ry="3" class="doodle-ground-wash" />
-                      <circle cx="40" cy="36" r="1.5" fill="currentColor" />
-                      <path d="M62 20l1 2.2 2.2 1-2.2 1-1 2.2-1-2.2-2.2-1 2.2-1 1-2.2z" class="doodle-star" />
-                    </svg>
-                  </div>
                   <div class="empty-state-title">{{ versionForm.bundleId ? '未查询到版本信息' : '历史版本时光机' }}</div>
                   <div class="empty-state-desc">{{ versionForm.bundleId ? '请检查 Bundle ID 是否正确，或当前账号是否具备权限' : '输入应用 Bundle ID 并点击「获取历史版本」，即可枚举所有构建历史' }}</div>
                 </div>
@@ -533,7 +389,6 @@
             <div>
               <div class="title-with-badge">
                 <h2 class="view-title">下载中心</h2>
-                <span v-if="isHanddrawn" class="handdrawn-view-badge" aria-hidden="true"># 任务清单 📥</span>
               </div>
               <p class="view-desc">正在下载与已完成的 IPA 任务管理，自动归档至对应账号目录</p>
             </div>
@@ -560,23 +415,6 @@
 
           <div class="tasks-container">
             <div v-if="downloadTasks.length === 0" class="empty-state-card">
-              <!-- 手绘风格专属小插图 (可爱待办清单与铅笔) -->
-              <div v-if="isHanddrawn" class="handdrawn-empty-doodle" aria-hidden="true">
-                <svg viewBox="0 0 68 68" width="56" height="56" fill="none" class="empty-doodle-svg">
-                  <rect x="18" y="15" width="32" height="42" rx="5" class="doodle-paper" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-                  <path d="M26 15v-3a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-                  <path d="M23 26l2 2 3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="doodle-check" />
-                  <line x1="32" y1="26" x2="43" y2="26" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-                  <path d="M23 35l2 2 3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="doodle-check" />
-                  <line x1="32" y1="35" x2="43" y2="35" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-                  <line x1="25" y1="44" x2="41" y2="44" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="2 3" />
-                  <g transform="translate(42, 28) rotate(22)">
-                    <rect x="0" y="0" width="7" height="24" rx="2" class="doodle-pencil" stroke="currentColor" stroke-width="1.6" />
-                    <path d="M0 24l3.5 6 3.5-6z" class="doodle-pencil-tip" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
-                  </g>
-                  <path d="M11 20l1 2.2 2.2 1-2.2 1-1 2.2-1-2.2-2.2-1 2.2-1 1-2.2z" class="doodle-star" />
-                </svg>
-              </div>
               <div class="empty-title">暂无下载任务</div>
               <div class="empty-desc">前往「应用搜索」或「历史版本」点击下载即可在此实时追踪进度</div>
             </div>
@@ -666,7 +504,6 @@
             <div>
               <div class="title-with-badge">
                 <h2 class="view-title">已购应用</h2>
-                <span v-if="isHanddrawn" class="handdrawn-view-badge" aria-hidden="true"># 珍藏宝库 🛍️</span>
               </div>
               <p class="view-desc">浏览与检索当前 Apple ID 名下已获得正版许可的历史应用库</p>
             </div>
@@ -785,14 +622,7 @@
               <template #empty>
                 <div class="purchased-empty-box">
                   <div v-if="purchasedSearchKeyword" class="search-none-state">
-                    <div v-if="isHanddrawn" class="handdrawn-table-empty-doodle" aria-hidden="true">
-                      <svg viewBox="0 0 80 72" width="68" height="60" fill="none" class="empty-doodle-svg">
-                        <circle cx="36" cy="34" r="16" class="doodle-paper" stroke="currentColor" stroke-width="1.8" />
-                        <line x1="48" y1="46" x2="64" y2="62" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
-                        <path d="M30 34h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-                      </svg>
-                    </div>
-                    <div v-else class="search-none-icon">🔍</div>
+                    <div class="search-none-icon">🔍</div>
                     <div class="search-none-title">未找到与「{{ purchasedSearchKeyword }}」匹配的已购应用</div>
                     <div class="search-none-desc">请尝试输入不同关键词，或点击下方按钮清空搜索</div>
                     <n-button size="tiny" secondary class="mt-2" @click="purchasedSearchKeyword = ''">
@@ -800,14 +630,6 @@
                     </n-button>
                   </div>
                   <div v-else class="search-none-state">
-                    <div v-if="isHanddrawn" class="handdrawn-table-empty-doodle" aria-hidden="true">
-                      <svg viewBox="0 0 80 72" width="68" height="60" fill="none" class="empty-doodle-svg">
-                        <path d="M22 26h36l3 32a3 3 0 0 1-3 3H22a3 3 0 0 1-3-3l3-32z" class="doodle-paper" stroke="currentColor" stroke-width="1.8" />
-                        <path d="M32 26v-6a8 8 0 0 1 16 0v6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                        <path d="M36 38c2 3 6 3 8 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-                        <path d="M60 18l1.2 2.2 2.2 1.2-2.2 1.2-1.2 2.2-1.2-2.2-2.2-1.2 2.2-1.2 1.2-2.2z" class="doodle-star" />
-                      </svg>
-                    </div>
                     <div class="search-none-title">暂无已购应用记录</div>
                     <div class="search-none-desc">点击右上角「加载全部已购」或刷新获取当前 Apple ID 历史正版应用</div>
                   </div>
@@ -823,7 +645,6 @@
             <div>
               <div class="title-with-badge">
                 <h2 class="view-title">设备直装</h2>
-                <span v-if="isHanddrawn" class="handdrawn-view-badge" aria-hidden="true"># 极速快传 📱</span>
               </div>
               <p class="view-desc">通过 USB 数据线将正版签署的 IPA 应用包一键安装至 iOS 设备</p>
             </div>
@@ -842,16 +663,6 @@
                 :class="{ 'drop-active': !!selectedIPAPath }"
                 @click="handleSelectIPA"
               >
-                <!-- 手绘风格拖拽包裹小插图 -->
-                <div v-if="isHanddrawn && !selectedIPAPath" class="handdrawn-drop-doodle" aria-hidden="true">
-                  <svg viewBox="0 0 54 54" width="44" height="44" fill="none" class="drop-doodle-svg">
-                    <path d="M11 22l16-8 16 8-16 8-16-8z" class="doodle-box-top" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
-                    <path d="M11 22v15l16 9 16-9V22" class="doodle-box-side" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
-                    <line x1="27" y1="30" x2="27" y2="46" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2 3" />
-                    <path d="M27 7l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1 1-2.5z" class="doodle-star" />
-                    <circle cx="40" cy="9" r="1.2" class="doodle-sparkle" />
-                  </svg>
-                </div>
                 <div class="drop-primary-title">
                   {{ selectedIPAPath ? selectedIPAFileName : '点击选择或拖拽 .ipa 文件到此处' }}
                 </div>
@@ -960,7 +771,6 @@
             <div>
               <div class="title-with-badge">
                 <h2 class="view-title">账号中心</h2>
-                <span v-if="isHanddrawn" class="handdrawn-view-badge" aria-hidden="true"># 身份档案 👤</span>
               </div>
               <p class="view-desc">管理用于 App Store 正版授权通信与 IPA 下载的 Apple ID 身份凭证</p>
             </div>
@@ -1073,7 +883,6 @@
             <div>
               <div class="title-with-badge">
                 <h2 class="view-title">系统设置</h2>
-                <span v-if="isHanddrawn" class="handdrawn-view-badge" aria-hidden="true"># 个性工坊 ⚙️</span>
               </div>
               <p class="view-desc">全局参数、网络代理、下载路径与基础运行引擎配置</p>
             </div>
@@ -1216,7 +1025,6 @@
             <div>
               <div class="title-with-badge">
                 <h2 class="view-title">关于软件</h2>
-                <span v-if="isHanddrawn" class="handdrawn-view-badge" aria-hidden="true"># 灵感手账 🍎</span>
               </div>
               <p class="view-desc">果仓助手 (AppleVault) 软件信息、项目开源地址与使用说明</p>
             </div>
@@ -1479,7 +1287,6 @@ const showThemePopover = ref(false)
 
 const effectiveTheme = computed<AppTheme>(() => props.currentTheme || (props.isDark ? 'minimal-dark' : 'minimal-light'))
 const isDarkTheme = computed(() => effectiveTheme.value.endsWith('-dark') || props.isDark)
-const isHanddrawn = computed(() => effectiveTheme.value.startsWith('handdrawn'))
 
 const themeList: ThemeOption[] = [
   {
@@ -1509,36 +1316,7 @@ const themeList: ThemeOption[] = [
       accent: '#0284c7',
       text: '#f1f5f9'
     }
-  },
-  {
-    key: 'handdrawn-light',
-    name: '手绘 - 浅色',
-    category: 'handdrawn',
-    categoryName: '手绘风格',
-    description: '水彩插画、清新手账',
-    preview: {
-      bg: '#d3e8f8',
-      card: '#ffffff',
-      border: '#b9ddfb',
-      accent: '#4092ea',
-      text: '#1e3a5f'
-    }
-  },
-  {
-    key: 'handdrawn-dark',
-    name: '手绘 - 深色',
-    category: 'handdrawn',
-    categoryName: '手绘风格',
-    description: '夜空水彩、清澈静谧',
-    preview: {
-      bg: '#131c28',
-      card: '#1b2636',
-      border: '#3b82f6',
-      accent: '#60a5fa',
-      text: '#e2e8f0'
-    }
-  }
-]
+  }]
 
 function selectTheme(themeKey: AppTheme) {
   emit('update:currentTheme', themeKey)
@@ -3779,40 +3557,6 @@ onBeforeUnmount(() => {
   color: #94a3b8;
 }
 
-/* 手绘模式专属适配 */
-.handdrawn-mode:not(.dark-mode) .purchased-search-input-box {
-  background: #ffffff;
-  border: 1px solid #cbe0f0;
-  border-radius: 18px;
-  box-shadow: 0 2px 8px rgba(162, 198, 224, 0.18);
-}
-
-.handdrawn-mode:not(.dark-mode) .purchased-search-input-box:focus-within {
-  border-color: #5baaf5;
-  box-shadow: 0 0 0 3px rgba(91, 170, 245, 0.22);
-}
-
-.handdrawn-mode.dark-mode .purchased-search-input-box {
-  background: #141d2a;
-  border: 1px solid rgba(91, 170, 245, 0.25);
-  border-radius: 18px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-.handdrawn-mode.dark-mode .purchased-search-input-box:focus-within {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
-}
-
-.handdrawn-mode:not(.dark-mode) .purchased-search-badge.has-filter {
-  color: #2563eb;
-  font-weight: 600;
-}
-
-.handdrawn-mode.dark-mode .purchased-search-badge.has-filter {
-  color: #60a5fa;
-  font-weight: 600;
-}
 
 /* Installer View */
 .installer-grid {
@@ -4572,894 +4316,6 @@ onBeforeUnmount(() => {
 .mr-2 { margin-right: 8px; }
 .ml-2 { margin-left: 8px; }
 
-/* ==========================================================================
-   Handdrawn Theme Styles (清新水彩插画手账风格)
-   ========================================================================== */
-
-/* 手绘模式字体栈：温润柔和 */
-.handdrawn-mode {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-}
-
-/* 1. 手绘 - 浅色模式 (Watercolor Illustration Light) - 多层不均匀手绘水彩晕染 */
-.handdrawn-mode:not(.dark-mode) {
-  background-color: #f6fafc;
-  background-image:
-    /* 水彩天蓝晕染 - 右上方大水渍斑块 */
-    radial-gradient(ellipse at 88% 12%, rgba(186, 230, 253, 0.65) 0%, rgba(224, 242, 254, 0.25) 36%, transparent 65%),
-    /* 柔和薰衣草淡紫水彩晕染 - 右下角层次 */
-    radial-gradient(ellipse at 85% 82%, rgba(237, 233, 254, 0.55) 0%, rgba(243, 232, 255, 0.18) 35%, transparent 60%),
-    /* 薄荷浅绿水彩微斑 - 左下方点缀 */
-    radial-gradient(ellipse at 18% 85%, rgba(204, 251, 241, 0.45) 0%, rgba(224, 242, 254, 0.15) 32%, transparent 58%),
-    /* 浅蓝手绘水渍晕染 - 左上方边缘 */
-    radial-gradient(ellipse at 16% 22%, rgba(191, 219, 254, 0.5) 0%, rgba(224, 242, 254, 0.15) 30%, transparent 55%),
-    /* 中心温润画纸柔光 */
-    radial-gradient(ellipse at 50% 45%, rgba(254, 249, 195, 0.28) 0%, transparent 50%),
-    /* 极细微水彩纸质纹理微粒 */
-    radial-gradient(rgba(125, 178, 224, 0.15) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 20px 20px;
-  background-attachment: fixed;
-  color: #243b53;
-}
-
-/* 侧边栏：多层次不均匀手绘水彩水渍质感 */
-.handdrawn-mode:not(.dark-mode) .app-sidebar {
-  background: 
-    radial-gradient(circle at 85% 10%, rgba(255, 255, 255, 0.75) 0%, transparent 50%),
-    radial-gradient(circle at 15% 42%, rgba(186, 230, 253, 0.65) 0%, transparent 60%),
-    radial-gradient(circle at 80% 86%, rgba(224, 231, 255, 0.45) 0%, transparent 55%),
-    linear-gradient(175deg, #d3e8f8 0%, #dcedf9 45%, #e7f3fb 100%);
-  border-right: 1px solid rgba(162, 203, 233, 0.65);
-  box-shadow: 2px 0 16px rgba(162, 198, 224, 0.16);
-}
-
-.handdrawn-mode:not(.dark-mode) .sidebar-brand {
-  border-bottom: 1px solid rgba(162, 203, 233, 0.6);
-}
-
-.handdrawn-mode:not(.dark-mode) .brand-icon-box {
-  background: linear-gradient(135deg, #5baaf5 0%, #3b82f6 100%);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.28);
-}
-
-.handdrawn-mode:not(.dark-mode) .brand-name {
-  color: #1c385c;
-  font-weight: 700;
-}
-
-.handdrawn-mode:not(.dark-mode) .brand-sub {
-  color: #527599;
-  font-weight: 500;
-}
-
-.handdrawn-mode:not(.dark-mode) .brand-tag {
-  border: 1px solid #bfdbfe;
-  background: #e1f0fc;
-  color: #2563eb;
-  border-radius: 6px;
-  font-weight: 600;
-}
-
-.handdrawn-mode:not(.dark-mode) .nav-section-title {
-  color: #627d98;
-  font-weight: 600;
-}
-
-/* 导航项：参考图风格，激活项为天蓝圆润卡片+柔光微阴影 */
-.handdrawn-mode:not(.dark-mode) .nav-item {
-  color: #3b5a7a;
-  font-weight: 600;
-  border: none;
-  border-radius: 10px;
-  transition: all 0.18s ease;
-}
-
-.handdrawn-mode:not(.dark-mode) .nav-item:hover {
-  background: rgba(255, 255, 255, 0.65);
-  color: #1e3a5f;
-}
-
-.handdrawn-mode:not(.dark-mode) .nav-item.active {
-  background: linear-gradient(135deg, #5baaf5 0%, #3b82f6 100%);
-  color: #ffffff;
-  border: none;
-  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
-  border-radius: 10px;
-  font-weight: 600;
-}
-
-.handdrawn-mode:not(.dark-mode) .sidebar-footer {
-  border-top: 1px solid rgba(162, 203, 233, 0.6);
-}
-
-.handdrawn-mode:not(.dark-mode) .sidebar-account-card {
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(186, 215, 237, 0.8);
-  box-shadow: 0 4px 14px rgba(162, 198, 224, 0.25);
-  border-radius: 12px;
-}
-
-.handdrawn-mode:not(.dark-mode) .sidebar-account-card:hover {
-  background: #ffffff;
-  box-shadow: 0 6px 18px rgba(147, 197, 235, 0.35);
-  transform: translateY(-1px);
-}
-
-.handdrawn-mode:not(.dark-mode) .user-name {
-  color: #1e3a5f;
-  font-weight: 700;
-}
-
-.handdrawn-mode:not(.dark-mode) .user-email {
-  color: #627d98;
-}
-
-.handdrawn-mode:not(.dark-mode) .quick-tool-label {
-  color: #3b5a7a;
-  font-weight: 600;
-}
-
-.handdrawn-mode:not(.dark-mode) .icon-action-btn {
-  border: 1px solid #cbe0f0;
-  background: #ffffff;
-  color: #3b5a7a;
-  box-shadow: 0 2px 8px rgba(162, 198, 224, 0.22);
-  border-radius: 8px;
-}
-
-.handdrawn-mode:not(.dark-mode) .icon-action-btn:hover {
-  background: #f0f7fe;
-  color: #2563eb;
-  border-color: #93c5fd;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
-  transform: translateY(-1px);
-}
-
-.handdrawn-mode:not(.dark-mode) .icon-action-btn:active {
-  transform: translateY(1px);
-  box-shadow: 0 1px 3px rgba(59, 130, 246, 0.2);
-}
-
-.handdrawn-mode:not(.dark-mode) .icon-action-btn.active {
-  background: #e1f0fc;
-  border-color: #60a5fa;
-  color: #2563eb;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
-}
-
-/* 标题与描述：清秀明亮 */
-.handdrawn-mode:not(.dark-mode) .view-title {
-  color: #1c385c;
-  font-weight: 700;
-  letter-spacing: -0.2px;
-}
-
-.handdrawn-mode:not(.dark-mode) .view-desc {
-  color: #627d98;
-}
-
-/* 主工作区卡片：纯白纸感，柔和蓝光弥散阴影，细致水彩勾线 */
-.handdrawn-mode:not(.dark-mode) .clean-card,
-.handdrawn-mode:not(.dark-mode) .settings-group,
-.handdrawn-mode:not(.dark-mode) .modern-task-card,
-.handdrawn-mode:not(.dark-mode) .empty-state-card,
-.handdrawn-mode:not(.dark-mode) .device-spec-box,
-.handdrawn-mode:not(.dark-mode) .installer-action-banner,
-.handdrawn-mode:not(.dark-mode) .about-section-box,
-.handdrawn-mode:not(.dark-mode) .sub-alert-box {
-  background: #ffffff;
-  border: 1px solid #dcebf6;
-  box-shadow: 0 6px 20px rgba(162, 198, 224, 0.2), 0 1px 3px rgba(162, 198, 224, 0.1);
-  border-radius: 14px;
-  transition: all 0.2s ease;
-}
-
-.handdrawn-mode:not(.dark-mode) .about-hero {
-  background: rgba(240, 247, 255, 0.7);
-  border: 1px solid #cbe0f0;
-  border-radius: 16px;
-  padding: 22px 28px;
-  box-shadow: 0 4px 16px rgba(162, 198, 224, 0.2);
-  gap: 24px;
-}
-
-.handdrawn-mode:not(.dark-mode) .about-large-icon {
-  background: linear-gradient(135deg, #5baaf5 0%, #3b82f6 100%);
-  box-shadow: 0 6px 18px rgba(59, 130, 246, 0.35);
-  margin-left: 6px;
-}
-
-.handdrawn-mode:not(.dark-mode) .clean-card:hover,
-.handdrawn-mode:not(.dark-mode) .modern-task-card:hover {
-  box-shadow: 0 8px 24px rgba(147, 197, 235, 0.32);
-}
-
-/* 搜索框：参考图风格的药丸形胶囊圆角，纯白加细边 */
-.handdrawn-mode:not(.dark-mode) .clean-input-box {
-  background: #ffffff;
-  border: 1px solid #cbe0f0;
-  box-shadow: 0 2px 8px rgba(162, 198, 224, 0.18);
-  border-radius: 20px;
-}
-
-.handdrawn-mode:not(.dark-mode) .clean-input-box:focus-within {
-  border-color: #5baaf5;
-  box-shadow: 0 0 0 3px rgba(91, 170, 245, 0.22);
-}
-
-.handdrawn-mode:not(.dark-mode) .clean-input {
-  color: #1e3a5f;
-}
-
-.handdrawn-mode:not(.dark-mode) .clean-input-prefix-box {
-  background: #eef6fc;
-  border-right: 1px solid #cbe0f0;
-  color: #2b496d;
-  font-weight: 600;
-  border-top-left-radius: 20px;
-  border-bottom-left-radius: 20px;
-}
-
-.handdrawn-mode:not(.dark-mode) .prefix-label {
-  color: #2b496d;
-  font-weight: 600;
-}
-
-/* 标签胶囊：清秀马卡龙水彩色系 */
-.handdrawn-mode:not(.dark-mode) .count-pill {
-  border: 1px solid #bae6fd;
-  background: #e0f2fe;
-  color: #0284c7;
-  font-weight: 600;
-  border-radius: 6px;
-}
-
-.handdrawn-mode:not(.dark-mode) .tag-version-highlight {
-  border: 1px solid #fde68a;
-  background: #fef3c7;
-  color: #b45309;
-  font-weight: 600;
-  border-radius: 6px;
-}
-
-.handdrawn-mode:not(.dark-mode) .task-pill-build {
-  border: 1px solid #bbf7d0;
-  background: #dcfce7;
-  color: #15803d;
-  font-weight: 600;
-  border-radius: 6px;
-}
-
-.handdrawn-mode:not(.dark-mode) .pill-gray {
-  border: 1px solid #e2e8f0;
-  background: #f1f5f9;
-  color: #475569;
-  font-weight: 600;
-  border-radius: 6px;
-}
-
-/* 拖拽区域 */
-.handdrawn-mode:not(.dark-mode) .clean-drop-zone {
-  background: #f6fafe;
-  border: 2px dashed #93c5fd;
-  border-radius: 16px;
-  box-shadow: 0 4px 16px rgba(162, 198, 224, 0.15);
-}
-
-.handdrawn-mode:not(.dark-mode) .clean-drop-zone:hover {
-  border-color: #3b82f6;
-  background: #eef7ff;
-}
-
-/* 底部状态栏 */
-.handdrawn-mode:not(.dark-mode) .bottom-status-bar {
-  background: #e6f2fa;
-  border-top: 1px solid rgba(162, 203, 233, 0.7);
-  color: #334e68;
-}
-
-.handdrawn-mode:not(.dark-mode) .status-summary-text {
-  color: #334e68;
-  font-weight: 600;
-}
-
-.handdrawn-mode:not(.dark-mode) .status-btn {
-  border: 1px solid #cbe0f0;
-  background: #ffffff;
-  color: #334e68;
-  box-shadow: 0 2px 6px rgba(162, 198, 224, 0.18);
-  border-radius: 6px;
-}
-
-.handdrawn-mode:not(.dark-mode) .status-btn:hover {
-  background: #dbeafe;
-  border-color: #93c5fd;
-  color: #1d4ed8;
-}
-
-/* 2. 手绘 - 深色模式 (Midnight Watercolor / 午夜星空水彩) - 不均匀星云水彩晕染 */
-.handdrawn-mode.dark-mode {
-  background-color: #0e1624;
-  background-image:
-    /* 星空深蓝水彩晕染 - 左上斑块 */
-    radial-gradient(ellipse at 16% 20%, rgba(30, 64, 175, 0.42) 0%, rgba(30, 58, 138, 0.18) 38%, transparent 65%),
-    /* 星云紫水彩晕染 - 右上方大斑块 */
-    radial-gradient(ellipse at 86% 16%, rgba(91, 33, 182, 0.35) 0%, rgba(67, 56, 202, 0.15) 36%, transparent 62%),
-    /* 极光深青水彩微光 - 右下斑块 */
-    radial-gradient(ellipse at 82% 84%, rgba(13, 148, 136, 0.3) 0%, rgba(15, 118, 110, 0.12) 35%, transparent 58%),
-    /* 墨蓝深水晕染 - 左下斑块 */
-    radial-gradient(ellipse at 22% 82%, rgba(29, 78, 216, 0.32) 0%, rgba(30, 58, 138, 0.12) 34%, transparent 55%),
-    /* 星尘微粒点缀 */
-    radial-gradient(rgba(147, 197, 253, 0.22) 1.2px, transparent 1.2px);
-  background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 28px 28px;
-  background-attachment: fixed;
-  color: #e2e8f0;
-}
-
-.handdrawn-mode.dark-mode .app-sidebar {
-  background: 
-    radial-gradient(circle at 85% 12%, rgba(59, 130, 246, 0.2) 0%, transparent 60%),
-    radial-gradient(circle at 15% 75%, rgba(124, 58, 237, 0.16) 0%, transparent 55%),
-    linear-gradient(180deg, #0c131d 0%, #101926 50%, #142132 100%);
-  border-right: 1px solid rgba(75, 115, 160, 0.28);
-}
-
-.handdrawn-mode.dark-mode .sidebar-brand {
-  border-bottom: 1px solid rgba(75, 115, 160, 0.25);
-}
-
-.handdrawn-mode.dark-mode .brand-icon-box {
-  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
-}
-
-.handdrawn-mode.dark-mode .brand-name {
-  color: #f1f5f9;
-  font-weight: 700;
-}
-
-.handdrawn-mode.dark-mode .brand-sub {
-  color: #94a3b8;
-  font-weight: 500;
-}
-
-.handdrawn-mode.dark-mode .brand-tag {
-  border: 1px solid #1e3a8a;
-  background: rgba(30, 58, 138, 0.4);
-  color: #93c5fd;
-  border-radius: 6px;
-  font-weight: 600;
-}
-
-.handdrawn-mode.dark-mode .nav-section-title {
-  color: #829ab1;
-  font-weight: 600;
-}
-
-.handdrawn-mode.dark-mode .nav-item {
-  color: #94a3b8;
-  font-weight: 600;
-  border: none;
-  border-radius: 10px;
-}
-
-.handdrawn-mode.dark-mode .nav-item:hover {
-  background: rgba(33, 49, 71, 0.7);
-  color: #f1f5f9;
-}
-
-.handdrawn-mode.dark-mode .nav-item.active {
-  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-  color: #ffffff;
-  border: none;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
-  border-radius: 10px;
-  font-weight: 600;
-}
-
-.handdrawn-mode.dark-mode .sidebar-footer {
-  border-top: 1px solid rgba(75, 115, 160, 0.25);
-}
-
-.handdrawn-mode.dark-mode .sidebar-account-card {
-  background: #1b2636;
-  border: 1px solid rgba(91, 170, 245, 0.18);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  border-radius: 12px;
-}
-
-.handdrawn-mode.dark-mode .sidebar-account-card:hover {
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-  transform: translateY(-1px);
-}
-
-.handdrawn-mode.dark-mode .user-name {
-  color: #f1f5f9;
-  font-weight: 700;
-}
-
-.handdrawn-mode.dark-mode .user-email {
-  color: #829ab1;
-}
-
-.handdrawn-mode.dark-mode .quick-tool-label {
-  color: #cbd5e1;
-  font-weight: 600;
-}
-
-.handdrawn-mode.dark-mode .icon-action-btn {
-  border: 1px solid rgba(91, 170, 245, 0.22);
-  background: #1b2636;
-  color: #cbd5e1;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  border-radius: 8px;
-}
-
-.handdrawn-mode.dark-mode .icon-action-btn:hover {
-  background: #233145;
-  color: #60a5fa;
-  border-color: #3b82f6;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-  transform: translateY(-1px);
-}
-
-.handdrawn-mode.dark-mode .icon-action-btn:active {
-  transform: translateY(1px);
-}
-
-.handdrawn-mode.dark-mode .icon-action-btn.active {
-  background: rgba(59, 130, 246, 0.25);
-  border-color: #3b82f6;
-  color: #93c5fd;
-}
-
-.handdrawn-mode.dark-mode .view-title {
-  color: #f1f5f9;
-  font-weight: 700;
-}
-
-.handdrawn-mode.dark-mode .view-desc {
-  color: #829ab1;
-}
-
-.handdrawn-mode.dark-mode .clean-card,
-.handdrawn-mode.dark-mode .settings-group,
-.handdrawn-mode.dark-mode .modern-task-card,
-.handdrawn-mode.dark-mode .empty-state-card,
-.handdrawn-mode.dark-mode .device-spec-box,
-.handdrawn-mode.dark-mode .installer-action-banner,
-.handdrawn-mode.dark-mode .about-section-box,
-.handdrawn-mode.dark-mode .sub-alert-box {
-  background: #1b2636;
-  border: 1px solid rgba(91, 170, 245, 0.18);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
-  border-radius: 14px;
-}
-
-.handdrawn-mode.dark-mode .about-hero {
-  background: rgba(27, 38, 54, 0.7);
-  border: 1px solid rgba(91, 170, 245, 0.22);
-  border-radius: 16px;
-  padding: 22px 28px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
-  gap: 24px;
-}
-
-.handdrawn-mode.dark-mode .about-large-icon {
-  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4);
-  margin-left: 6px;
-}
-
-.handdrawn-mode.dark-mode .clean-input-box {
-  background: #141d2a;
-  border: 1px solid rgba(91, 170, 245, 0.25);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  border-radius: 20px;
-}
-
-.handdrawn-mode.dark-mode .clean-input-box:focus-within {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
-}
-
-.handdrawn-mode.dark-mode .clean-input {
-  color: #f1f5f9;
-}
-
-.handdrawn-mode.dark-mode .clean-input-prefix-box {
-  background: #101824;
-  border-right: 1px solid rgba(91, 170, 245, 0.25);
-  color: #93c5fd;
-  font-weight: 600;
-  border-top-left-radius: 20px;
-  border-bottom-left-radius: 20px;
-}
-
-.handdrawn-mode.dark-mode .prefix-label {
-  color: #93c5fd;
-  font-weight: 600;
-}
-
-.handdrawn-mode.dark-mode .count-pill {
-  border: 1px solid rgba(2, 132, 199, 0.4);
-  background: rgba(2, 132, 199, 0.2);
-  color: #7dd3fc;
-  font-weight: 600;
-  border-radius: 6px;
-}
-
-.handdrawn-mode.dark-mode .tag-version-highlight {
-  border: 1px solid rgba(217, 119, 6, 0.4);
-  background: rgba(217, 119, 6, 0.2);
-  color: #fcd34d;
-  font-weight: 600;
-  border-radius: 6px;
-}
-
-.handdrawn-mode.dark-mode .task-pill-build {
-  border: 1px solid rgba(22, 163, 74, 0.4);
-  background: rgba(22, 163, 74, 0.2);
-  color: #86efac;
-  font-weight: 600;
-  border-radius: 6px;
-}
-
-.handdrawn-mode.dark-mode .pill-gray {
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background: #243245;
-  color: #cbd5e1;
-  font-weight: 600;
-  border-radius: 6px;
-}
-
-.handdrawn-mode.dark-mode .clean-drop-zone {
-  background: #16202e;
-  border: 2px dashed #3b82f6;
-  border-radius: 16px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-}
-
-.handdrawn-mode.dark-mode .clean-drop-zone:hover {
-  border-color: #60a5fa;
-  background: #1c293b;
-}
-
-.handdrawn-mode.dark-mode .bottom-status-bar {
-  background: #0f1722;
-  border-top: 1px solid rgba(75, 115, 160, 0.25);
-  color: #cbd5e1;
-}
-
-.handdrawn-mode.dark-mode .status-summary-text {
-  color: #cbd5e1;
-  font-weight: 600;
-}
-
-.handdrawn-mode.dark-mode .status-btn {
-  border: 1px solid rgba(91, 170, 245, 0.22);
-  background: #1b2636;
-  color: #cbd5e1;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-  border-radius: 6px;
-}
-
-.handdrawn-mode.dark-mode .status-btn:hover {
-  background: #233145;
-  border-color: #3b82f6;
-  color: #93c5fd;
-}
-
-/* 3. 手绘模式下的 Naive UI 深度穿透样式 */
-.handdrawn-mode:not(.dark-mode) :deep(.n-button--primary-type) {
-  background: linear-gradient(135deg, #5baaf5 0%, #3b82f6 100%) !important;
-  border: none !important;
-  color: #ffffff !important;
-  border-radius: 9px !important;
-  box-shadow: 0 3px 10px rgba(59, 130, 246, 0.3);
-  font-weight: 600;
-}
-
-.handdrawn-mode:not(.dark-mode) :deep(.n-button--primary-type:hover) {
-  background: linear-gradient(135deg, #6bb6fb 0%, #488ef7 100%) !important;
-  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
-  transform: translateY(-1px);
-}
-
-.handdrawn-mode:not(.dark-mode) :deep(.n-button:not(.n-button--primary-type)) {
-  border: 1px solid #cfe2f2 !important;
-  border-radius: 9px !important;
-  box-shadow: 0 2px 6px rgba(162, 198, 224, 0.15);
-  font-weight: 500;
-}
-
-.handdrawn-mode.dark-mode :deep(.n-button--primary-type) {
-  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%) !important;
-  border: none !important;
-  color: #ffffff !important;
-  border-radius: 9px !important;
-  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.35);
-  font-weight: 600;
-}
-
-.handdrawn-mode.dark-mode :deep(.n-button:not(.n-button--primary-type)) {
-  border: 1px solid rgba(91, 170, 245, 0.22) !important;
-  border-radius: 9px !important;
-  font-weight: 500;
-}
-
-.handdrawn-mode:not(.dark-mode) :deep(.n-data-table) {
-  border: 1px solid #dcebf6;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(162, 198, 224, 0.15);
-  overflow: hidden;
-}
-
-.handdrawn-mode.dark-mode :deep(.n-data-table) {
-  border: 1px solid rgba(75, 115, 160, 0.25);
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  overflow: hidden;
-}
-
-.handdrawn-mode:not(.dark-mode) :deep(.n-select .n-base-selection) {
-  border: 1px solid #cbe0f0 !important;
-  box-shadow: 0 2px 6px rgba(162, 198, 224, 0.12);
-  border-radius: 9px;
-}
-
-.handdrawn-mode.dark-mode :deep(.n-select .n-base-selection) {
-  border: 1px solid rgba(91, 170, 245, 0.25) !important;
-  border-radius: 9px;
-}
-
-/* ==========================================================================
-   Handdrawn Cute Illustrations & Stickers (手绘精美小插图)
-   ========================================================================== */
-
-/* 1. 侧边栏底部手绘小插画贴纸 */
-.handdrawn-sidebar-sticker {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin: 4px 0 10px 0;
-  pointer-events: none;
-  user-select: none;
-}
-
-.sidebar-sticker-svg {
-  overflow: visible;
-  filter: drop-shadow(0 3px 6px rgba(162, 198, 224, 0.25));
-}
-
-.handdrawn-mode:not(.dark-mode) .doodle-apple-body {
-  fill: #ff6b6b;
-  color: #c92a2a;
-}
-
-.handdrawn-mode:not(.dark-mode) .doodle-leaf {
-  fill: #51cf66;
-  color: #2b8a3e;
-}
-
-.handdrawn-mode:not(.dark-mode) .doodle-ground-wash {
-  fill: rgba(186, 230, 253, 0.5);
-}
-
-.handdrawn-mode:not(.dark-mode) .doodle-star {
-  fill: #fcc419;
-  color: #e67700;
-  animation: starTwinkle 3s ease-in-out infinite;
-}
-
-.handdrawn-mode:not(.dark-mode) .doodle-sparkle {
-  fill: #74c0fc;
-}
-
-/* 深色模式下的侧边栏小插图 */
-.handdrawn-mode.dark-mode .sidebar-sticker-svg {
-  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.4));
-}
-
-.handdrawn-mode.dark-mode .doodle-apple-body {
-  fill: #f87171;
-  color: #ef4444;
-}
-
-.handdrawn-mode.dark-mode .doodle-leaf {
-  fill: #4ade80;
-  color: #22c55e;
-}
-
-.handdrawn-mode.dark-mode .doodle-ground-wash {
-  fill: rgba(30, 58, 138, 0.45);
-}
-
-.handdrawn-mode.dark-mode .doodle-star {
-  fill: #fde047;
-  color: #eab308;
-  animation: starTwinkle 3s ease-in-out infinite;
-}
-
-.handdrawn-mode.dark-mode .doodle-sparkle {
-  fill: #93c5fd;
-}
-
-/* 2. 主区域右上角浮动治愈小插图 */
-.handdrawn-top-doodle {
-  position: absolute;
-  top: 14px;
-  right: 24px;
-  pointer-events: none;
-  user-select: none;
-  z-index: 2;
-  animation: floatCloud 4.5s ease-in-out infinite;
-}
-
-@keyframes floatCloud {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-5px) rotate(1.2deg);
-  }
-}
-
-@keyframes starTwinkle {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 0.95;
-  }
-  50% {
-    transform: scale(1.18);
-    opacity: 1;
-  }
-}
-
-.handdrawn-mode:not(.dark-mode) .doodle-cloud-body {
-  fill: rgba(255, 255, 255, 0.92);
-  color: #60a5fa;
-  filter: drop-shadow(0 4px 12px rgba(162, 198, 224, 0.3));
-}
-
-.handdrawn-mode:not(.dark-mode) .doodle-blush {
-  fill: #ff8787;
-  opacity: 0.65;
-}
-
-.handdrawn-mode.dark-mode .doodle-cloud-body {
-  fill: rgba(30, 41, 59, 0.88);
-  color: #93c5fd;
-  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.4));
-}
-
-.handdrawn-mode.dark-mode .doodle-blush {
-  fill: #f472b6;
-  opacity: 0.7;
-}
-
-/* 3. 任务空状态手绘插图 */
-.handdrawn-empty-doodle {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 12px;
-}
-
-.handdrawn-mode:not(.dark-mode) .doodle-paper {
-  fill: #ffffff;
-  color: #60a5fa;
-  filter: drop-shadow(0 3px 8px rgba(162, 198, 224, 0.25));
-}
-
-.handdrawn-mode:not(.dark-mode) .doodle-check {
-  color: #10b981;
-}
-
-.handdrawn-mode:not(.dark-mode) .doodle-pencil {
-  fill: #fde047;
-  color: #eab308;
-}
-
-.handdrawn-mode:not(.dark-mode) .doodle-pencil-tip {
-  fill: #475569;
-  color: #334155;
-}
-
-.handdrawn-mode.dark-mode .doodle-paper {
-  fill: #1e293b;
-  color: #93c5fd;
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
-}
-
-.handdrawn-mode.dark-mode .doodle-check {
-  color: #34d399;
-}
-
-.handdrawn-mode.dark-mode .doodle-pencil {
-  fill: #facc15;
-  color: #ca8a04;
-}
-
-.handdrawn-mode.dark-mode .doodle-pencil-tip {
-  fill: #94a3b8;
-  color: #64748b;
-}
-
-/* 4. IPA拖拽区域手绘插图 */
-.handdrawn-drop-doodle {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 8px;
-}
-
-.handdrawn-mode:not(.dark-mode) .doodle-box-top {
-  fill: #e0f2fe;
-  color: #38bdf8;
-}
-
-.handdrawn-mode:not(.dark-mode) .doodle-box-side {
-  fill: #bae6fd;
-  color: #0284c7;
-}
-
-.handdrawn-mode.dark-mode .doodle-box-top {
-  fill: #1e3a8a;
-  color: #60a5fa;
-}
-
-.handdrawn-mode.dark-mode .doodle-box-side {
-  fill: #172554;
-  color: #3b82f6;
-}
-
-/* ==========================================================================
-   Handdrawn Rich Elements: Washi Tape, Doodle Icons, Badges & Empty Illustrations
-   ========================================================================== */
-
-/* 1. 侧边栏导航手绘图标与动效 */
-.nav-doodle-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  margin-right: 8px;
-  flex-shrink: 0;
-  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.nav-item:hover .nav-doodle-icon {
-  transform: scale(1.18) rotate(5deg);
-}
-
-.nav-item.active .nav-doodle-icon {
-  transform: scale(1.12) rotate(-3deg);
-  animation: doodleWiggle 2.5s ease-in-out infinite alternate;
-}
-
-@keyframes doodleWiggle {
-  0% { transform: scale(1.12) rotate(-3deg); }
-  50% { transform: scale(1.15) rotate(3deg); }
-  100% { transform: scale(1.12) rotate(-3deg); }
-}
-
-.nav-title-sparkle {
-  font-size: 11px;
-  margin-left: 5px;
-  color: #f59e0b;
-  display: inline-block;
-  animation: starTwinkle 2.5s ease-in-out infinite;
-}
-
-.brand-handdrawn-crown {
-  font-size: 13px;
-  margin-left: 3px;
-  display: inline-block;
-  transform: rotate(12deg);
-  filter: drop-shadow(0 2px 4px rgba(245, 158, 11, 0.3));
-}
-
-/* 2. 标题马克笔划线与手绘印章贴纸 */
 .title-with-badge {
   display: flex;
   align-items: center;
@@ -5467,129 +4323,6 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
 }
 
-.handdrawn-view-badge {
-  display: inline-flex;
-  align-items: center;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 9px;
-  border-radius: 8px;
-  letter-spacing: 0.2px;
-  user-select: none;
-  transform: rotate(-1.5deg);
-  transition: transform 0.2s ease;
-}
-
-.handdrawn-view-badge:hover {
-  transform: rotate(1.2deg) scale(1.05);
-}
-
-/* 浅色模式手绘印章贴纸 */
-.handdrawn-mode:not(.dark-mode) .handdrawn-view-badge {
-  background: linear-gradient(135deg, rgba(254, 240, 138, 0.8) 0%, rgba(253, 230, 138, 0.6) 100%);
-  color: #854d0e;
-  border: 1.5px dashed rgba(202, 138, 4, 0.5);
-  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.15);
-}
-
-/* 深色模式手绘印章贴纸 (荧光粉笔黑板风) */
-.handdrawn-mode.dark-mode .handdrawn-view-badge {
-  background: rgba(30, 58, 138, 0.5);
-  color: #93c5fd;
-  border: 1.5px dashed rgba(96, 165, 250, 0.6);
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.25);
-}
-
-/* 标题手绘马克笔划线底纹 */
-.handdrawn-mode .view-title {
-  position: relative;
-  display: inline-block;
-  z-index: 1;
-}
-
-.handdrawn-mode:not(.dark-mode) .view-title::after {
-  content: "";
-  position: absolute;
-  left: -4px;
-  bottom: 1px;
-  width: 106%;
-  height: 9px;
-  background: rgba(253, 224, 71, 0.45);
-  border-radius: 4px;
-  z-index: -1;
-  transform: rotate(-0.8deg);
-}
-
-.handdrawn-mode.dark-mode .view-title::after {
-  content: "";
-  position: absolute;
-  left: -4px;
-  bottom: 1px;
-  width: 106%;
-  height: 9px;
-  background: rgba(56, 189, 248, 0.28);
-  border-radius: 4px;
-  z-index: -1;
-  transform: rotate(-0.8deg);
-}
-
-/* 3. 卡片顶部和纸胶带 (Washi Tape) 手账贴纸效果 */
-.handdrawn-mode:not(.dark-mode) .clean-card,
-.handdrawn-mode:not(.dark-mode) .settings-group,
-.handdrawn-mode:not(.dark-mode) .installer-action-banner,
-.handdrawn-mode:not(.dark-mode) .about-section-box {
-  position: relative;
-}
-
-.handdrawn-mode:not(.dark-mode) .clean-card::before,
-.handdrawn-mode:not(.dark-mode) .settings-group::before,
-.handdrawn-mode:not(.dark-mode) .installer-action-banner::before,
-.handdrawn-mode:not(.dark-mode) .about-section-box::before {
-  content: "";
-  position: absolute;
-  top: -7px;
-  left: 50%;
-  transform: translateX(-50%) rotate(-1deg);
-  width: 68px;
-  height: 14px;
-  background: rgba(254, 240, 138, 0.65);
-  border-left: 2px dashed rgba(234, 179, 8, 0.45);
-  border-right: 2px dashed rgba(234, 179, 8, 0.45);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-  border-radius: 2px;
-  pointer-events: none;
-  z-index: 3;
-}
-
-/* 深色模式下的透明极光微发光胶带 */
-.handdrawn-mode.dark-mode .clean-card,
-.handdrawn-mode.dark-mode .settings-group,
-.handdrawn-mode.dark-mode .installer-action-banner,
-.handdrawn-mode.dark-mode .about-section-box {
-  position: relative;
-}
-
-.handdrawn-mode.dark-mode .clean-card::before,
-.handdrawn-mode.dark-mode .settings-group::before,
-.handdrawn-mode.dark-mode .installer-action-banner::before,
-.handdrawn-mode.dark-mode .about-section-box::before {
-  content: "";
-  position: absolute;
-  top: -7px;
-  left: 50%;
-  transform: translateX(-50%) rotate(-1deg);
-  width: 68px;
-  height: 14px;
-  background: rgba(56, 189, 248, 0.22);
-  border-left: 2px dashed rgba(125, 211, 252, 0.5);
-  border-right: 2px dashed rgba(125, 211, 252, 0.5);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-  border-radius: 2px;
-  pointer-events: none;
-  z-index: 3;
-}
-
-/* 4. 表格空状态手绘插画与排版 */
 .table-empty-box {
   display: flex;
   flex-direction: column;
@@ -5599,18 +4332,6 @@ onBeforeUnmount(() => {
   text-align: center;
 }
 
-.handdrawn-table-empty-doodle {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: 14px;
-  filter: drop-shadow(0 3px 8px rgba(162, 198, 224, 0.25));
-}
-
-.handdrawn-mode.dark-mode .handdrawn-table-empty-doodle {
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.45));
-}
-
 .empty-state-title {
   font-size: 14px;
   font-weight: 700;
@@ -5618,7 +4339,7 @@ onBeforeUnmount(() => {
   color: #1e3a5f;
 }
 
-.handdrawn-mode.dark-mode .empty-state-title {
+.dark-mode .empty-state-title {
   color: #e2e8f0;
 }
 
@@ -5629,33 +4350,7 @@ onBeforeUnmount(() => {
   line-height: 1.5;
 }
 
-.handdrawn-mode.dark-mode .empty-state-desc {
+.dark-mode .empty-state-desc {
   color: #94a3b8;
-}
-
-/* 5. 手绘卡片微弧度手绘感边框与交互效果 */
-.handdrawn-mode:not(.dark-mode) .nav-item.active {
-  border-radius: 12px 14px 11px 13px;
-}
-
-.handdrawn-mode.dark-mode .nav-item.active {
-  border-radius: 12px 14px 11px 13px;
-}
-
-.handdrawn-mode:not(.dark-mode) .clean-input-box {
-  border-radius: 20px 22px 19px 21px;
-}
-
-.handdrawn-mode.dark-mode .clean-input-box {
-  border-radius: 20px 22px 19px 21px;
-}
-
-/* 手绘按钮悬停微晃动有趣细节 */
-.handdrawn-mode :deep(.n-button--primary-type):hover {
-  transform: translateY(-1px) rotate(0.4deg);
-}
-
-.handdrawn-mode :deep(.n-button--primary-type):active {
-  transform: translateY(1px) rotate(-0.3deg);
 }
 </style>

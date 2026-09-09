@@ -1,9 +1,9 @@
-export type AppTheme = 'minimal-light' | 'minimal-dark' | 'handdrawn-light' | 'handdrawn-dark'
+export type AppTheme = 'minimal-light' | 'minimal-dark'
 
 export interface ThemeOption {
   key: AppTheme
   name: string
-  category: 'minimal' | 'handdrawn'
+  category: 'minimal'
   categoryName: string
   description: string
   preview: {
