@@ -394,6 +394,11 @@ html, body, #app {
   letter-spacing: 1.2px !important;
 }
 
+.app-layout.handdrawn-mode .app-sidebar,
+.app-layout.handdrawn-mode .sidebar-nav {
+  overflow-x: hidden !important;
+}
+
 .app-layout.handdrawn-mode .nav-item {
   min-height: 38px;
   color: #315b82 !important;
@@ -690,6 +695,473 @@ html, body, #app {
   .app-layout.handdrawn-mode .view-content-wrapper {
     padding-right: 14px !important;
     padding-left: 14px !important;
+  }
+}
+
+/* ========================================================================== 
+   Handdrawn view interiors
+   页面内部增加水彩分区、手账标记和钢笔细节，同时修复设置页嵌套卡片布局。
+   ========================================================================== */
+.app-layout.handdrawn-mode .view-panel {
+  position: relative;
+}
+
+/* 通用卡片角落水彩印记，不遮挡表单与表格交互 */
+.app-layout.handdrawn-mode .search-bar-card,
+.app-layout.handdrawn-mode .purchased-search-toolbar,
+.app-layout.handdrawn-mode .installer-grid > .clean-card,
+.app-layout.handdrawn-mode .two-columns-layout > .clean-card,
+.app-layout.handdrawn-mode .about-section-box {
+  position: relative;
+  overflow: hidden;
+}
+
+.app-layout.handdrawn-mode .search-bar-card::after,
+.app-layout.handdrawn-mode .purchased-search-toolbar::after,
+.app-layout.handdrawn-mode .installer-grid > .clean-card::after,
+.app-layout.handdrawn-mode .two-columns-layout > .clean-card::after,
+.app-layout.handdrawn-mode .about-section-box::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  right: -24px;
+  top: -30px;
+  width: 128px;
+  height: 86px;
+  opacity: 0.52;
+  border-radius: 48% 52% 42% 58%;
+  transform: rotate(-8deg);
+  background: radial-gradient(ellipse, rgba(111, 190, 222, 0.28), rgba(166, 217, 231, 0.12) 48%, transparent 72%);
+}
+
+.app-layout.handdrawn-mode .search-bar-card {
+  background-image:
+    radial-gradient(ellipse at 98% 10%, rgba(241, 191, 91, 0.13), transparent 24%),
+    radial-gradient(circle at 12% 18%, rgba(114, 178, 211, 0.035) 0 1px, transparent 1.4px),
+    linear-gradient(106deg, rgba(255, 255, 255, 0.62), rgba(255, 251, 239, 0.22)) !important;
+  background-size: auto, 17px 17px, auto !important;
+}
+
+.app-layout.handdrawn-mode .search-bar-card::before {
+  content: "APP STORE · 探索手记" !important;
+  position: absolute;
+  right: 22px;
+  top: 8px;
+  z-index: 0;
+  color: rgba(50, 106, 148, 0.42);
+  font: 600 9px/1 "Segoe UI", sans-serif;
+  letter-spacing: 1.1px;
+  transform: rotate(1deg);
+}
+
+.app-layout.handdrawn-mode .search-input-group,
+.app-layout.handdrawn-mode .versions-toolbar,
+.app-layout.handdrawn-mode .purchased-search-toolbar > *,
+.app-layout.handdrawn-mode .installer-grid > .clean-card > *,
+.app-layout.handdrawn-mode .two-columns-layout > .clean-card > *,
+.app-layout.handdrawn-mode .about-section-box > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* 搜索与历史版本表格加入淡淡横线，像记录纸而不是纯白容器 */
+.app-layout.handdrawn-mode .table-flex-card {
+  background-image:
+    repeating-linear-gradient(0deg, transparent 0 31px, rgba(99, 151, 184, 0.045) 31px 32px),
+    radial-gradient(circle at 12% 18%, rgba(114, 178, 211, 0.035) 0 1px, transparent 1.4px),
+    linear-gradient(106deg, rgba(255, 255, 255, 0.62), rgba(255, 251, 239, 0.22)) !important;
+  background-size: auto, 17px 17px, auto !important;
+}
+
+.app-layout.handdrawn-mode .versions-toolbar {
+  position: relative;
+  padding-top: 10px;
+}
+
+.app-layout.handdrawn-mode .versions-toolbar::before {
+  content: "VERSION TIMELINE";
+  position: absolute;
+  top: -8px;
+  left: 2px;
+  color: rgba(52, 109, 151, 0.46);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  border-bottom: 1px solid rgba(58, 116, 157, 0.28);
+}
+
+.app-layout.handdrawn-mode .filter-search-row {
+  border-top: 1px dashed rgba(93, 145, 178, 0.25);
+  padding-top: 10px;
+}
+
+/* 下载任务像手账待办卡；状态进度使用淡彩笔触 */
+.app-layout.handdrawn-mode .tasks-container {
+  padding: 4px 5px 8px;
+  background-image: radial-gradient(rgba(81, 137, 171, 0.10) 1px, transparent 1.2px);
+  background-size: 18px 18px;
+}
+
+.app-layout.handdrawn-mode .modern-task-card {
+  position: relative;
+  overflow: hidden;
+  border-left: 4px solid rgba(74, 159, 198, 0.56) !important;
+}
+
+.app-layout.handdrawn-mode .modern-task-card::after {
+  content: "✓";
+  position: absolute;
+  right: 13px;
+  bottom: -8px;
+  color: rgba(58, 147, 118, 0.13);
+  font-family: "STKaiti", "KaiTi", serif;
+  font-size: 58px;
+  font-weight: 700;
+  transform: rotate(-9deg);
+  pointer-events: none;
+}
+
+.app-layout.handdrawn-mode .task-name,
+.app-layout.handdrawn-mode .empty-title,
+.app-layout.handdrawn-mode .headline-title,
+.app-layout.handdrawn-mode .action-banner-title,
+.app-layout.handdrawn-mode .profile-name,
+.app-layout.handdrawn-mode .about-app-title,
+.app-layout.handdrawn-mode .feature-title {
+  font-family: "STKaiti", "KaiTi", "Kaiti SC", "Microsoft YaHei", serif !important;
+  letter-spacing: 0.3px;
+}
+
+.app-layout.handdrawn-mode .task-progress-section .n-progress-graph-line-fill {
+  background: linear-gradient(90deg, #55b998, #65add2) !important;
+  box-shadow: 0 1px 4px rgba(74, 162, 150, 0.24);
+}
+
+/* 已购页使用珍藏册的薄荷绿水彩标记 */
+.app-layout.handdrawn-mode .purchased-search-toolbar {
+  background-image:
+    radial-gradient(ellipse at 94% 20%, rgba(82, 190, 149, 0.15), transparent 28%),
+    radial-gradient(circle at 12% 18%, rgba(114, 178, 211, 0.035) 0 1px, transparent 1.4px),
+    linear-gradient(106deg, rgba(255, 255, 255, 0.62), rgba(255, 251, 239, 0.22)) !important;
+  background-size: auto, 17px 17px, auto !important;
+}
+
+.app-layout.handdrawn-mode .purchased-search-toolbar::before {
+  content: "MY COLLECTION" !important;
+  position: absolute;
+  top: 7px;
+  right: 18px;
+  color: rgba(38, 139, 105, 0.38);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.1px;
+  transform: rotate(-1deg);
+}
+
+.app-layout.handdrawn-mode .purchased-search-badge {
+  background: rgba(220, 247, 235, 0.62) !important;
+  color: #287c62 !important;
+  border-color: rgba(63, 163, 126, 0.30) !important;
+}
+
+/* 设备直装：两张步骤纸与底部水彩提示条 */
+.app-layout.handdrawn-mode .installer-grid {
+  gap: 18px !important;
+  position: relative;
+}
+
+.app-layout.handdrawn-mode .installer-grid::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 24px;
+  bottom: 24px;
+  border-left: 1px dashed rgba(73, 135, 175, 0.26);
+}
+
+.app-layout.handdrawn-mode .installer-grid > .clean-card:first-child::after {
+  background: radial-gradient(ellipse, rgba(240, 185, 83, 0.25), rgba(246, 216, 158, 0.10) 48%, transparent 72%);
+}
+
+.app-layout.handdrawn-mode .installer-grid > .clean-card:nth-child(2)::after {
+  background: radial-gradient(ellipse, rgba(75, 187, 144, 0.24), rgba(154, 224, 194, 0.10) 48%, transparent 72%);
+}
+
+.app-layout.handdrawn-mode .card-headline {
+  padding-bottom: 8px;
+  border-bottom: 1px dashed rgba(83, 140, 176, 0.25);
+}
+
+.app-layout.handdrawn-mode .headline-title {
+  color: var(--ink) !important;
+  font-size: 15px !important;
+}
+
+.app-layout.handdrawn-mode .installer-action-banner {
+  border-left: 4px solid rgba(65, 170, 132, 0.54) !important;
+  background-image:
+    radial-gradient(ellipse at 12% 100%, rgba(108, 200, 164, 0.14), transparent 30%),
+    radial-gradient(circle at 12% 18%, rgba(114, 178, 211, 0.035) 0 1px, transparent 1.4px),
+    linear-gradient(106deg, rgba(255, 255, 255, 0.62), rgba(255, 251, 239, 0.22)) !important;
+}
+
+/* 账号页：身份档案纸，头像增加双层水彩圆环 */
+.app-layout.handdrawn-mode .two-columns-layout {
+  gap: 18px !important;
+}
+
+.app-layout.handdrawn-mode .two-columns-layout > .clean-card:first-child::after {
+  background: radial-gradient(ellipse, rgba(102, 174, 220, 0.26), transparent 70%);
+}
+
+.app-layout.handdrawn-mode .two-columns-layout > .clean-card:nth-child(2)::after {
+  background: radial-gradient(ellipse, rgba(241, 192, 105, 0.22), transparent 70%);
+}
+
+.app-layout.handdrawn-mode .account-profile-box {
+  position: relative;
+  padding: 18px !important;
+  border: 1px dashed rgba(89, 145, 181, 0.32);
+  border-radius: 10px 13px 9px 12px;
+  background: rgba(224, 241, 247, 0.28);
+}
+
+.app-layout.handdrawn-mode .large-avatar {
+  border: 2px solid rgba(255, 255, 255, 0.86) !important;
+  outline: 2px solid rgba(79, 151, 196, 0.36);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 7px rgba(116, 193, 219, 0.09) !important;
+}
+
+.app-layout.handdrawn-mode .form-item-clean {
+  position: relative;
+}
+
+.app-layout.handdrawn-mode .clean-label::before {
+  content: "✎";
+  margin-right: 5px;
+  color: #4b91bd;
+  font-family: serif;
+}
+
+/* 系统设置：由纵向大套娃卡片改成紧凑的两栏设置便笺 */
+.app-layout.handdrawn-mode .settings-stack {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  align-content: start !important;
+  gap: 16px !important;
+  padding: 10px !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  background: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+}
+
+.app-layout.handdrawn-mode .settings-group {
+  min-width: 0;
+  margin: 0 !important;
+  padding: 15px 16px 16px !important;
+  gap: 12px !important;
+  border-bottom: 1px solid rgba(118, 168, 199, 0.48) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.app-layout.handdrawn-mode .settings-group::after {
+  position: absolute;
+  right: 12px;
+  top: 5px;
+  font-family: "STKaiti", "KaiTi", serif;
+  font-size: 30px;
+  color: rgba(54, 115, 157, 0.13);
+  transform: rotate(-7deg);
+  pointer-events: none;
+}
+
+.app-layout.handdrawn-mode .settings-group:nth-child(1)::after { content: "⌘"; }
+.app-layout.handdrawn-mode .settings-group:nth-child(2)::after { content: "◇"; }
+.app-layout.handdrawn-mode .settings-group:nth-child(3)::after { content: "↝"; }
+.app-layout.handdrawn-mode .settings-group:nth-child(4)::after { content: "⌄"; }
+
+.app-layout.handdrawn-mode .settings-group:nth-child(1) {
+  border-top-color: rgba(81, 163, 201, 0.55) !important;
+}
+
+.app-layout.handdrawn-mode .settings-group:nth-child(2) {
+  border-top: 3px solid rgba(237, 179, 73, 0.45) !important;
+}
+
+.app-layout.handdrawn-mode .settings-group:nth-child(3) {
+  border-top: 3px solid rgba(72, 181, 139, 0.45) !important;
+}
+
+.app-layout.handdrawn-mode .settings-group:nth-child(4) {
+  border-top: 3px solid rgba(115, 139, 202, 0.42) !important;
+}
+
+.app-layout.handdrawn-mode .settings-group-title {
+  width: fit-content;
+  padding: 0 4px 3px 1px;
+  color: #245b85 !important;
+  font-size: 14px !important;
+  text-transform: none !important;
+  letter-spacing: 0.8px !important;
+  border-bottom: 2px solid rgba(82, 150, 190, 0.25);
+  transform: rotate(-0.3deg);
+}
+
+.app-layout.handdrawn-mode .settings-field-row {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 5px 0 !important;
+  gap: 8px !important;
+}
+
+.app-layout.handdrawn-mode .settings-field-row + .settings-field-row {
+  border-top: 1px dashed rgba(91, 143, 176, 0.22);
+  padding-top: 12px !important;
+}
+
+.app-layout.handdrawn-mode .field-meta,
+.app-layout.handdrawn-mode .field-control,
+.app-layout.handdrawn-mode .setting-input-action-group {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+}
+
+.app-layout.handdrawn-mode .field-control {
+  justify-content: flex-start !important;
+}
+
+.app-layout.handdrawn-mode .field-control > .n-switch {
+  margin: 2px 0;
+}
+
+.app-layout.handdrawn-mode .field-title {
+  color: var(--ink) !important;
+  font-size: 13px !important;
+  line-height: 1.35;
+}
+
+.app-layout.handdrawn-mode .field-desc {
+  color: var(--ink-muted) !important;
+  font-size: 11px !important;
+  line-height: 1.45;
+  white-space: normal;
+}
+
+.app-layout.handdrawn-mode .setting-input-action-group > .clean-input {
+  min-width: 0 !important;
+}
+
+.app-layout.handdrawn-mode .engine-badge-box {
+  padding: 5px 11px !important;
+  border: 1px solid rgba(63, 169, 126, 0.22);
+  background: rgba(218, 246, 231, 0.64) !important;
+}
+
+/* 关于页变成四张略微错落的水彩便签 */
+.app-layout.handdrawn-mode .about-features-grid {
+  gap: 14px !important;
+}
+
+.app-layout.handdrawn-mode .about-feature-item {
+  position: relative;
+  padding: 15px 16px !important;
+  border: 1px solid rgba(107, 159, 192, 0.38) !important;
+  border-radius: 7px 10px 6px 9px !important;
+  box-shadow: 1px 2px 0 rgba(72, 126, 160, 0.08);
+  background: rgba(255, 254, 247, 0.62) !important;
+}
+
+.app-layout.handdrawn-mode .about-feature-item:nth-child(odd) {
+  transform: rotate(-0.25deg);
+  background: rgba(236, 247, 248, 0.66) !important;
+}
+
+.app-layout.handdrawn-mode .about-feature-item:nth-child(even) {
+  transform: rotate(0.25deg);
+  background: rgba(255, 247, 223, 0.58) !important;
+}
+
+.app-layout.handdrawn-mode .about-feature-item::before {
+  content: "";
+  position: absolute;
+  width: 44px;
+  height: 9px;
+  top: -5px;
+  left: calc(50% - 22px);
+  background: rgba(142, 202, 218, 0.30);
+  border-left: 1px dashed rgba(72, 134, 168, 0.28);
+  border-right: 1px dashed rgba(72, 134, 168, 0.28);
+  transform: rotate(-1deg);
+}
+
+.app-layout.handdrawn-mode .about-footer-notice,
+.app-layout.handdrawn-mode .sub-alert-box,
+.app-layout.handdrawn-mode .no-device-box {
+  border-style: dashed !important;
+}
+
+/* 深色手绘内部控件的专属校正 */
+.app-layout.handdrawn-mode.theme-handdrawn-dark .search-bar-card,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .purchased-search-toolbar,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .table-flex-card,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .installer-action-banner {
+  background-image:
+    repeating-linear-gradient(0deg, transparent 0 31px, rgba(135, 177, 201, 0.025) 31px 32px),
+    radial-gradient(circle at 12% 18%, rgba(156, 198, 220, 0.035) 0 1px, transparent 1.4px),
+    linear-gradient(106deg, rgba(36, 57, 74, 0.60), rgba(25, 41, 55, 0.30)) !important;
+}
+
+.app-layout.handdrawn-mode.theme-handdrawn-dark .account-profile-box,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .about-feature-item {
+  background: rgba(23, 43, 57, 0.68) !important;
+  border-color: rgba(107, 159, 187, 0.32) !important;
+}
+
+.app-layout.handdrawn-mode.theme-handdrawn-dark .engine-badge-box {
+  background: rgba(42, 112, 83, 0.28) !important;
+  border-color: rgba(82, 181, 137, 0.25) !important;
+}
+
+.app-layout.handdrawn-mode.theme-handdrawn-dark .settings-group-title {
+  color: #a9d4ec !important;
+}
+
+@media (max-width: 1180px) {
+  .app-layout.handdrawn-mode .settings-stack {
+    grid-template-columns: 1fr !important;
+  }
+
+  .app-layout.handdrawn-mode .settings-group {
+    padding: 13px 15px 14px !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-layout.handdrawn-mode .installer-grid::before {
+    display: none;
+  }
+
+  .app-layout.handdrawn-mode .view-header {
+    min-height: auto;
+    align-items: flex-start !important;
+    gap: 10px;
+  }
+
+  .app-layout.handdrawn-mode .settings-stack {
+    padding: 5px !important;
+    gap: 12px !important;
   }
 }
 
