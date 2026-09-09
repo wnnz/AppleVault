@@ -283,15 +283,17 @@ html, body, #app {
 
 .app-layout.handdrawn-mode.theme-handdrawn-light {
   color: var(--ink) !important;
-  background-color: #f8fbfa !important;
+  background-color: #f7f5ed !important;
   background-image:
-    radial-gradient(ellipse at 72% 7%, rgba(171, 220, 238, 0.42) 0 12%, transparent 35%),
-    radial-gradient(ellipse at 93% 24%, rgba(212, 235, 215, 0.42) 0 8%, transparent 28%),
-    radial-gradient(ellipse at 56% 88%, rgba(248, 226, 172, 0.22) 0 10%, transparent 31%),
-    linear-gradient(rgba(95, 146, 176, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(95, 146, 176, 0.025) 1px, transparent 1px),
-    linear-gradient(108deg, #fbfdfb 0%, #fffdf8 48%, #f5fbfd 100%) !important;
-  background-size: auto, auto, auto, 24px 24px, 24px 24px, auto !important;
+    radial-gradient(ellipse at 16% 13%, rgba(174, 211, 224, 0.25) 0 9%, transparent 31%),
+    radial-gradient(ellipse at 88% 18%, rgba(192, 220, 205, 0.22) 0 8%, transparent 28%),
+    radial-gradient(ellipse at 64% 84%, rgba(231, 207, 153, 0.14) 0 10%, transparent 32%),
+    radial-gradient(circle at 24% 62%, rgba(181, 205, 214, 0.14) 0 5%, transparent 19%),
+    repeating-linear-gradient(8deg, rgba(84, 111, 123, 0.018) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(98deg, rgba(113, 91, 59, 0.013) 0 1px, transparent 1px 11px),
+    radial-gradient(rgba(65, 89, 99, 0.075) 0.55px, transparent 0.8px),
+    linear-gradient(112deg, #f8f7f0 0%, #fffdf5 44%, #f2f7f5 100%) !important;
+  background-size: auto, auto, auto, auto, auto, auto, 9px 9px, auto !important;
 }
 
 /* 画纸工作区与水彩远山横幅 */
@@ -619,16 +621,18 @@ html, body, #app {
   --ink: #e7f0f6;
   --ink-muted: #a9bed0;
   --sketch-blue: #6598b8;
-  --paper: rgba(27, 42, 57, 0.91);
-  --paper-strong: #1d3041;
-  background-color: #101d29 !important;
+  --paper: rgba(26, 40, 52, 0.93);
+  --paper-strong: #1b2c39;
+  background-color: #111c25 !important;
   background-image:
-    radial-gradient(ellipse at 78% 8%, rgba(69, 116, 151, 0.32), transparent 38%),
-    radial-gradient(ellipse at 90% 78%, rgba(51, 119, 105, 0.20), transparent 33%),
-    linear-gradient(rgba(160, 194, 215, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(160, 194, 215, 0.018) 1px, transparent 1px),
-    linear-gradient(115deg, #101a26, #152534 50%, #101c29) !important;
-  background-size: auto, auto, 24px 24px, 24px 24px, auto !important;
+    radial-gradient(ellipse at 17% 12%, rgba(62, 105, 132, 0.24) 0 9%, transparent 31%),
+    radial-gradient(ellipse at 87% 20%, rgba(48, 101, 89, 0.17) 0 8%, transparent 28%),
+    radial-gradient(ellipse at 63% 86%, rgba(90, 81, 121, 0.13) 0 10%, transparent 32%),
+    repeating-linear-gradient(8deg, rgba(174, 200, 213, 0.018) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(98deg, rgba(184, 167, 139, 0.012) 0 1px, transparent 1px 11px),
+    radial-gradient(rgba(180, 202, 213, 0.065) 0.55px, transparent 0.8px),
+    linear-gradient(112deg, #111b24 0%, #172630 46%, #101c25 100%) !important;
+  background-size: auto, auto, auto, auto, auto, 9px 9px, auto !important;
 }
 
 .app-layout.handdrawn-mode.theme-handdrawn-dark .app-sidebar {
@@ -1163,6 +1167,247 @@ html, body, #app {
     padding: 5px !important;
     gap: 12px !important;
   }
+}
+
+/* ========================================================================== 
+   Calm paper refinement
+   保留手绘纸张与钢笔线条，收起过多贴纸、英文标记、角标和旋转装饰。
+   ========================================================================== */
+.app-layout.handdrawn-mode .handdrawn-view-badge,
+.app-layout.handdrawn-mode .handdrawn-sidebar-sticker {
+  display: none !important;
+}
+
+.app-layout.handdrawn-mode .app-main::before {
+  height: 132px !important;
+  opacity: 0.34 !important;
+  filter: blur(0.4px) saturate(0.66) !important;
+}
+
+.app-layout.handdrawn-mode .view-header {
+  min-height: 58px !important;
+  padding: 3px 4px 6px !important;
+  margin-bottom: 12px !important;
+}
+
+.app-layout.handdrawn-mode .view-header::after {
+  left: 4px !important;
+  width: 72px !important;
+  border-bottom-width: 1px !important;
+  opacity: 0.58;
+  transform: rotate(-0.7deg) !important;
+}
+
+.app-layout.handdrawn-mode .view-title {
+  font-size: 21px !important;
+  letter-spacing: 0.2px !important;
+}
+
+.app-layout.handdrawn-mode .view-desc {
+  font-size: 12px !important;
+  letter-spacing: 0.15px !important;
+}
+
+/* 卡片使用统一纸张质感，不再叠加角落色块、胶带和多重轮廓 */
+.app-layout.handdrawn-mode .clean-card,
+.app-layout.handdrawn-mode .settings-group,
+.app-layout.handdrawn-mode .modern-task-card,
+.app-layout.handdrawn-mode .empty-state-card,
+.app-layout.handdrawn-mode .device-spec-box,
+.app-layout.handdrawn-mode .installer-action-banner,
+.app-layout.handdrawn-mode .about-section-box,
+.app-layout.handdrawn-mode .sub-alert-box,
+.app-layout.handdrawn-mode .about-hero {
+  background-color: var(--paper) !important;
+  background-image:
+    radial-gradient(ellipse at 12% 18%, rgba(132, 173, 190, 0.055) 0 7%, transparent 25%),
+    radial-gradient(ellipse at 88% 76%, rgba(202, 183, 133, 0.040) 0 8%, transparent 27%),
+    repeating-linear-gradient(7deg, rgba(72, 97, 108, 0.012) 0 1px, transparent 1px 8px),
+    repeating-linear-gradient(97deg, rgba(106, 83, 54, 0.010) 0 1px, transparent 1px 12px),
+    radial-gradient(rgba(66, 90, 99, 0.052) 0.5px, transparent 0.75px),
+    linear-gradient(108deg, rgba(255, 255, 252, 0.50), rgba(248, 246, 235, 0.18)) !important;
+  background-size: auto, auto, auto, auto, 10px 10px, auto !important;
+  border: 1px solid rgba(110, 155, 181, 0.38) !important;
+  outline: none !important;
+  border-radius: 10px !important;
+  box-shadow: 0 3px 12px rgba(65, 104, 126, 0.065) !important;
+  transform: none !important;
+}
+
+.app-layout.handdrawn-mode.theme-handdrawn-dark .clean-card,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .settings-group,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .modern-task-card,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .empty-state-card,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .device-spec-box,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .installer-action-banner,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .about-section-box,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .sub-alert-box,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .about-hero {
+  background-image:
+    radial-gradient(ellipse at 14% 19%, rgba(112, 158, 181, 0.065) 0 7%, transparent 25%),
+    radial-gradient(ellipse at 86% 78%, rgba(116, 105, 139, 0.042) 0 8%, transparent 27%),
+    repeating-linear-gradient(7deg, rgba(178, 199, 209, 0.012) 0 1px, transparent 1px 8px),
+    repeating-linear-gradient(97deg, rgba(200, 184, 154, 0.009) 0 1px, transparent 1px 12px),
+    radial-gradient(rgba(179, 203, 214, 0.045) 0.5px, transparent 0.75px),
+    linear-gradient(108deg, rgba(40, 58, 70, 0.48), rgba(21, 34, 44, 0.22)) !important;
+  border-color: rgba(104, 150, 177, 0.29) !important;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.16) !important;
+}
+
+.app-layout.handdrawn-mode .clean-card:hover,
+.app-layout.handdrawn-mode .modern-task-card:hover {
+  border-color: rgba(87, 143, 177, 0.48) !important;
+  box-shadow: 0 4px 14px rgba(65, 104, 126, 0.085) !important;
+  transform: none !important;
+}
+
+/* 清理页面内部过度装饰 */
+.app-layout.handdrawn-mode .search-bar-card::before,
+.app-layout.handdrawn-mode .search-bar-card::after,
+.app-layout.handdrawn-mode .purchased-search-toolbar::before,
+.app-layout.handdrawn-mode .purchased-search-toolbar::after,
+.app-layout.handdrawn-mode .installer-grid::before,
+.app-layout.handdrawn-mode .installer-grid > .clean-card::after,
+.app-layout.handdrawn-mode .two-columns-layout > .clean-card::after,
+.app-layout.handdrawn-mode .about-section-box::after,
+.app-layout.handdrawn-mode .modern-task-card::after,
+.app-layout.handdrawn-mode .versions-toolbar::before,
+.app-layout.handdrawn-mode .settings-group::after,
+.app-layout.handdrawn-mode .about-feature-item::before,
+.app-layout.handdrawn-mode .clean-label::before {
+  content: none !important;
+  display: none !important;
+}
+
+.app-layout.handdrawn-mode .search-bar-card,
+.app-layout.handdrawn-mode .purchased-search-toolbar,
+.app-layout.handdrawn-mode .table-flex-card,
+.app-layout.handdrawn-mode .installer-action-banner {
+  background-image:
+    repeating-linear-gradient(0deg, transparent 0 34px, rgba(91, 137, 163, 0.025) 34px 35px),
+    radial-gradient(ellipse at 14% 16%, rgba(123, 169, 189, 0.050) 0 7%, transparent 25%),
+    repeating-linear-gradient(7deg, rgba(72, 97, 108, 0.010) 0 1px, transparent 1px 8px),
+    radial-gradient(rgba(66, 90, 99, 0.045) 0.5px, transparent 0.75px),
+    linear-gradient(108deg, rgba(255, 255, 252, 0.48), rgba(248, 246, 235, 0.16)) !important;
+  background-size: auto, auto, auto, 10px 10px, auto !important;
+}
+
+.app-layout.handdrawn-mode.theme-handdrawn-dark .search-bar-card,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .purchased-search-toolbar,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .table-flex-card,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .installer-action-banner {
+  background-image:
+    repeating-linear-gradient(0deg, transparent 0 34px, rgba(135, 177, 201, 0.018) 34px 35px),
+    radial-gradient(ellipse at 14% 16%, rgba(112, 158, 181, 0.055) 0 7%, transparent 25%),
+    repeating-linear-gradient(7deg, rgba(178, 199, 209, 0.010) 0 1px, transparent 1px 8px),
+    radial-gradient(rgba(179, 203, 214, 0.040) 0.5px, transparent 0.75px),
+    linear-gradient(108deg, rgba(40, 58, 70, 0.46), rgba(21, 34, 44, 0.20)) !important;
+}
+
+.app-layout.handdrawn-mode .versions-toolbar {
+  padding-top: 0 !important;
+}
+
+.app-layout.handdrawn-mode .filter-search-row {
+  border-top-color: rgba(93, 145, 178, 0.18) !important;
+}
+
+.app-layout.handdrawn-mode .tasks-container {
+  background-image: none !important;
+  padding: 0 !important;
+}
+
+.app-layout.handdrawn-mode .modern-task-card,
+.app-layout.handdrawn-mode .installer-action-banner {
+  border-left-width: 1px !important;
+}
+
+.app-layout.handdrawn-mode .installer-grid,
+.app-layout.handdrawn-mode .two-columns-layout {
+  gap: 14px !important;
+}
+
+.app-layout.handdrawn-mode .card-headline {
+  border-bottom-style: solid !important;
+  border-bottom-color: rgba(83, 140, 176, 0.17) !important;
+}
+
+.app-layout.handdrawn-mode .account-profile-box {
+  padding: 16px !important;
+  border-style: solid !important;
+  border-color: rgba(89, 145, 181, 0.24) !important;
+  border-radius: 9px !important;
+  background: rgba(224, 239, 243, 0.18) !important;
+}
+
+.app-layout.handdrawn-mode.theme-handdrawn-dark .account-profile-box {
+  background: rgba(21, 38, 49, 0.38) !important;
+}
+
+.app-layout.handdrawn-mode .large-avatar {
+  outline: none !important;
+  box-shadow: 0 2px 8px rgba(64, 119, 151, 0.14) !important;
+}
+
+/* 设置页保留清晰两栏，但统一成安静的纸张卡片 */
+.app-layout.handdrawn-mode .settings-stack {
+  gap: 14px !important;
+  padding: 4px !important;
+}
+
+.app-layout.handdrawn-mode .settings-group {
+  padding: 14px 15px !important;
+  gap: 10px !important;
+  border-top: 1px solid rgba(110, 155, 181, 0.38) !important;
+  border-bottom: 1px solid rgba(110, 155, 181, 0.38) !important;
+}
+
+.app-layout.handdrawn-mode .settings-group-title {
+  padding: 0 0 5px !important;
+  border-bottom: 1px solid rgba(82, 150, 190, 0.18) !important;
+  transform: none !important;
+  font-size: 13px !important;
+  letter-spacing: 0.35px !important;
+}
+
+.app-layout.handdrawn-mode .settings-field-row + .settings-field-row {
+  border-top-style: solid !important;
+  border-top-color: rgba(91, 143, 176, 0.14) !important;
+}
+
+/* 关于页取消便签错位和胶带，保持统一信息卡 */
+.app-layout.handdrawn-mode .about-features-grid {
+  gap: 12px !important;
+}
+
+.app-layout.handdrawn-mode .about-feature-item,
+.app-layout.handdrawn-mode .about-feature-item:nth-child(odd),
+.app-layout.handdrawn-mode .about-feature-item:nth-child(even) {
+  padding: 14px 15px !important;
+  transform: none !important;
+  background-color: rgba(255, 254, 248, 0.52) !important;
+  background-image:
+    radial-gradient(rgba(66, 90, 99, 0.040) 0.5px, transparent 0.75px),
+    linear-gradient(108deg, rgba(255, 255, 252, 0.34), rgba(242, 246, 241, 0.14)) !important;
+  background-size: 10px 10px, auto !important;
+  border-color: rgba(107, 159, 192, 0.30) !important;
+  border-radius: 9px !important;
+  box-shadow: none !important;
+}
+
+.app-layout.handdrawn-mode.theme-handdrawn-dark .about-feature-item,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .about-feature-item:nth-child(odd),
+.app-layout.handdrawn-mode.theme-handdrawn-dark .about-feature-item:nth-child(even) {
+  background-color: rgba(24, 41, 52, 0.56) !important;
+  background-image:
+    radial-gradient(rgba(179, 203, 214, 0.035) 0.5px, transparent 0.75px),
+    linear-gradient(108deg, rgba(40, 58, 70, 0.30), rgba(21, 34, 44, 0.18)) !important;
+}
+
+.app-layout.handdrawn-mode .about-footer-notice,
+.app-layout.handdrawn-mode .sub-alert-box,
+.app-layout.handdrawn-mode .no-device-box {
+  border-style: solid !important;
 }
 
 
