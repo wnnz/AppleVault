@@ -30,29 +30,17 @@ if ((Test-Path "$ScriptDir/ios.exe") -and -not (Test-Path "$ToolsDir/ios.exe")) 
 }
 
 Write-Host "==> [3/4] 检查 Windows Logo 图标与应用资源嵌入..." -ForegroundColor Cyan
-$IconFile = "$ScriptDir/build/appicon.png"
-if (-not (Test-Path $IconFile)) {
-    $IconFile = "$ScriptDir/build/windows/icon.ico"
-}
-$WinresCmd = Get-Command go-winres -ErrorAction SilentlyContinue
-if (-not $WinresCmd -and (Test-Path "$env:USERPROFILE/go/bin/go-winres.exe")) {
-    $WinresCmd = "$env:USERPROFILE/go/bin/go-winres.exe"
-}
-if ($WinresCmd -and (Test-Path $IconFile)) {
-    $winresArgs = @(
-        "simply",
-        "--icon", $IconFile,
-        "--manifest", "gui",
-        "--product-name", "AppleVault",
-        "--file-description", "果仓助手 - 苹果 App Store 官方正版与历史版本下载工具",
-        "--product-version", "1.0.0",
-        "--file-version", "1.0.0",
-        "--copyright", "AppleVault",
-        "--arch", "amd64"
-    )
-    & $WinresCmd @winresArgs
-} elseif (-not (Test-Path "$ScriptDir/rsrc_windows_amd64.syso")) {
-    Write-Warning "未检测到 go-winres 且缺少 rsrc_windows_amd64.syso，编译可能缺少 exe 图标。建议执行: go install github.com/tc-hib/go-winres@latest"
+$SysoFile = "$ScriptDir/rsrc_windows_amd64.syso"
+if (-not (Test-Path $SysoFile)) {
+    $RsrcCmd = Get-Command rsrc -ErrorAction SilentlyContinue
+    if (-not $RsrcCmd -and (Test-Path "$env:USERPROFILE/go/bin/rsrc.exe")) {
+        $RsrcCmd = "$env:USERPROFILE/go/bin/rsrc.exe"
+    }
+    $IcoFile = "$ScriptDir/build/windows/icon.ico"
+    $ManifestFile = "$ScriptDir/build/windows/wails.exe.manifest"
+    if ($RsrcCmd -and (Test-Path $IcoFile) -and (Test-Path $ManifestFile)) {
+        & $RsrcCmd -manifest "$ManifestFile" -ico "$IcoFile" -arch "amd64" -o "$SysoFile"
+    }
 }
 
 Write-Host "==> [4/4] 编译主程序 AppleVault.exe (增量覆盖输出，保留所有依赖与数据)..." -ForegroundColor Cyan

@@ -54,6 +54,7 @@ func (a *App) startup(ctx context.Context) {
 	a.ensureDataMigration()
 	a.loadSettings()
 	a.loadTasks()
+	initWindowIcon()
 
 	go func() {
 		acc, err := a.GetAccountInfo()
