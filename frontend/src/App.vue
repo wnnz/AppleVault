@@ -8,7 +8,12 @@
     <n-dialog-provider>
       <n-notification-provider>
         <n-message-provider>
-          <MainView :is-dark="isDark" @toggle-theme="toggleTheme" />
+          <MainView 
+            :current-theme="currentTheme" 
+            :is-dark="isDark" 
+            @update:current-theme="setTheme"
+            @toggle-theme="toggleTheme" 
+          />
         </n-message-provider>
       </n-notification-provider>
     </n-dialog-provider>
@@ -17,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import {
   NConfigProvider,
   NMessageProvider,
@@ -30,37 +35,126 @@ import {
   GlobalThemeOverrides
 } from 'naive-ui'
 import MainView from './components/MainView.vue'
+import { AppTheme, THEME_STORAGE_KEY } from './types/theme'
 
-const isDark = ref(false)
+// 从 localStorage 读取存储的主题，默认 'minimal-light'
+const savedTheme = (localStorage.getItem(THEME_STORAGE_KEY) as AppTheme) || 'minimal-light'
+const validThemes: AppTheme[] = ['minimal-light', 'minimal-dark', 'handdrawn-light', 'handdrawn-dark']
 
-function toggleTheme() {
-  isDark.value = !isDark.value
+const currentTheme = ref<AppTheme>(
+  validThemes.includes(savedTheme) ? savedTheme : 'minimal-light'
+)
+
+const isDark = computed(() => currentTheme.value.endsWith('-dark'))
+
+function setTheme(theme: AppTheme) {
+  currentTheme.value = theme
+  localStorage.setItem(THEME_STORAGE_KEY, theme)
 }
 
-const themeOverrides = computed<GlobalThemeOverrides>(() => ({
-  common: {
-    primaryColor: '#0071e3',
-    primaryColorHover: '#0077ed',
-    primaryColorPressed: '#005bb5',
-    primaryColorSuppl: '#0071e3',
-    borderRadius: '8px',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif'
-  },
-  Card: {
-    borderRadius: '12px',
-    paddingSmall: '14px'
-  },
-  Button: {
-    borderRadiusMedium: '8px',
-    borderRadiusSmall: '6px',
-    borderRadiusTiny: '5px',
-    fontWeight: '500'
-  },
-  Input: {
-    borderRadius: '8px'
-  },
-  DataTable: {
-    borderRadius: '8px'
+function toggleTheme() {
+  if (currentTheme.value === 'minimal-light') {
+    setTheme('minimal-dark')
+  } else if (currentTheme.value === 'minimal-dark') {
+    setTheme('minimal-light')
+  } else if (currentTheme.value === 'handdrawn-light') {
+    setTheme('handdrawn-dark')
+  } else if (currentTheme.value === 'handdrawn-dark') {
+    setTheme('handdrawn-light')
   }
-}))
+}
+
+watch(currentTheme, (newTheme) => {
+  localStorage.setItem(THEME_STORAGE_KEY, newTheme)
+})
+
+const themeOverrides = computed<GlobalThemeOverrides>(() => {
+  // 手绘风格 - 浅色 (水彩手账插画风)
+  if (currentTheme.value === 'handdrawn-light') {
+    return {
+      common: {
+        primaryColor: '#4092ea',
+        primaryColorHover: '#5baaf5',
+        primaryColorPressed: '#2c7be5',
+        primaryColorSuppl: '#4092ea',
+        borderRadius: '10px',
+        fontFamily: '"Chalkboard SE", "Comic Sans MS", "Caveat", "PingFang SC", "Microsoft YaHei", sans-serif'
+      },
+      Card: {
+        borderRadius: '14px',
+        paddingSmall: '14px'
+      },
+      Button: {
+        borderRadiusMedium: '10px',
+        borderRadiusSmall: '8px',
+        borderRadiusTiny: '6px',
+        fontWeight: '600'
+      },
+      Input: {
+        borderRadius: '10px'
+      },
+      DataTable: {
+        borderRadius: '12px'
+      }
+    }
+  }
+
+  // 手绘风格 - 深色 (夜空水彩插画风)
+  if (currentTheme.value === 'handdrawn-dark') {
+    return {
+      common: {
+        primaryColor: '#60a5fa',
+        primaryColorHover: '#93c5fd',
+        primaryColorPressed: '#3b82f6',
+        primaryColorSuppl: '#60a5fa',
+        borderRadius: '10px',
+        fontFamily: '"Chalkboard SE", "Comic Sans MS", "Caveat", "PingFang SC", "Microsoft YaHei", sans-serif'
+      },
+      Card: {
+        borderRadius: '14px',
+        paddingSmall: '14px'
+      },
+      Button: {
+        borderRadiusMedium: '10px',
+        borderRadiusSmall: '8px',
+        borderRadiusTiny: '6px',
+        fontWeight: '600'
+      },
+      Input: {
+        borderRadius: '10px'
+      },
+      DataTable: {
+        borderRadius: '12px'
+      }
+    }
+  }
+
+  // 简约风格 (minimal-light 和 minimal-dark)
+  return {
+    common: {
+      primaryColor: '#0071e3',
+      primaryColorHover: '#0077ed',
+      primaryColorPressed: '#005bb5',
+      primaryColorSuppl: '#0071e3',
+      borderRadius: '8px',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif'
+    },
+    Card: {
+      borderRadius: '12px',
+      paddingSmall: '14px'
+    },
+    Button: {
+      borderRadiusMedium: '8px',
+      borderRadiusSmall: '6px',
+      borderRadiusTiny: '5px',
+      fontWeight: '500'
+    },
+    Input: {
+      borderRadius: '8px'
+    },
+    DataTable: {
+      borderRadius: '8px'
+    }
+  }
+})
 </script>

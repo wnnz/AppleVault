@@ -70,6 +70,29 @@ func (a *App) startup(ctx context.Context) {
 }
 
 func (a *App) getDataDir() string {
+	// 1. 检查程序所在目录下的 data (release 模式)
+	if exe, err := os.Executable(); err == nil {
+		dir := filepath.Dir(exe)
+		p := filepath.Join(dir, "data")
+		lowerDir := strings.ToLower(dir)
+		if !strings.Contains(lowerDir, "temp") && !strings.Contains(lowerDir, "tmp") {
+			if fi, err := os.Stat(p); err == nil && fi.IsDir() {
+				return p
+			}
+		}
+	}
+	// 2. 检查工作目录下的 build/bin/data 或 data (dev 模式)
+	if cwd, err := os.Getwd(); err == nil {
+		pBinData := filepath.Join(cwd, "build", "bin", "data")
+		if fi, err := os.Stat(pBinData); err == nil && fi.IsDir() {
+			return pBinData
+		}
+		pCwdData := filepath.Join(cwd, "data")
+		if fi, err := os.Stat(pCwdData); err == nil && fi.IsDir() {
+			return pCwdData
+		}
+	}
+	// 3. 默认回退
 	var baseDir string
 	if exe, err := os.Executable(); err == nil {
 		baseDir = filepath.Dir(exe)
@@ -287,17 +310,20 @@ func (a *App) buildIpaToolCmd(ctx context.Context, exePath string, cmdArgs []str
 		if strings.HasPrefix(upper, "USERPROFILE=") ||
 			strings.HasPrefix(upper, "HOME=") ||
 			strings.HasPrefix(upper, "HOMEDRIVE=") ||
-			strings.HasPrefix(upper, "HOMEPATH=") {
+			strings.HasPrefix(upper, "HOMEPATH=") ||
+			strings.HasPrefix(upper, "IPATOOL_DIRECTORY=") {
 			continue
 		}
 		filtered = append(filtered, e)
 	}
 
+	ipatoolDir := filepath.Join(dataDir, ".ipatool")
 	filtered = append(filtered,
 		"USERPROFILE="+dataDir,
 		"HOME="+dataDir,
 		"HOMEDRIVE="+drive,
 		"HOMEPATH="+pathNoVolume,
+		"IPATOOL_DIRECTORY="+ipatoolDir,
 	)
 
 	if enableProxy && strings.TrimSpace(proxyUrl) != "" {
@@ -313,6 +339,7 @@ func (a *App) buildIpaToolCmd(ctx context.Context, exePath string, cmdArgs []str
 		a.emitLog(fmt.Sprintf("[网络代理] 已启用: %s", proxy))
 	}
 
+	cmd.Dir = dataDir
 	cmd.Env = filtered
 	return cmd
 }
@@ -322,7 +349,7 @@ func (a *App) runIpaTool(ctx context.Context, args ...string) (string, error) {
 	if _, err := os.Stat(exePath); err != nil {
 		errStr := fmt.Sprintf("未在程序同目录下找到 ipatool.exe！请确认存在于: %s", exePath)
 		a.emitLog(errStr)
-		return "", fmt.Errorf(errStr)
+		return "", fmt.Errorf("%s", errStr)
 	}
 
 	cmdArgs := make([]string, 0, len(args)+4)
@@ -389,6 +416,8 @@ func (a *App) runIpaTool(ctx context.Context, args ...string) (string, error) {
 	go func() {
 		defer wg.Done()
 		scanner := bufio.NewScanner(stdoutPipe)
+		buf := make([]byte, 64*1024)
+		scanner.Buffer(buf, 10*1024*1024)
 		for scanner.Scan() {
 			line := scanner.Text()
 			stdoutLines = append(stdoutLines, line)
@@ -399,6 +428,8 @@ func (a *App) runIpaTool(ctx context.Context, args ...string) (string, error) {
 	go func() {
 		defer wg.Done()
 		scanner := bufio.NewScanner(stderrPipe)
+		buf := make([]byte, 64*1024)
+		scanner.Buffer(buf, 10*1024*1024)
 		for scanner.Scan() {
 			line := scanner.Text()
 			stderrLines = append(stderrLines, line)
@@ -413,14 +444,33 @@ func (a *App) runIpaTool(ctx context.Context, args ...string) (string, error) {
 	stderr := strings.Join(stderrLines, "\n")
 
 	if cmdErr != nil {
-		// Extract error from output
 		allOutput := stderr + "\n" + stdout
+		// 1. 优先解析 JSON 格式错误: {"error": "..."} 或 {"message": "..."}
+		for _, line := range strings.Split(allOutput, "\n") {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "{") && strings.HasSuffix(line, "}") {
+				var errObj struct {
+					Error   string `json:"error"`
+					Message string `json:"message"`
+				}
+				if err := json.Unmarshal([]byte(line), &errObj); err == nil {
+					if errObj.Error != "" {
+						return stdout, fmt.Errorf("%s", errObj.Error)
+					}
+					if errObj.Message != "" {
+						return stdout, fmt.Errorf("%s", errObj.Message)
+					}
+				}
+			}
+		}
+
+		// 2. 尝试 logfmt 格式 error="([^"]+)"
 		re := regexp.MustCompile(`error="([^"]+)"`)
 		if matches := re.FindStringSubmatch(allOutput); len(matches) > 1 {
-			return stdout, fmt.Errorf(matches[1])
+			return stdout, fmt.Errorf("%s", matches[1])
 		}
 		if strings.TrimSpace(stderr) != "" {
-			return stdout, fmt.Errorf(stderr)
+			return stdout, fmt.Errorf("%s", stderr)
 		}
 		return stdout, cmdErr
 	}
@@ -431,6 +481,36 @@ func (a *App) runIpaTool(ctx context.Context, args ...string) (string, error) {
 func parseJSONFromOutput[T any](output string) (T, error) {
 	var zero T
 	lines := strings.Split(output, "\n")
+
+	// 第一轮优先筛选：跳过纯日志行（只有 level/time/message 的 log 结构，或 level 为 error）
+	for i := len(lines) - 1; i >= 0; i-- {
+		line := strings.TrimSpace(lines[i])
+		if strings.HasPrefix(line, "{") && strings.HasSuffix(line, "}") {
+			var rawMap map[string]interface{}
+			if err := json.Unmarshal([]byte(line), &rawMap); err == nil {
+				if level, ok := rawMap["level"].(string); ok && level == "error" {
+					continue
+				}
+				hasOnlyLogKeys := true
+				for k := range rawMap {
+					if k != "level" && k != "time" && k != "message" {
+						hasOnlyLogKeys = false
+						break
+					}
+				}
+				if hasOnlyLogKeys {
+					continue
+				}
+
+				var result T
+				if err := json.Unmarshal([]byte(line), &result); err == nil {
+					return result, nil
+				}
+			}
+		}
+	}
+
+	// 第二轮兜底：任意可解析为目标类型的 JSON
 	for i := len(lines) - 1; i >= 0; i-- {
 		line := strings.TrimSpace(lines[i])
 		if strings.HasPrefix(line, "{") && strings.HasSuffix(line, "}") {
@@ -791,6 +871,66 @@ func (a *App) Purchase(bundleId string) (PurchaseResult, error) {
 }
 
 func (a *App) ListPurchases(page, limit int) (PurchasedResult, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+
+	// ipatool 单次最多支持 100 条 (max results must not exceed 100)
+	// 若请求超过 100 条 (如前端拉取名下全部已购记录)，按 100 每页自动分批拉取并合并
+	if limit > 100 {
+		var allApps []AppItem
+		currentPage := 1
+		totalCount := 0
+		pageSize := 100
+
+		for {
+			ctx := a.startCommandContext()
+			args := []string{"list-purchases", "-p", fmt.Sprintf("%d", currentPage), "-l", fmt.Sprintf("%d", pageSize), "--format", "json"}
+			out, err := a.runIpaTool(ctx, args...)
+			if err != nil {
+				return PurchasedResult{}, err
+			}
+
+			res, err := parseJSONFromOutput[PurchasedResult](out)
+			if err != nil {
+				return PurchasedResult{}, err
+			}
+
+			totalCount = res.TotalCount
+			allApps = append(allApps, res.Apps...)
+
+			if totalCount > 0 && len(allApps) >= totalCount {
+				break
+			}
+			if len(allApps) >= limit || len(res.Apps) < pageSize {
+				break
+			}
+			currentPage++
+		}
+
+		if len(allApps) > limit {
+			allApps = allApps[:limit]
+		}
+
+		for i := range allApps {
+			if allApps[i].Price == 0 {
+				allApps[i].DisplayPrice = "免费"
+			} else {
+				allApps[i].DisplayPrice = fmt.Sprintf("¥%.2f", allApps[i].Price)
+			}
+		}
+
+		return PurchasedResult{
+			Count:      len(allApps),
+			TotalCount: totalCount,
+			Page:       1,
+			Apps:       allApps,
+		}, nil
+	}
+
 	ctx := a.startCommandContext()
 	args := []string{"list-purchases", "-p", fmt.Sprintf("%d", page), "-l", fmt.Sprintf("%d", limit), "--format", "json"}
 

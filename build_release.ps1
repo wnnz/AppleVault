@@ -7,6 +7,14 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 Set-Location $ScriptDir
 
+# 确保 Go 与 go-winres 环境变量可用（支持便携式 Go）
+if (-not (Get-Command go -ErrorAction SilentlyContinue)) {
+    if (Test-Path "$env:TEMP\liveagent-go1.27.1\go\bin\go.exe") {
+        $env:GOROOT = "$env:TEMP\liveagent-go1.27.1\go"
+        $env:PATH = "$env:GOROOT\bin;$env:USERPROFILE\go\bin;$env:PATH"
+    }
+}
+
 Write-Host "==> [1/3] 检查前端构建..." -ForegroundColor Cyan
 if (-not $SkipFrontend) {
     Set-Location "$ScriptDir/frontend"
@@ -42,11 +50,11 @@ if (-not (Test-Path $SysoFile)) {
             "simply",
             "--icon", $IconFile,
             "--manifest", "gui",
-            "--product-name", "AppleVault",
-            "--file-description", "AppleVault",
+            "--product-name", "果仓助手",
+            "--file-description", "果仓助手 (AppleVault)",
             "--product-version", "1.0.0",
             "--file-version", "1.0.0",
-            "--copyright", "AppleVault",
+            "--copyright", "AppleVault (果仓助手)",
             "--arch", "amd64"
         )
         & $WinresCmd @winresArgs
