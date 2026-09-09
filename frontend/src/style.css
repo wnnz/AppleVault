@@ -263,4 +263,434 @@ html, body, #app {
   }
 }
 
+/* ========================================================================== 
+   Watercolor notebook refinement
+   仅作用于手绘主题：淡彩画纸、钢笔勾线、柔和侧栏与远山水彩背景。
+   ========================================================================== */
+.app-layout.handdrawn-mode {
+  --ink: #183b68;
+  --ink-muted: #58779a;
+  --sketch-blue: #92bdd9;
+  --sketch-blue-soft: rgba(122, 178, 215, 0.42);
+  --paper: rgba(255, 254, 249, 0.92);
+  --paper-strong: #fffefa;
+  --mint: #47b98c;
+  --sun: #efb347;
+  --coral: #ef786f;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif !important;
+  isolation: isolate;
+}
+
+.app-layout.handdrawn-mode.theme-handdrawn-light {
+  color: var(--ink) !important;
+  background-color: #f8fbfa !important;
+  background-image:
+    radial-gradient(ellipse at 72% 7%, rgba(171, 220, 238, 0.42) 0 12%, transparent 35%),
+    radial-gradient(ellipse at 93% 24%, rgba(212, 235, 215, 0.42) 0 8%, transparent 28%),
+    radial-gradient(ellipse at 56% 88%, rgba(248, 226, 172, 0.22) 0 10%, transparent 31%),
+    linear-gradient(rgba(95, 146, 176, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(95, 146, 176, 0.025) 1px, transparent 1px),
+    linear-gradient(108deg, #fbfdfb 0%, #fffdf8 48%, #f5fbfd 100%) !important;
+  background-size: auto, auto, auto, 24px 24px, 24px 24px, auto !important;
+}
+
+/* 画纸工作区与水彩远山横幅 */
+.app-layout.handdrawn-mode .app-main {
+  isolation: isolate;
+}
+
+.app-layout.handdrawn-mode .app-main::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 158px;
+  pointer-events: none;
+  opacity: 0.88;
+  background:
+    radial-gradient(ellipse at 78% 72%, rgba(91, 151, 125, 0.30) 0 2.2%, transparent 2.8%),
+    radial-gradient(ellipse at 83% 70%, rgba(71, 135, 110, 0.25) 0 1.8%, transparent 2.5%),
+    radial-gradient(ellipse at 90% 66%, rgba(83, 145, 111, 0.30) 0 2.1%, transparent 2.8%),
+    linear-gradient(156deg, transparent 0 53%, rgba(103, 162, 185, 0.20) 53.4% 60%, transparent 60.5%) 72% 8% / 38% 110% no-repeat,
+    linear-gradient(150deg, transparent 0 48%, rgba(113, 171, 194, 0.24) 48.5% 60%, transparent 60.5%) 92% 0 / 37% 100% no-repeat,
+    linear-gradient(168deg, transparent 0 62%, rgba(155, 197, 178, 0.27) 62.5% 70%, transparent 70.5%) 48% 12% / 52% 100% no-repeat,
+    radial-gradient(ellipse at 68% 20%, rgba(188, 225, 238, 0.56), transparent 55%);
+  filter: blur(0.15px) saturate(0.86);
+}
+
+.app-layout.handdrawn-mode.theme-handdrawn-dark .app-main::before {
+  opacity: 0.42;
+  filter: saturate(0.75);
+  background:
+    radial-gradient(ellipse at 83% 72%, rgba(94, 166, 145, 0.34) 0 2.2%, transparent 2.8%),
+    linear-gradient(156deg, transparent 0 53%, rgba(82, 137, 169, 0.30) 53.4% 60%, transparent 60.5%) 72% 8% / 38% 110% no-repeat,
+    linear-gradient(150deg, transparent 0 48%, rgba(105, 101, 167, 0.30) 48.5% 60%, transparent 60.5%) 92% 0 / 37% 100% no-repeat,
+    radial-gradient(ellipse at 70% 16%, rgba(65, 116, 157, 0.34), transparent 58%);
+}
+
+.app-layout.handdrawn-mode .handdrawn-top-doodle,
+.app-layout.handdrawn-mode .brand-handdrawn-crown,
+.app-layout.handdrawn-mode .nav-title-sparkle {
+  display: none !important;
+}
+
+/* 淡蓝水彩侧栏，激活项改为参考图中的半透明蓝色纸片 */
+.app-layout.handdrawn-mode .app-sidebar {
+  width: 224px !important;
+  min-width: 224px !important;
+  padding: 17px 12px 12px !important;
+  border-right: 1px solid rgba(116, 166, 199, 0.52) !important;
+  box-shadow: 2px 0 12px rgba(83, 132, 164, 0.10) !important;
+}
+
+.app-layout.handdrawn-mode.theme-handdrawn-light .app-sidebar {
+  background:
+    radial-gradient(ellipse at 25% 12%, rgba(255, 255, 255, 0.78), transparent 38%),
+    radial-gradient(ellipse at 78% 72%, rgba(171, 219, 228, 0.34), transparent 52%),
+    linear-gradient(178deg, rgba(220, 239, 249, 0.96), rgba(232, 246, 250, 0.94)) !important;
+}
+
+.app-layout.handdrawn-mode .sidebar-brand {
+  padding: 3px 8px 15px !important;
+  border-bottom: 1px dashed rgba(102, 153, 187, 0.42) !important;
+}
+
+.app-layout.handdrawn-mode .brand-icon-box {
+  background: rgba(255, 255, 255, 0.58) !important;
+  color: #3988c3 !important;
+  border: 1px solid rgba(93, 158, 201, 0.48) !important;
+  border-radius: 50% 46% 52% 45% !important;
+  box-shadow: 1px 2px 0 rgba(76, 136, 177, 0.16) !important;
+}
+
+.app-layout.handdrawn-mode .brand-name,
+.app-layout.handdrawn-mode .view-title,
+.app-layout.handdrawn-mode .settings-group-title,
+.app-layout.handdrawn-mode .about-section-title,
+.app-layout.handdrawn-mode .empty-state-title,
+.app-layout.handdrawn-mode .search-none-title {
+  font-family: "STKaiti", "KaiTi", "Kaiti SC", "FangSong", "Microsoft YaHei", serif !important;
+  color: var(--ink) !important;
+  letter-spacing: 0.5px !important;
+}
+
+.app-layout.handdrawn-mode .brand-name {
+  font-size: 16px !important;
+  font-weight: 700 !important;
+}
+
+.app-layout.handdrawn-mode .brand-tag {
+  color: #397dad !important;
+  background: rgba(255, 255, 255, 0.46) !important;
+  border: 1px dashed rgba(76, 137, 178, 0.44) !important;
+  border-radius: 7px 5px 8px 6px !important;
+}
+
+.app-layout.handdrawn-mode .nav-section-title {
+  color: #6986a1 !important;
+  font-size: 10px !important;
+  letter-spacing: 1.2px !important;
+}
+
+.app-layout.handdrawn-mode .nav-item {
+  min-height: 38px;
+  color: #315b82 !important;
+  border: 1px solid transparent !important;
+  border-radius: 8px 10px 7px 9px !important;
+  font-weight: 500 !important;
+  box-shadow: none !important;
+}
+
+.app-layout.handdrawn-mode .nav-item:hover {
+  color: #1d4d77 !important;
+  background: rgba(255, 255, 255, 0.44) !important;
+  border-color: rgba(109, 164, 201, 0.28) !important;
+  transform: translateX(1px);
+}
+
+.app-layout.handdrawn-mode .nav-item.active {
+  color: #1d5687 !important;
+  background:
+    linear-gradient(105deg, rgba(170, 216, 248, 0.76), rgba(198, 229, 248, 0.64)) !important;
+  border: 1px solid rgba(103, 170, 217, 0.42) !important;
+  box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.48), 1px 2px 0 rgba(79, 139, 181, 0.10) !important;
+  text-shadow: 0 1px rgba(255, 255, 255, 0.76);
+}
+
+.app-layout.handdrawn-mode .nav-doodle-icon {
+  color: #4d7ea5 !important;
+  opacity: 0.92;
+}
+
+.app-layout.handdrawn-mode .nav-item.active .nav-doodle-icon {
+  color: #3485c2 !important;
+  animation: none !important;
+  transform: scale(1.08) rotate(-2deg) !important;
+}
+
+/* 页面标题像钢笔写在水彩横幅上 */
+.app-layout.handdrawn-mode .view-content-wrapper {
+  padding: 22px 22px 9px !important;
+}
+
+.app-layout.handdrawn-mode .view-header {
+  min-height: 66px;
+  align-items: center !important;
+  margin-bottom: 14px !important;
+  padding: 4px 8px 7px !important;
+  position: relative;
+}
+
+.app-layout.handdrawn-mode .view-header::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  bottom: 2px;
+  width: 92px;
+  height: 5px;
+  border-bottom: 2px solid rgba(47, 105, 157, 0.55);
+  border-radius: 50%;
+  transform: rotate(-1.5deg);
+}
+
+.app-layout.handdrawn-mode .view-title {
+  font-size: 23px !important;
+  line-height: 1.16 !important;
+  font-weight: 700 !important;
+}
+
+.app-layout.handdrawn-mode .view-title::after {
+  display: none !important;
+}
+
+.app-layout.handdrawn-mode .view-desc {
+  color: var(--ink-muted) !important;
+  font-size: 12.5px !important;
+  letter-spacing: 0.45px;
+}
+
+.app-layout.handdrawn-mode .handdrawn-view-badge {
+  color: #376c96 !important;
+  background: rgba(255, 254, 246, 0.55) !important;
+  border: 1px dashed rgba(76, 128, 166, 0.40) !important;
+  border-radius: 5px 8px 6px 9px !important;
+  box-shadow: none !important;
+  transform: rotate(-1deg) !important;
+  font-family: "STKaiti", "KaiTi", "Kaiti SC", serif !important;
+}
+
+/* 白色水彩纸卡片：纤细蓝色钢笔线而非现代玻璃卡片 */
+.app-layout.handdrawn-mode .clean-card,
+.app-layout.handdrawn-mode .settings-group,
+.app-layout.handdrawn-mode .modern-task-card,
+.app-layout.handdrawn-mode .empty-state-card,
+.app-layout.handdrawn-mode .device-spec-box,
+.app-layout.handdrawn-mode .installer-action-banner,
+.app-layout.handdrawn-mode .about-section-box,
+.app-layout.handdrawn-mode .sub-alert-box,
+.app-layout.handdrawn-mode .about-hero {
+  background-color: var(--paper) !important;
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(114, 178, 211, 0.035) 0 1px, transparent 1.4px),
+    linear-gradient(106deg, rgba(255, 255, 255, 0.62), rgba(255, 251, 239, 0.22)) !important;
+  background-size: 17px 17px, auto !important;
+  border: 1px solid rgba(118, 168, 199, 0.48) !important;
+  outline: 1px solid rgba(142, 190, 216, 0.16);
+  outline-offset: 2px;
+  border-radius: 9px 12px 8px 11px !important;
+  box-shadow: 1px 2px 0 rgba(80, 128, 158, 0.08), 0 8px 22px rgba(77, 130, 164, 0.055) !important;
+}
+
+.app-layout.handdrawn-mode .clean-card::before,
+.app-layout.handdrawn-mode .settings-group::before,
+.app-layout.handdrawn-mode .installer-action-banner::before,
+.app-layout.handdrawn-mode .about-section-box::before {
+  content: none !important;
+}
+
+.app-layout.handdrawn-mode .clean-card:hover,
+.app-layout.handdrawn-mode .modern-task-card:hover {
+  border-color: rgba(81, 148, 192, 0.58) !important;
+  box-shadow: 2px 3px 0 rgba(80, 128, 158, 0.09), 0 10px 25px rgba(77, 130, 164, 0.075) !important;
+}
+
+.app-layout.handdrawn-mode .clean-input-box,
+.app-layout.handdrawn-mode .sidebar-account-card,
+.app-layout.handdrawn-mode .icon-action-btn,
+.app-layout.handdrawn-mode .clean-drop-zone {
+  border-color: rgba(108, 161, 197, 0.50) !important;
+  border-radius: 8px 11px 7px 10px !important;
+  box-shadow: 1px 2px 0 rgba(84, 137, 172, 0.08) !important;
+}
+
+.app-layout.handdrawn-mode.theme-handdrawn-light .clean-input-box,
+.app-layout.handdrawn-mode.theme-handdrawn-light .sidebar-account-card,
+.app-layout.handdrawn-mode.theme-handdrawn-light .icon-action-btn {
+  background: rgba(255, 254, 250, 0.80) !important;
+}
+
+.app-layout.handdrawn-mode .clean-input-box:focus-within {
+  border-color: #5d9eca !important;
+  box-shadow: 0 0 0 3px rgba(114, 181, 219, 0.14), 1px 2px 0 rgba(84, 137, 172, 0.08) !important;
+}
+
+.app-layout.handdrawn-mode .clean-drop-zone {
+  background: rgba(239, 248, 250, 0.62) !important;
+  border-style: dashed !important;
+  border-width: 1.5px !important;
+}
+
+/* Naive UI 控件同步为轻钢笔描边与低饱和马卡龙色 */
+.app-layout.handdrawn-mode .n-button {
+  border-radius: 7px 9px 6px 8px !important;
+  box-shadow: 1px 2px 0 rgba(67, 120, 156, 0.09) !important;
+  font-weight: 500 !important;
+}
+
+.app-layout.handdrawn-mode .n-button--primary-type {
+  color: #fff !important;
+  background: linear-gradient(112deg, #58a5d7, #438fc8) !important;
+  border: 1px solid rgba(41, 116, 167, 0.52) !important;
+  box-shadow: 1px 2px 0 rgba(40, 101, 144, 0.20) !important;
+}
+
+.app-layout.handdrawn-mode .n-button--primary-type:hover {
+  background: linear-gradient(112deg, #69b2df, #519dce) !important;
+  transform: translateY(-1px) rotate(0.2deg);
+}
+
+.app-layout.handdrawn-mode .n-base-selection,
+.app-layout.handdrawn-mode .n-input {
+  border-radius: 7px 9px 6px 8px !important;
+}
+
+.app-layout.handdrawn-mode .n-data-table {
+  border: 1px solid rgba(118, 168, 199, 0.42) !important;
+  border-radius: 7px 10px 8px 9px !important;
+  box-shadow: none !important;
+  overflow: hidden;
+}
+
+.app-layout.handdrawn-mode.theme-handdrawn-light .n-data-table,
+.app-layout.handdrawn-mode.theme-handdrawn-light .n-data-table-th,
+.app-layout.handdrawn-mode.theme-handdrawn-light .n-data-table-td {
+  background-color: rgba(255, 254, 250, 0.70) !important;
+}
+
+.app-layout.handdrawn-mode.theme-handdrawn-light .n-data-table-th {
+  color: #315f86 !important;
+  background-color: rgba(222, 240, 247, 0.64) !important;
+}
+
+.app-layout.handdrawn-mode .n-data-table-td,
+.app-layout.handdrawn-mode .n-data-table-th {
+  border-bottom-color: rgba(119, 163, 191, 0.20) !important;
+}
+
+.app-layout.handdrawn-mode .count-pill,
+.app-layout.handdrawn-mode .tag-version-highlight,
+.app-layout.handdrawn-mode .task-pill-build,
+.app-layout.handdrawn-mode .pill-gray,
+.app-layout.handdrawn-mode .account-pill,
+.app-layout.handdrawn-mode .purchased-search-badge {
+  border-style: solid !important;
+  border-radius: 5px 7px 4px 6px !important;
+  box-shadow: none !important;
+}
+
+.app-layout.handdrawn-mode .bottom-status-bar {
+  border-top: 1px dashed rgba(100, 153, 188, 0.46) !important;
+  box-shadow: 0 -2px 10px rgba(87, 135, 166, 0.06);
+}
+
+.app-layout.handdrawn-mode.theme-handdrawn-light .bottom-status-bar {
+  background: rgba(226, 242, 248, 0.88) !important;
+}
+
+/* 深色手绘主题保留同一套纸张/钢笔语言，改为靛蓝夜间水彩 */
+.app-layout.handdrawn-mode.theme-handdrawn-dark {
+  --ink: #e7f0f6;
+  --ink-muted: #a9bed0;
+  --sketch-blue: #6598b8;
+  --paper: rgba(27, 42, 57, 0.91);
+  --paper-strong: #1d3041;
+  background-color: #101d29 !important;
+  background-image:
+    radial-gradient(ellipse at 78% 8%, rgba(69, 116, 151, 0.32), transparent 38%),
+    radial-gradient(ellipse at 90% 78%, rgba(51, 119, 105, 0.20), transparent 33%),
+    linear-gradient(rgba(160, 194, 215, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(160, 194, 215, 0.018) 1px, transparent 1px),
+    linear-gradient(115deg, #101a26, #152534 50%, #101c29) !important;
+  background-size: auto, auto, 24px 24px, 24px 24px, auto !important;
+}
+
+.app-layout.handdrawn-mode.theme-handdrawn-dark .app-sidebar {
+  background:
+    radial-gradient(ellipse at 24% 15%, rgba(73, 120, 151, 0.24), transparent 42%),
+    linear-gradient(178deg, rgba(20, 40, 56, 0.98), rgba(24, 48, 62, 0.96)) !important;
+  border-right-color: rgba(105, 151, 179, 0.34) !important;
+}
+
+.app-layout.handdrawn-mode.theme-handdrawn-dark .nav-item {
+  color: #abc2d3 !important;
+}
+
+.app-layout.handdrawn-mode.theme-handdrawn-dark .nav-item.active {
+  color: #e8f5fb !important;
+  text-shadow: none;
+  background: linear-gradient(105deg, rgba(65, 122, 158, 0.72), rgba(54, 107, 140, 0.62)) !important;
+  border-color: rgba(113, 169, 201, 0.42) !important;
+  box-shadow: inset 0 0 12px rgba(153, 205, 229, 0.08), 1px 2px 0 rgba(0, 0, 0, 0.15) !important;
+}
+
+.app-layout.handdrawn-mode.theme-handdrawn-dark .clean-card,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .settings-group,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .modern-task-card,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .empty-state-card,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .device-spec-box,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .installer-action-banner,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .about-section-box,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .sub-alert-box,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .about-hero {
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(156, 198, 220, 0.035) 0 1px, transparent 1.4px),
+    linear-gradient(106deg, rgba(36, 57, 74, 0.60), rgba(25, 41, 55, 0.30)) !important;
+  border-color: rgba(104, 150, 179, 0.38) !important;
+  outline-color: rgba(118, 165, 193, 0.08) !important;
+}
+
+.app-layout.handdrawn-mode.theme-handdrawn-dark .brand-name,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .view-title,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .settings-group-title,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .about-section-title,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .empty-state-title,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .search-none-title {
+  color: #e5eff5 !important;
+}
+
+.app-layout.handdrawn-mode.theme-handdrawn-dark .clean-input-box,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .sidebar-account-card,
+.app-layout.handdrawn-mode.theme-handdrawn-dark .icon-action-btn {
+  background: rgba(20, 36, 50, 0.82) !important;
+}
+
+.app-layout.handdrawn-mode.theme-handdrawn-dark .n-button--primary-type {
+  background: linear-gradient(112deg, #508fb6, #39789f) !important;
+  border-color: rgba(103, 165, 200, 0.50) !important;
+}
+
+@media (max-width: 900px) {
+  .app-layout.handdrawn-mode .app-sidebar {
+    width: 208px !important;
+    min-width: 208px !important;
+  }
+
+  .app-layout.handdrawn-mode .view-content-wrapper {
+    padding-right: 14px !important;
+    padding-left: 14px !important;
+  }
+}
+
 

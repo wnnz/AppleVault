@@ -73,12 +73,15 @@ const themeOverrides = computed<GlobalThemeOverrides>(() => {
   if (currentTheme.value === 'handdrawn-light') {
     return {
       common: {
-        primaryColor: '#4092ea',
-        primaryColorHover: '#5baaf5',
-        primaryColorPressed: '#2c7be5',
-        primaryColorSuppl: '#4092ea',
-        borderRadius: '10px',
-        fontFamily: '"Chalkboard SE", "Comic Sans MS", "Caveat", "PingFang SC", "Microsoft YaHei", sans-serif'
+        primaryColor: '#3f8fce',
+        primaryColorHover: '#62a9dc',
+        primaryColorPressed: '#2f75ad',
+        primaryColorSuppl: '#3f8fce',
+        successColor: '#42b88a',
+        warningColor: '#e8aa46',
+        errorColor: '#ef786e',
+        borderRadius: '8px',
+        fontFamily: '"Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif'
       },
       Card: {
         borderRadius: '14px',
@@ -103,12 +106,15 @@ const themeOverrides = computed<GlobalThemeOverrides>(() => {
   if (currentTheme.value === 'handdrawn-dark') {
     return {
       common: {
-        primaryColor: '#60a5fa',
-        primaryColorHover: '#93c5fd',
-        primaryColorPressed: '#3b82f6',
-        primaryColorSuppl: '#60a5fa',
-        borderRadius: '10px',
-        fontFamily: '"Chalkboard SE", "Comic Sans MS", "Caveat", "PingFang SC", "Microsoft YaHei", sans-serif'
+        primaryColor: '#6aaed8',
+        primaryColorHover: '#8bc5e6',
+        primaryColorPressed: '#4e91bc',
+        primaryColorSuppl: '#6aaed8',
+        successColor: '#58c49a',
+        warningColor: '#e5b45c',
+        errorColor: '#ef8279',
+        borderRadius: '8px',
+        fontFamily: '"Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif'
       },
       Card: {
         borderRadius: '14px',
