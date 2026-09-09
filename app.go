@@ -29,6 +29,9 @@ type App struct {
 	tasksMu     sync.RWMutex
 	tasks       []*DownloadTask
 	taskCancels map[string]context.CancelFunc
+
+	accountMu          sync.RWMutex
+	cachedAccountEmail string
 }
 
 func NewApp() *App {
@@ -51,6 +54,18 @@ func (a *App) startup(ctx context.Context) {
 	a.ensureDataMigration()
 	a.loadSettings()
 	a.loadTasks()
+
+	go func() {
+		acc, err := a.GetAccountInfo()
+		if err == nil && acc.Success && acc.Email != "" {
+			a.accountMu.Lock()
+			a.cachedAccountEmail = acc.Email
+			a.accountMu.Unlock()
+			a.settingsMu.Lock()
+			a.settings.DefaultDownloadDir = a.getDownloadsDir()
+			a.settingsMu.Unlock()
+		}
+	}()
 }
 
 func (a *App) getDataDir() string {
@@ -65,8 +80,32 @@ func (a *App) getDataDir() string {
 	return dataDir
 }
 
+func sanitizeAccountDir(email string) string {
+	clean := strings.TrimSpace(email)
+	if clean == "" {
+		return "default"
+	}
+	invalidChars := `\/:*?"<>|`
+	for _, c := range invalidChars {
+		clean = strings.ReplaceAll(clean, string(c), "_")
+	}
+	return clean
+}
+
+func (a *App) getAccountIdentifier() string {
+	a.accountMu.RLock()
+	email := a.cachedAccountEmail
+	a.accountMu.RUnlock()
+
+	if email != "" {
+		return sanitizeAccountDir(email)
+	}
+	return "default"
+}
+
 func (a *App) getDownloadsDir() string {
-	downloadsDir := filepath.Join(a.getDataDir(), "downloads")
+	accountDir := a.getAccountIdentifier()
+	downloadsDir := filepath.Join(a.getDataDir(), "downloads", accountDir)
 	_ = os.MkdirAll(downloadsDir, 0755)
 	return downloadsDir
 }
@@ -524,7 +563,17 @@ func (a *App) GetAccountInfo() (AccountInfo, error) {
 	if err != nil {
 		return AccountInfo{}, err
 	}
-	return parseJSONFromOutput[AccountInfo](out)
+	acc, parseErr := parseJSONFromOutput[AccountInfo](out)
+	if parseErr == nil && acc.Success && acc.Email != "" {
+		a.accountMu.Lock()
+		a.cachedAccountEmail = acc.Email
+		a.accountMu.Unlock()
+
+		a.settingsMu.Lock()
+		a.settings.DefaultDownloadDir = a.getDownloadsDir()
+		a.settingsMu.Unlock()
+	}
+	return acc, parseErr
 }
 
 func (a *App) Login(email, password, authCode string) (LoginResult, error) {
@@ -555,6 +604,14 @@ func (a *App) Login(email, password, authCode string) (LoginResult, error) {
 
 	acc, parseErr := parseJSONFromOutput[AccountInfo](out)
 	if parseErr == nil && acc.Success {
+		a.accountMu.Lock()
+		a.cachedAccountEmail = acc.Email
+		a.accountMu.Unlock()
+
+		a.settingsMu.Lock()
+		a.settings.DefaultDownloadDir = a.getDownloadsDir()
+		a.settingsMu.Unlock()
+
 		return LoginResult{
 			Success: true,
 			Account: acc,
@@ -580,6 +637,14 @@ func (a *App) Revoke() (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	a.accountMu.Lock()
+	a.cachedAccountEmail = ""
+	a.accountMu.Unlock()
+
+	a.settingsMu.Lock()
+	a.settings.DefaultDownloadDir = a.getDownloadsDir()
+	a.settingsMu.Unlock()
+
 	var res map[string]interface{}
 	if err := json.Unmarshal([]byte(out), &res); err == nil {
 		if s, ok := res["success"].(bool); ok {

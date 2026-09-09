@@ -39,25 +39,28 @@ function toggleTheme() {
 
 const themeOverrides = computed<GlobalThemeOverrides>(() => ({
   common: {
-    primaryColor: '#0078D4',
-    primaryColorHover: '#106EBE',
-    primaryColorPressed: '#005A9E',
-    primaryColorSuppl: '#0078D4',
-    borderRadius: '4px',
-    fontFamily: 'Segoe UI, "Microsoft YaHei UI", sans-serif'
+    primaryColor: '#0071e3',
+    primaryColorHover: '#0077ed',
+    primaryColorPressed: '#005bb5',
+    primaryColorSuppl: '#0071e3',
+    borderRadius: '8px',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif'
   },
   Card: {
-    borderRadius: '8px',
-    paddingSmall: '16px'
+    borderRadius: '12px',
+    paddingSmall: '14px'
   },
   Button: {
-    borderRadiusMedium: '4px',
-    borderRadiusSmall: '4px',
-    borderRadiusTiny: '4px',
-    fontWeight: '600'
+    borderRadiusMedium: '8px',
+    borderRadiusSmall: '6px',
+    borderRadiusTiny: '5px',
+    fontWeight: '500'
   },
   Input: {
-    borderRadius: '4px'
+    borderRadius: '8px'
+  },
+  DataTable: {
+    borderRadius: '8px'
   }
 }))
 </script>

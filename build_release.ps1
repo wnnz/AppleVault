@@ -39,7 +39,18 @@ if (-not $WinresCmd -and (Test-Path "$env:USERPROFILE/go/bin/go-winres.exe")) {
     $WinresCmd = "$env:USERPROFILE/go/bin/go-winres.exe"
 }
 if ($WinresCmd -and (Test-Path $IconFile)) {
-    & $WinresCmd simply --icon "$IconFile" --manifest "gui" --product-name "果仓助手 (AppleVault)" --file-description "果仓助手 - 苹果 App Store 官方正版与历史版本下载工具" --product-version "1.0.0" --file-version "1.0.0" --copyright "AppleVault" --arch "amd64"
+    $winresArgs = @(
+        "simply",
+        "--icon", $IconFile,
+        "--manifest", "gui",
+        "--product-name", "AppleVault",
+        "--file-description", "果仓助手 - 苹果 App Store 官方正版与历史版本下载工具",
+        "--product-version", "1.0.0",
+        "--file-version", "1.0.0",
+        "--copyright", "AppleVault",
+        "--arch", "amd64"
+    )
+    & $WinresCmd @winresArgs
 } elseif (-not (Test-Path "$ScriptDir/rsrc_windows_amd64.syso")) {
     Write-Warning "未检测到 go-winres 且缺少 rsrc_windows_amd64.syso，编译可能缺少 exe 图标。建议执行: go install github.com/tc-hib/go-winres@latest"
 }

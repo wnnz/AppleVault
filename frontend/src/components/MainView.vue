@@ -1,644 +1,1050 @@
 <template>
   <div class="app-layout" :class="{ 'dark-mode': isDark }">
-    <!-- 1. Top Header Bar -->
-    <header class="top-header">
-      <div class="header-brand">
-        <span class="brand-emoji">🍎</span>
-        <span class="brand-title">果仓助手</span>
-        <span class="brand-badge">v1.0</span>
-        <span class="brand-subtitle">— AppleVault 苹果 App Store 正版与历史版本下载</span>
+    <!-- Left Modern Sidebar -->
+    <aside class="app-sidebar">
+      <!-- Brand Header -->
+      <div class="sidebar-brand">
+        <div class="brand-icon-box">
+          <svg class="brand-apple-svg" viewBox="0 0 170 170" fill="currentColor">
+            <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.08-7.7-7.85-12.01-14.3-6.24-9.35-11.12-20.2-14.65-32.54-3.52-12.35-5.29-24.3-5.29-35.87 0-14.12 3.52-25.75 10.57-34.89 7.05-9.14 16.03-13.88 26.94-14.21 4.79 0 10.36 1.34 16.71 4.02 6.36 2.68 10.15 4.08 11.37 4.19 1.12-.11 5.02-1.57 11.7-4.38 6.68-2.82 12.35-4.08 17.02-3.78 12.79.89 23.01 5.66 30.65 14.31-11.29 6.81-16.79 16.32-16.5 28.53.33 9.61 4.2 17.58 11.62 23.9 7.42 6.32 16.31 9.94 26.68 10.86-2.12 6.54-4.53 13.06-7.24 19.56zm-29.35-104.9c-.11 4.14-1.55 8.35-4.32 12.63-2.77 4.28-6.42 7.74-10.96 10.38-3.02 1.63-6.21 2.72-9.56 3.27-.11-1.3-.11-2.4-.11-3.27 0-4.13 1.54-8.38 4.63-12.75 3.09-4.37 7.02-7.86 11.8-10.47 2.91-1.63 5.75-2.73 8.52-3.3 0 1.2.06 2.37 0 3.51z"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <div class="brand-name">AppleVault</div>
+          <div class="brand-tag">v1.0</div>
+        </div>
       </div>
 
-      <div class="header-tools">
-        <!-- Proxy Pill Badge -->
-        <div class="pill-badge" title="全局网络代理设置">
-          <n-switch v-model:value="settings.enableProxy" size="small" @update:value="onProxyToggle" />
-          <span class="pill-label">代理</span>
-          <span class="pill-value text-ellipsis" :title="settings.proxyUrl">{{ settings.proxyUrl }}</span>
+      <!-- Navigation List -->
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">核心功能</div>
+        <button
+          class="nav-item"
+          :class="{ active: activeTab === 'search' }"
+          @click="activeTab = 'search'"
+        >
+          <span class="nav-label">应用搜索</span>
+        </button>
+
+        <button
+          class="nav-item"
+          :class="{ active: activeTab === 'versions' }"
+          @click="activeTab = 'versions'"
+        >
+          <span class="nav-label">历史版本</span>
+        </button>
+
+        <button
+          class="nav-item"
+          :class="{ active: activeTab === 'download' }"
+          @click="activeTab = 'download'"
+        >
+          <span class="nav-label">下载中心</span>
+          <span v-if="activeTaskCount > 0" class="nav-badge">{{ activeTaskCount }}</span>
+        </button>
+
+        <button
+          class="nav-item"
+          :class="{ active: activeTab === 'purchased' }"
+          @click="activeTab = 'purchased'"
+        >
+          <span class="nav-label">已购应用</span>
+        </button>
+
+        <button
+          class="nav-item"
+          :class="{ active: activeTab === 'installer' }"
+          @click="activeTab = 'installer'"
+        >
+          <span class="nav-label">设备直装</span>
+        </button>
+
+        <div class="nav-section-title mt-4">偏好与设置</div>
+        <button
+          class="nav-item"
+          :class="{ active: activeTab === 'account' }"
+          @click="activeTab = 'account'"
+        >
+          <span class="nav-label">账号中心</span>
+          <span class="account-dot" :class="isLoggedIn ? 'dot-online' : 'dot-offline'"></span>
+        </button>
+
+        <button
+          class="nav-item"
+          :class="{ active: activeTab === 'settings' }"
+          @click="activeTab = 'settings'"
+        >
+          <span class="nav-label">系统设置</span>
+        </button>
+
+        <button
+          class="nav-item"
+          :class="{ active: activeTab === 'about' }"
+          @click="activeTab = 'about'"
+        >
+          <span class="nav-label">关于软件</span>
+        </button>
+      </nav>
+
+      <!-- Sidebar Footer (Account & Quick Controls) -->
+      <div class="sidebar-footer">
+        <!-- Account Quick Card -->
+        <div class="sidebar-account-card" @click="activeTab = 'account'">
+          <div class="user-avatar" :class="{ 'avatar-logged': isLoggedIn }">
+            {{ isLoggedIn ? (account.name ? account.name.charAt(0).toUpperCase() : '') : '?' }}
+          </div>
+          <div class="user-info-text">
+            <div class="user-name text-ellipsis">{{ account.name || '未登录 Apple ID' }}</div>
+            <div class="user-email text-ellipsis">{{ account.email || '点击前往登录' }}</div>
+          </div>
         </div>
 
-        <!-- Account Pill Badge -->
-        <div class="pill-badge">
-          <span class="indicator-dot" :class="isLoggedIn ? 'dot-active' : 'dot-inactive'"></span>
-          <span class="pill-value font-bold">{{ account.name || '未登录' }}</span>
-          <span v-if="account.email" class="pill-sub">({{ account.email }})</span>
+        <!-- Quick Switch Bar -->
+        <div class="sidebar-actions-bar">
+          <!-- Proxy Switch -->
+          <div class="quick-tool" title="网络代理">
+            <n-switch
+              v-model:value="settings.enableProxy"
+              size="small"
+              @update:value="onProxyToggle"
+            />
+            <span class="quick-tool-label">代理</span>
+          </div>
+
+          <!-- Theme Toggle -->
+          <button
+            class="icon-action-btn"
+            @click="emit('toggleTheme')"
+            :title="isDark ? '切换到浅色模式' : '切换到深色模式'"
+          >
+            <svg v-if="isDark" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            <svg v-else viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </button>
+
+          <!-- Log Toggle -->
+          <button
+            class="icon-action-btn"
+            :class="{ active: showLogs }"
+            @click="toggleLogs"
+            :title="showLogs ? '隐藏控制台日志' : '展开控制台日志'"
+          >
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="4 17 10 11 4 5"></polyline>
+              <line x1="12" y1="19" x2="20" y2="19"></line>
+            </svg>
+          </button>
         </div>
-
-        <!-- Refresh Account Button -->
-        <n-button size="small" secondary @click="() => refreshAccount(false)" :loading="isAccountLoading">
-          刷新状态
-        </n-button>
-
-        <!-- Toggle Console Logs -->
-        <n-button size="small" secondary @click="toggleLogs" :title="showLogs ? '收起底部日志控制台' : '展开底部日志控制台'">
-          📜 日志
-        </n-button>
-
-        <!-- Theme Switcher -->
-        <n-button size="small" circle quaternary @click="emit('toggleTheme')" :title="isDark ? '切换到亮色模式' : '切换到深色模式'">
-          <template #icon>
-            <span style="font-size: 14px;">{{ isDark ? '☀️' : '🌙' }}</span>
-          </template>
-        </n-button>
       </div>
-    </header>
+    </aside>
 
-    <!-- 2. Main Tab Content Area -->
-    <main class="main-body">
-      <n-tabs v-model:value="activeTab" type="line" animated class="custom-tabs">
-        
-        <!-- TAB 1: 账号管理 -->
-        <n-tab-pane name="account" tab="👤 账号管理">
-          <div class="tab-scroll-container">
-            <div class="two-columns-layout">
-              <!-- Left Card: Current Account Status -->
-              <div class="fluent-card">
-                <h3 class="card-title">当前登录状态</h3>
-                
-                <div class="key-value-row">
-                  <span class="row-label">账号名称:</span>
-                  <span class="row-value font-bold">{{ account.name || '未登录' }}</span>
-                </div>
+    <!-- Right Main Workspace -->
+    <section class="app-main">
+      <!-- Dynamic View Container -->
+      <div class="view-content-wrapper">
 
-                <div class="key-value-row">
-                  <span class="row-label">Apple ID:</span>
-                  <span class="row-value">{{ account.email || '未登录' }}</span>
-                </div>
-
-                <div class="notice-box notice-warning">
-                  💡 提示：IPATool 使用你自己的 Apple ID 官方凭据直接从苹果 App Store 服务器下载正版 IPA，下载的文件自带你的个人授权，装入设备不会闪退。
-                </div>
-
-                <div class="btn-group-row">
-                  <n-button type="error" :disabled="!isLoggedIn" @click="handleRevoke" :loading="isRevoking">
-                    退出登录 (Revoke)
-                  </n-button>
-                  <n-button secondary @click="handleClearKeychain" :loading="isClearing" title="删除 ~/.ipatool 目录，解决密码校验失败问题">
-                    清空本地密钥库缓存
-                  </n-button>
-                </div>
-              </div>
-
-              <!-- Right Card: Login Form -->
-              <div class="fluent-card">
-                <h3 class="card-title">登录 Apple ID</h3>
-
-                <div class="form-group">
-                  <label class="field-label">Apple ID 邮箱:</label>
-                  <n-input v-model:value="loginForm.email" placeholder="例如: your_apple_id@icloud.com" size="medium" />
-                </div>
-
-                <div class="form-group">
-                  <label class="field-label">Apple ID 密码:</label>
-                  <n-input v-model:value="loginForm.password" type="password" show-password-on="click" placeholder="请输入密码" size="medium" @keydown.enter="handleLogin" />
-                </div>
-
-                <div class="notice-box notice-gray">
-                  🔒 验证说明：点击登录后，若你的 Apple ID 开启了双重认证（2FA），界面会自动弹出验证码输入弹窗，在手机上确认后输入 6 位验证码即可完成登录。
-                </div>
-
-                <n-button type="primary" block size="large" :loading="isLoggingIn" @click="handleLogin" style="height: 38px;">
-                  登 录 Apple ID
-                </n-button>
-              </div>
+        <!-- VIEW 1: 应用搜索 (search) -->
+        <div v-show="activeTab === 'search'" class="view-panel">
+          <div class="view-header">
+            <div>
+              <h2 class="view-title">应用搜索</h2>
+              <p class="view-desc">在 Apple App Store 全球库中精准检索正版应用信息</p>
             </div>
           </div>
-        </n-tab-pane>
 
-        <!-- TAB 2: 已购应用 -->
-        <n-tab-pane name="purchased" tab="📦 已购应用">
-          <div class="tab-table-container">
-            <div class="fluent-card toolbar-card">
-              <div class="purchased-toolbar">
-                <n-button type="primary" size="medium" :loading="isPurchasedLoading" @click="loadPurchases">
-                  刷新已购列表
-                </n-button>
-
-                <div class="pagination-area">
-                  <n-button secondary size="small" :disabled="purchasedPage <= 1" @click="prevPurchasedPage">
-                    上一页
-                  </n-button>
-                  <span class="pagination-info">第 {{ purchasedPage }} 页 (共 {{ purchasedTotal }} 个应用)</span>
-                  <n-button secondary size="small" :disabled="purchasedPage * 20 >= purchasedTotal" @click="nextPurchasedPage">
-                    下一页
-                  </n-button>
-                </div>
-              </div>
-            </div>
-
-            <div class="fluent-card table-card">
-              <n-data-table
-                :columns="purchasedColumns"
-                :data="purchasedApps"
-                :loading="isPurchasedLoading"
-                size="small"
-                flex-height
-                style="height: 100%;"
-              />
-            </div>
-          </div>
-        </n-tab-pane>
-
-        <!-- TAB 3: 搜索应用 -->
-        <n-tab-pane name="search" tab="🔍 搜索应用">
-          <div class="tab-table-container">
-            <!-- Search Toolbar Card -->
-            <div class="fluent-card toolbar-card">
-              <div class="search-toolbar">
-                <n-input v-model:value="searchForm.term" placeholder="输入关键词搜索应用（如: 支付宝、微信、TikTok）" class="flex-1" size="medium" @keydown.enter="handleSearch" />
-                
-                <div class="select-wrapper">
-                  <span class="label-inline">平台:</span>
-                  <n-select v-model:value="searchForm.platform" :options="platformOptions" size="medium" style="width: 130px;" />
-                </div>
-
-                <div class="select-wrapper">
-                  <span class="label-inline">数量:</span>
-                  <n-select v-model:value="searchForm.limit" :options="limitOptions" size="medium" style="width: 85px;" />
-                </div>
-
-                <n-button type="primary" size="medium" :loading="isSearching" @click="handleSearch" style="width: 80px;">
-                  搜 索
-                </n-button>
-              </div>
-            </div>
-
-            <!-- Search Results Table Card -->
-            <div class="fluent-card table-card">
-              <n-data-table
-                :columns="searchColumns"
-                :data="searchResults"
-                :loading="isSearching"
-                :pagination="{ pageSize: 10 }"
-                size="small"
-                flex-height
-                style="height: 100%;"
-              />
-            </div>
-          </div>
-        </n-tab-pane>
-
-        <!-- TAB 4: 历史版本 -->
-        <n-tab-pane name="versions" tab="📜 历史版本">
-          <div class="tab-table-container">
-            <!-- Versions Toolbar Card -->
-            <div class="fluent-card toolbar-card">
-              <div class="version-toolbar-rows">
-                <div class="toolbar-row">
-                  <span class="label-inline">目标 Bundle ID:</span>
-                  <n-input v-model:value="versionForm.bundleId" placeholder="例如: com.alipay.iphoneclient" style="width: 300px;" size="medium" @keydown.enter="handleListVersions" />
-                  <n-button
-                    type="primary"
-                    size="medium"
-                    :loading="isListingVersions"
-                    :disabled="isListingVersions || isBatchQuerying || isTargetQuerying"
-                    @click="handleListVersions"
-                  >
-                    获取历史版本列表
-                  </n-button>
-                  <n-button
-                    :type="isBatchQuerying ? 'error' : 'default'"
-                    :secondary="!isBatchQuerying"
-                    size="medium"
-                    :disabled="versionItems.length === 0 || isListingVersions || isTargetQuerying"
-                    @click="handleBatchQueryClick"
-                  >
-                    <template #icon v-if="isBatchQuerying">
-                      <n-spin size="small" />
-                    </template>
-                    {{ isBatchQuerying ? '⏹️ 停止查询' : '批量查询前 30 个版本号' }}
-                  </n-button>
-                  <n-button
-                    :type="isTargetQuerying ? 'error' : 'default'"
-                    :secondary="!isTargetQuerying"
-                    size="medium"
-                    :disabled="versionItems.length === 0 || isListingVersions || isBatchQuerying"
-                    @click="handleTargetQueryClick"
-                  >
-                    <template #icon v-if="isTargetQuerying">
-                      <n-spin size="small" />
-                    </template>
-                    {{ isTargetQuerying ? '⏹️ 停止查询' : '🎯 二分查找指定版本' }}
-                  </n-button>
-                </div>
-
-                <div class="toolbar-row mt-2">
-                  <span class="label-inline">筛选版本 (输入版本号如 10.2.96、体积或构建 ID):</span>
-                  <n-input v-model:value="versionForm.filter" placeholder="实时过滤筛选..." style="width: 280px;" size="small" clearable />
-                  <span class="count-tag">共 {{ filteredVersions.length }} / {{ versionItems.length }} 个版本记录</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Versions DataGrid Card -->
-            <div class="fluent-card table-card">
-              <n-data-table
-                :columns="versionColumns"
-                :data="filteredVersions"
-                :loading="isListingVersions"
-                :virtual-scroll="true"
-                flex-height
-                style="height: 100%;"
-                size="small"
-              />
-            </div>
-          </div>
-        </n-tab-pane>
-
-        <!-- TAB 5: 下载中心 -->
-        <n-tab-pane name="download" tab="⬇️ 下载中心">
-          <div class="tab-table-container">
-            <div class="fluent-card toolbar-card">
-              <div class="purchased-toolbar">
-                <div class="flex-align-center">
-                  <span class="font-bold text-sm mr-2">下载任务列表</span>
-                  <n-tag type="info" size="small" round>
-                    共 {{ downloadTasks.length }} 个任务 ({{ activeTaskCount }} 个进行中，{{ completedTaskCount }} 个已完成)
-                  </n-tag>
-                </div>
-
-                <div class="btn-group-row">
-                  <n-button secondary size="small" :disabled="completedTaskCount === 0" @click="handleClearCompleted">
-                    清空已完成
-                  </n-button>
-                  <n-button secondary size="small" @click="handleOpenDefaultDownloadDir">
-                    📁 打开下载目录
-                  </n-button>
-                </div>
-              </div>
-            </div>
-
-            <div class="fluent-card table-card" style="padding: 12px; overflow-y: auto;">
-              <div v-if="downloadTasks.length === 0" class="empty-tasks-box">
-                <n-empty description="暂无下载任务。请在「应用搜索」或「历史版本」中点击下载直接添加！">
-                  <template #icon>
-                    <span style="font-size: 36px;">⬇️</span>
-                  </template>
-                </n-empty>
-              </div>
-
-              <div v-else class="task-items-list">
-                <div v-for="task in downloadTasks" :key="task.id" class="task-card">
-                  <div class="task-main">
-                    <div class="task-info">
-                      <div class="task-title-row">
-                        <span class="task-app-name">{{ task.appName }}</span>
-                        <n-tag size="small" type="success" :bordered="false" round class="task-ver-tag">
-                          {{ task.version }}
-                        </n-tag>
-                        <span class="task-bundle-id">{{ task.bundleID }}</span>
-                        <span v-if="task.versionId" class="task-build-id">Build: {{ task.versionId }}</span>
-                      </div>
-
-                      <div class="task-progress-bar">
-                        <n-progress
-                          type="line"
-                          :percentage="task.progress"
-                          :status="getTaskProgressStatus(task.status)"
-                          :show-indicator="false"
-                          :height="8"
-                          border-radius="4"
-                        />
-                      </div>
-
-                      <div class="task-meta-row">
-                        <div class="task-meta-left">
-                          <span class="task-badge-status" :class="'badge-' + task.status">{{ getTaskStatusText(task.status) }}</span>
-                          <span v-if="task.status === 'downloading'" class="task-speed font-semibold">{{ task.speed }}</span>
-                          <span v-if="task.status === 'downloading' && task.totalBytes > 0" class="task-bytes">
-                            {{ formatTaskBytes(task.currBytes) }} / {{ formatTaskBytes(task.totalBytes) }}
-                          </span>
-                          <span v-else-if="task.fileSize && task.fileSize !== '-'" class="task-size">大小: {{ task.fileSize }}</span>
-                          <span v-if="task.status === 'error'" class="task-err-msg">
-                            错误: {{ task.errorMessage }}
-                          </span>
-                        </div>
-                        <div class="task-meta-right">
-                          <span class="task-pct font-bold">{{ task.progress }}%</span>
-                          <span class="task-time text-gray-sub">{{ task.createdAt }}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="task-actions">
-                      <n-button v-if="task.status === 'downloading'" size="tiny" type="error" secondary @click="handleCancelTask(task.id)">
-                        取消
-                      </n-button>
-                      <n-button v-if="task.status === 'completed'" size="tiny" type="primary" @click="handleInstallFromTask(task.outputPath)">
-                        📲 安装
-                      </n-button>
-                      <n-button v-if="task.status === 'error' || task.status === 'canceled'" size="tiny" secondary @click="handleRetryTask(task)">
-                        重试
-                      </n-button>
-                      <n-button size="tiny" quaternary @click="handleDeleteTask(task.id)">
-                        删除
-                      </n-button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </n-tab-pane>
-
-        <!-- TAB 6: IPA 安装 -->
-        <n-tab-pane name="installer" tab="📲 IPA 安装">
-          <div class="tab-scroll-container">
-            <div class="installer-layout">
-              <div class="fluent-card">
-                <h3 class="card-title">选择 IPA 安装包</h3>
-                <div
-                  class="ipa-drop-zone"
-                  :class="{ 'has-file': !!selectedIPAPath }"
-                  @click="handleSelectIPA"
-                >
-                  <div class="drop-icon">{{ selectedIPAPath ? '✅' : '📦' }}</div>
-                  <div class="drop-title">{{ selectedIPAPath ? selectedIPAFileName : '点击选择或拖放 IPA 文件到此处' }}</div>
-                  <div class="drop-subtitle" :title="selectedIPAPath">
-                    {{ selectedIPAPath || '仅支持 .ipa 文件' }}
-                  </div>
-                </div>
-                <n-input-group class="mt-3">
-                  <n-input :value="selectedIPAPath" readonly placeholder="尚未选择 IPA 文件" />
-                  <n-button secondary @click="handleSelectIPA">浏览...</n-button>
-                </n-input-group>
-              </div>
-
-              <div class="fluent-card">
-                <div class="installer-card-header">
-                  <h3 class="card-title">选择已连接的苹果设备</h3>
-                  <n-button secondary size="small" :loading="isLoadingDevices" :disabled="isInstallingIPA" @click="loadConnectedDevices">
-                    刷新设备
-                  </n-button>
-                </div>
-
-                <n-select
-                  v-model:value="selectedDeviceUDID"
-                  :options="deviceOptions"
-                  :loading="isLoadingDevices"
-                  :disabled="isInstallingIPA"
-                  placeholder="请选择设备"
-                  size="large"
+          <div class="clean-card mb-4 search-bar-card">
+            <div class="search-input-group">
+              <div class="search-input-wrapper">
+                <input
+                  v-model="searchForm.term"
+                  class="clean-input search-input height-aligned"
+                  placeholder="输入应用名称、关键字或开发商（如：微信、支付宝、TikTok）"
+                  @keydown.enter="handleSearch"
                 />
-
-                <div class="device-wake-tip">
-                  <span class="tip-icon">💡</span>
-                  <span>请保持设备屏幕<strong>解锁并常亮</strong>；若设备<strong>息屏休眠</strong>，USB 通信将中断并丢失连接。</span>
-                </div>
-
-                <div v-if="selectedDevice" class="device-detail-card">
-                  <div class="key-value-row">
-                    <span class="row-label">设备名称:</span>
-                    <span class="row-value font-bold">{{ selectedDevice.name }}</span>
-                  </div>
-                  <div class="key-value-row">
-                    <span class="row-label">设备型号:</span>
-                    <span class="row-value">{{ selectedDevice.productType || '-' }}</span>
-                  </div>
-                  <div class="key-value-row">
-                    <span class="row-label">系统版本:</span>
-                    <span class="row-value">{{ selectedDevice.productVersion || '-' }}</span>
-                  </div>
-                  <div class="key-value-row">
-                    <span class="row-label">连接方式:</span>
-                    <span class="row-value">{{ selectedDevice.connectionType || '-' }}</span>
-                  </div>
-                  <div class="key-value-row">
-                    <span class="row-label">UDID:</span>
-                    <span class="row-value break-all">{{ selectedDevice.udid }}</span>
-                  </div>
-                </div>
-                <div v-else-if="!isLoadingDevices && devices.length === 0" class="device-empty-container">
-                  <n-empty description="未检测到已连接的苹果设备">
-                    <template #extra>
-                      <div class="empty-guide-box">
-                        <div class="empty-guide-title font-bold">排查与连接建议：</div>
-                        <ol class="empty-guide-list">
-                          <li>使用 USB 数据线将设备与电脑直连（避免使用无供电拓展坞）；</li>
-                          <li><strong>点亮设备屏幕并输入密码解锁</strong>（切勿处于锁屏或息屏休眠状态）；</li>
-                          <li>若设备端弹出「要信任此电脑吗？」，请点击<strong>「信任」</strong>；</li>
-                          <li>点击右上角<strong>「刷新设备」</strong>按钮重新识别。</li>
-                        </ol>
-                      </div>
-                    </template>
-                  </n-empty>
-                </div>
-              </div>
-            </div>
-
-            <div class="fluent-card installer-action-card">
-              <div class="installer-tips-container">
-                <div class="notice-box notice-warning mb-0">
-                  <div class="notice-header">
-                    <span class="notice-icon">⚠️</span>
-                    <span class="notice-title font-bold">安装与连接重要提醒：</span>
-                  </div>
-                  <ul class="installer-tips-list">
-                    <li>
-                      <strong>保持屏幕解锁常亮</strong>：安装及检测全程，请务必<strong>点亮设备屏幕并解锁</strong>。若设备<strong>息屏休眠</strong>或自动锁屏，iOS 系统将挂起 USB 数据通信导致传输中断失败。
-                    </li>
-                    <li>
-                      <strong>首次信任此电脑</strong>：首次连接请在设备端弹出提示时输入锁屏密码并点击「信任此电脑」；若已信任仍无法识别，可重新拔插数据线。
-                    </li>
-                    <li>
-                      <strong>驱动与线缆要求</strong>：Windows 电脑须已安装 Apple Mobile Device 驱动（可通过安装官方 iTunes 或 Apple 设备获得），请使用原装或具备数据传输功能的优质数据线。
-                    </li>
-                    <li>
-                      <strong>应用签名有效性</strong>：IPA 安装包须具有适用于当前设备的有效签名（本工具下载的正版 IPA 需用登录了同 Apple ID 的设备安装），未签名或证书失效的安装包无法被系统接受。
-                    </li>
-                  </ul>
-                </div>
-
-                <div v-if="isInstallingIPA" class="notice-box notice-info mt-2">
-                  <div class="flex-align-center">
-                    <n-spin size="small" class="mr-2" />
-                    <span class="font-semibold text-blue">正在向设备传输并安装 IPA，请保持设备屏幕处于点亮解锁状态，切勿让设备息屏或断开数据线...</span>
-                  </div>
-                </div>
               </div>
 
-              <div class="installer-btn-wrapper">
+              <div class="filter-controls">
+                <div class="filter-item">
+                  <span class="filter-label">平台</span>
+                  <n-select
+                    v-model:value="searchForm.platform"
+                    :options="platformOptions"
+                    size="medium"
+                    style="width: 130px;"
+                  />
+                </div>
+
+                <div class="filter-item">
+                  <span class="filter-label">条数</span>
+                  <n-select
+                    v-model:value="searchForm.limit"
+                    :options="limitOptions"
+                    size="medium"
+                    style="width: 90px;"
+                  />
+                </div>
+
                 <n-button
                   type="primary"
-                  size="large"
-                  :disabled="!selectedIPAPath || !selectedDeviceUDID || isLoadingDevices"
-                  :loading="isInstallingIPA"
-                  class="install-submit-btn"
-                  @click="handleInstallIPA"
+                  size="medium"
+                  :loading="isSearching"
+                  @click="handleSearch"
+                  class="height-aligned-btn"
                 >
-                  <template #icon>
-                    <span>📲</span>
-                  </template>
-                  {{ isInstallingIPA ? '正在安装中...' : '安装 IPA 到所选设备' }}
+                  搜索
                 </n-button>
-                <div class="install-btn-subtip text-xs text-gray-sub">
-                  {{ !selectedIPAPath ? '请先选择 IPA 文件' : (!selectedDeviceUDID ? '请先选择目标设备' : '就绪，点击开始安装') }}
-                </div>
               </div>
             </div>
           </div>
-        </n-tab-pane>
 
-        <!-- TAB 7: 设置 -->
-        <n-tab-pane name="settings" tab="⚙️ 全局设置">
-          <div class="tab-scroll-container">
-            <div class="fluent-card centered-card">
-              <h3 class="card-title">全局参数与配置</h3>
+          <div class="clean-card table-flex-card">
+            <n-data-table
+              :columns="searchColumns"
+              :data="searchResults"
+              :loading="isSearching"
+              :pagination="{ pageSize: 10 }"
+              :scroll-x="780"
+              size="small"
+              flex-height
+              style="height: 100%;"
+            />
+          </div>
+        </div>
 
-              <!-- Engine Status Card -->
-              <div class="form-group">
-                <label class="field-label">内置 ipatool / go-ios 引擎状态:</label>
-                <div class="status-box">
-                  <div class="status-left">
-                    <div class="flex-align-center mb-1">
-                      <span class="indicator-dot dot-active"></span>
-                      <span class="font-bold text-sm">已加载依赖引擎 (支持 tools/ 独立目录与主程序同目录)</span>
-                    </div>
-                    <div class="text-xs text-gray-sub">{{ settings.ipaToolPath }}</div>
-                  </div>
-                  <n-tag type="success" size="small" round :bordered="false">引擎就绪</n-tag>
-                </div>
-              </div>
+        <!-- VIEW 2: 历史版本 (versions) -->
+        <div v-show="activeTab === 'versions'" class="view-panel">
+          <div class="view-header">
+            <div>
+              <h2 class="view-title">历史版本</h2>
+              <p class="view-desc">解析与枚举 App Store 所有历史构建版本，支持快速精准检索</p>
+            </div>
+            <div class="header-right-badges">
+              <span class="count-pill">共 {{ filteredVersions.length }} / {{ versionItems.length }} 条记录</span>
+            </div>
+          </div>
 
-              <!-- Passphrase -->
-              <div class="form-group">
-                <label class="field-label">本地密钥库解锁密码 (--keychain-passphrase):</label>
-                <n-input v-model:value="settings.keychainPassphrase" placeholder="输入本地密钥解锁密码（如 123456）" size="medium" />
-                <div class="notice-box notice-green mt-2">
-                  ✅ 核心功能说明：设置此密码后，IPATool 将自动在所有操作（搜索、版本查询、下载等）中以命令行参数传入此密码，彻底规避 Windows 终端下无法输入密码和直接卡死报错的 Bug！
-                </div>
-              </div>
-
-              <!-- Proxy Settings -->
-              <div class="form-group">
-                <label class="field-label">网络代理配置 (HTTP / SOCKS5):</label>
-                <div class="sub-card">
-                  <n-checkbox v-model:checked="settings.enableProxy" class="mb-3">
-                    启用网络代理 (通过环境变量传递给 ipatool 进程)
-                  </n-checkbox>
-
-                  <div class="form-group mb-2">
-                    <label class="field-label text-xs">代理地址 (例如 http://127.0.0.1:10808):</label>
-                    <n-input-group>
-                      <n-input v-model:value="settings.proxyUrl" :disabled="!settings.enableProxy" placeholder="http://127.0.0.1:10808" size="medium" />
-                      <n-button secondary :disabled="!settings.enableProxy" :loading="isTestingProxy" @click="handleTestProxy" size="medium">
-                        测试代理连接
-                      </n-button>
-                    </n-input-group>
-                  </div>
-                  <div class="field-tip">* 国内访问 Apple App Store 认证接口通常需要代理，支持 Clash / v2rayN 等常见本地代理端口。</div>
-                </div>
-              </div>
-
-              <!-- Default Download Dir -->
-              <div class="form-group">
-                <label class="field-label">默认 IPA 下载保存目录:</label>
-                <n-input-group>
-                  <n-input
-                    v-model:value="settings.defaultDownloadDir"
-                    placeholder="程序数据目录: data/downloads"
-                    size="medium"
-                    readonly
-                    disabled
+          <div class="clean-card mb-4">
+            <div class="versions-toolbar">
+              <div class="bundle-input-row">
+                <div class="clean-input-prefix-box height-aligned">
+                  <span class="prefix-label">Bundle ID</span>
+                  <input
+                    v-model="versionForm.bundleId"
+                    class="clean-input flex-1 border-none"
+                    placeholder="例如: com.alipay.iphoneclient"
+                    @keydown.enter="handleListVersions"
                   />
-                  <n-button secondary size="medium" @click="handleOpenDefaultDownloadDir">📁 打开目录</n-button>
-                </n-input-group>
-                <div class="field-tip">* 下载路径已默认固定为程序根目录下的 data/downloads 目录，不可修改。</div>
-              </div>
+                </div>
 
-              <!-- Default Platform -->
-              <div class="form-group">
-                <label class="field-label">默认下载平台:</label>
-                <n-select v-model:value="settings.defaultPlatform" :options="platformOptions" size="medium" />
-              </div>
-
-              <div class="mt-4 flex-align-center" style="justify-content: space-between;">
-                <n-button type="primary" size="large" @click="handleSaveSettings" style="height: 38px; padding: 0 24px;">
-                  💾 保存并应用设置
+                <n-button
+                  type="primary"
+                  size="medium"
+                  class="height-aligned-btn"
+                  :loading="isListingVersions"
+                  :disabled="isListingVersions || isBatchQuerying || isTargetQuerying"
+                  @click="handleListVersions"
+                >
+                  获取历史版本
                 </n-button>
-                <span class="text-xs text-gray-sub">果仓助手 (AppleVault) v1.0 · Wails v2 + Go + Vue 3</span>
+
+                <n-button
+                  :type="isBatchQuerying ? 'error' : 'default'"
+                  :secondary="!isBatchQuerying"
+                  size="medium"
+                  class="height-aligned-btn"
+                  :loading="isBatchQuerying"
+                  :disabled="versionItems.length === 0 || isListingVersions || isTargetQuerying"
+                  @click="handleBatchQueryClick"
+                >
+                  {{ isBatchQuerying ? '停止查询' : '批量解析前 30 项' }}
+                </n-button>
+
+                <n-button
+                  :type="isTargetQuerying ? 'error' : 'default'"
+                  :secondary="!isTargetQuerying"
+                  size="medium"
+                  class="height-aligned-btn"
+                  :loading="isTargetQuerying"
+                  :disabled="versionItems.length === 0 || isListingVersions || isBatchQuerying"
+                  @click="handleTargetQueryClick"
+                >
+                  {{ isTargetQuerying ? '停止查询' : '查找指定版本' }}
+                </n-button>
+              </div>
+
+              <div class="filter-search-row">
+                <div class="filter-search-box">
+                  <input
+                    v-model="versionForm.filter"
+                    class="clean-input filter-input height-aligned"
+                    placeholder="输入版本号 (如 10.2.80)、构建 ID 或体积进行实时筛选..."
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </n-tab-pane>
 
-      </n-tabs>
-    </main>
-
-    <!-- 3. Bottom GridSplitter Divider -->
-    <div v-if="showLogs" class="panel-divider"></div>
-
-    <!-- 4. Bottom Real-time Logs Console Drawer -->
-    <footer class="console-drawer" :class="{ 'collapsed': !showLogs }">
-      <!-- Status Header -->
-      <div class="console-header">
-        <div class="console-status-left">
-          <n-spin v-if="isAnyOperationRunning" size="small" class="mr-2" />
-          <span class="status-prefix">状态:</span>
-          <span class="status-val">{{ statusText }}</span>
+          <div class="clean-card table-flex-card">
+            <n-data-table
+              :columns="versionColumns"
+              :data="filteredVersions"
+              :loading="isListingVersions"
+              :virtual-scroll="true"
+              :scroll-x="720"
+              flex-height
+              style="height: 100%;"
+              size="small"
+            />
+          </div>
         </div>
-        <div class="console-actions-right">
-          <n-button v-if="isAnyOperationRunning" size="tiny" type="error" @click="handleCancel" class="mr-2">
-            取消当前操作
+
+        <!-- VIEW 3: 下载中心 (download) -->
+        <div v-show="activeTab === 'download'" class="view-panel">
+          <div class="view-header">
+            <div>
+              <h2 class="view-title">下载中心</h2>
+              <p class="view-desc">正在下载与已完成的 IPA 任务管理，自动归档至对应账号目录</p>
+            </div>
+            <div class="btn-group-row">
+              <n-button
+                secondary
+                size="small"
+                class="small-aligned-btn"
+                :disabled="completedTaskCount === 0"
+                @click="handleClearCompleted"
+              >
+                清空已完成
+              </n-button>
+              <n-button
+                secondary
+                size="small"
+                class="small-aligned-btn"
+                @click="handleOpenDefaultDownloadDir"
+              >
+                打开存储目录
+              </n-button>
+            </div>
+          </div>
+
+          <div class="tasks-container">
+            <div v-if="downloadTasks.length === 0" class="empty-state-card">
+              <div class="empty-title">暂无下载任务</div>
+              <div class="empty-desc">前往「应用搜索」或「历史版本」点击下载即可在此实时追踪进度</div>
+            </div>
+
+            <div v-else class="task-grid">
+              <div v-for="task in downloadTasks" :key="task.id" class="modern-task-card">
+                <div class="task-card-header">
+                  <div class="task-app-title-group">
+                    <span class="task-name">{{ task.appName }}</span>
+                    <span class="task-pill task-pill-ver">{{ task.version }}</span>
+                    <span v-if="task.versionId" class="task-pill task-pill-build">Build {{ task.versionId }}</span>
+                  </div>
+                  <div class="task-actions-group">
+                    <n-button
+                      v-if="task.status === 'downloading'"
+                      size="tiny"
+                      type="error"
+                      secondary
+                      @click="handleCancelTask(task.id)"
+                    >
+                      取消
+                    </n-button>
+                    <n-button
+                      v-if="task.status === 'completed'"
+                      size="tiny"
+                      type="primary"
+                      @click="handleInstallFromTask(task.outputPath)"
+                    >
+                      安装到设备
+                    </n-button>
+                    <n-button
+                      v-if="task.status === 'error' || task.status === 'canceled'"
+                      size="tiny"
+                      secondary
+                      @click="handleRetryTask(task)"
+                    >
+                      重试
+                    </n-button>
+                    <n-button size="tiny" quaternary @click="handleDeleteTask(task.id)">
+                      删除
+                    </n-button>
+                  </div>
+                </div>
+
+                <div class="task-meta-bundle">{{ task.bundleID }}</div>
+
+                <div class="task-progress-section">
+                  <n-progress
+                    type="line"
+                    :percentage="task.progress"
+                    :status="getTaskProgressStatus(task.status)"
+                    :show-indicator="false"
+                    :height="6"
+                    border-radius="3"
+                  />
+                </div>
+
+                <div class="task-card-footer">
+                  <div class="footer-status-tag">
+                    <span class="status-indicator" :class="'indicator-' + task.status"></span>
+                    <span class="status-text">{{ getTaskStatusText(task.status) }}</span>
+                    <span v-if="task.status === 'downloading' && task.speed" class="task-speed">{{ task.speed }}</span>
+                    <span v-if="task.status === 'downloading' && task.totalBytes > 0" class="task-bytes-info">
+                      {{ formatTaskBytes(task.currBytes) }} / {{ formatTaskBytes(task.totalBytes) }}
+                    </span>
+                    <span v-else-if="task.fileSize && task.fileSize !== '-'" class="task-bytes-info">
+                      体积: {{ task.fileSize }}
+                    </span>
+                    <span v-if="task.status === 'error'" class="task-error-text" :title="task.errorMessage">
+                      {{ task.errorMessage }}
+                    </span>
+                  </div>
+
+                  <div class="footer-right-info">
+                    <span class="pct-text font-bold">{{ task.progress }}%</span>
+                    <span class="time-text">{{ task.createdAt }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW 4: 已购应用 (purchased) -->
+        <div v-show="activeTab === 'purchased'" class="view-panel">
+          <div class="view-header">
+            <div>
+              <h2 class="view-title">已购应用</h2>
+              <p class="view-desc">浏览当前 Apple ID 名下已获得正版许可的历史应用库</p>
+            </div>
+            <div class="purchased-page-controls">
+              <n-button
+                secondary
+                size="small"
+                class="small-aligned-btn"
+                :disabled="purchasedPage <= 1 || isPurchasedLoading"
+                @click="prevPurchasedPage"
+              >
+                上一页
+              </n-button>
+              <span class="page-indicator">第 {{ purchasedPage }} 页 / 共 {{ purchasedTotal }} 款</span>
+              <n-button
+                secondary
+                size="small"
+                class="small-aligned-btn"
+                :disabled="purchasedPage * 20 >= purchasedTotal || isPurchasedLoading"
+                @click="nextPurchasedPage"
+              >
+                下一页
+              </n-button>
+              <n-button
+                type="primary"
+                size="small"
+                class="small-aligned-btn ml-2"
+                :loading="isPurchasedLoading"
+                @click="loadPurchases"
+              >
+                刷新
+              </n-button>
+            </div>
+          </div>
+
+          <div class="clean-card table-flex-card">
+            <n-data-table
+              :columns="purchasedColumns"
+              :data="purchasedApps"
+              :loading="isPurchasedLoading"
+              :scroll-x="720"
+              size="small"
+              flex-height
+              style="height: 100%;"
+            />
+          </div>
+        </div>
+
+        <!-- VIEW 5: 设备直装 (installer) -->
+        <div v-show="activeTab === 'installer'" class="view-panel">
+          <div class="view-header">
+            <div>
+              <h2 class="view-title">设备直装</h2>
+              <p class="view-desc">通过 USB 数据线将正版签署的 IPA 应用包一键安装至 iOS 设备</p>
+            </div>
+          </div>
+
+          <div class="installer-grid">
+            <!-- Left: IPA File Selection -->
+            <div class="clean-card flex-col">
+              <div class="card-headline">
+                <span class="headline-title">1. 选择安装包</span>
+                <span v-if="selectedIPAPath" class="headline-badge">已就绪</span>
+              </div>
+
+              <div
+                class="clean-drop-zone"
+                :class="{ 'drop-active': !!selectedIPAPath }"
+                @click="handleSelectIPA"
+              >
+                <div class="drop-primary-title">
+                  {{ selectedIPAPath ? selectedIPAFileName : '点击选择或拖拽 .ipa 文件到此处' }}
+                </div>
+                <div class="drop-secondary-path text-ellipsis" :title="selectedIPAPath">
+                  {{ selectedIPAPath || '支持标准 iOS 签名应用包格式' }}
+                </div>
+              </div>
+
+              <div class="mt-3 flex-align-center">
+                <input
+                  :value="selectedIPAPath"
+                  readonly
+                  class="clean-input flex-1 mr-2 height-aligned"
+                  placeholder="尚未选择文件"
+                />
+                <n-button secondary size="medium" class="height-aligned-btn" @click="handleSelectIPA">浏览文件</n-button>
+              </div>
+            </div>
+
+            <!-- Right: Device Selection -->
+            <div class="clean-card flex-col">
+              <div class="card-headline">
+                <span class="headline-title">2. 选择苹果设备</span>
+                <n-button
+                  secondary
+                  size="tiny"
+                  :loading="isLoadingDevices"
+                  :disabled="isInstallingIPA"
+                  @click="loadConnectedDevices"
+                >
+                  刷新检测
+                </n-button>
+              </div>
+
+              <n-select
+                v-model:value="selectedDeviceUDID"
+                :options="deviceOptions"
+                :loading="isLoadingDevices"
+                :disabled="isInstallingIPA"
+                placeholder="请选择已连接的 iOS 设备"
+                size="large"
+              />
+
+              <div class="sub-alert-box mt-3">
+                <span>请保持设备屏幕<b>常亮解锁</b>；若设备息屏休眠，USB 通信将中断并丢失连接。</span>
+              </div>
+
+              <!-- Device Specs Box -->
+              <div v-if="selectedDevice" class="device-spec-box mt-3">
+                <div class="spec-row">
+                  <span class="spec-k">设备名称</span>
+                  <span class="spec-v font-bold">{{ selectedDevice.name }}</span>
+                </div>
+                <div class="spec-row">
+                  <span class="spec-k">设备型号</span>
+                  <span class="spec-v">{{ selectedDevice.productType || '-' }}</span>
+                </div>
+                <div class="spec-row">
+                  <span class="spec-k">系统版本</span>
+                  <span class="spec-v">{{ selectedDevice.productVersion || '-' }}</span>
+                </div>
+                <div class="spec-row">
+                  <span class="spec-k">连接模式</span>
+                  <span class="spec-v">{{ selectedDevice.connectionType || '-' }}</span>
+                </div>
+                <div class="spec-row">
+                  <span class="spec-k">UDID</span>
+                  <span class="spec-v text-ellipsis" :title="selectedDevice.udid">{{ selectedDevice.udid }}</span>
+                </div>
+              </div>
+
+              <div v-else-if="!isLoadingDevices && devices.length === 0" class="no-device-box mt-3">
+                <div class="no-device-text">未检测到已连接的苹果设备</div>
+                <div class="no-device-sub">请直连电脑 USB 接口、点亮屏幕、输入密码并信任此电脑</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Action Bar for Installer -->
+          <div class="clean-card mt-4 installer-action-banner">
+            <div class="installer-action-info">
+              <div class="action-banner-title">
+                {{ !selectedIPAPath ? '请先选择待安装的 IPA 文件' : (!selectedDeviceUDID ? '请选择目标苹果设备' : '就绪，可以开始安装') }}
+              </div>
+              <div class="action-banner-desc">
+                本工具下载的正版 IPA 需安装至登录了相同 Apple ID 的设备上，未签名包将无法被系统接受。
+              </div>
+            </div>
+
+            <n-button
+              type="primary"
+              size="large"
+              :disabled="!selectedIPAPath || !selectedDeviceUDID || isLoadingDevices"
+              :loading="isInstallingIPA"
+              @click="handleInstallIPA"
+              class="install-submit-btn"
+            >
+              {{ isInstallingIPA ? '正在安装中...' : '开始安装到设备' }}
+            </n-button>
+          </div>
+        </div>
+
+        <!-- VIEW 6: 账号中心 (account) -->
+        <div v-show="activeTab === 'account'" class="view-panel">
+          <div class="view-header">
+            <div>
+              <h2 class="view-title">账号中心</h2>
+              <p class="view-desc">管理用于 App Store 正版授权通信与 IPA 下载的 Apple ID 身份凭证</p>
+            </div>
+          </div>
+
+          <div class="two-columns-layout">
+            <!-- Account Status Card -->
+            <div class="clean-card">
+              <div class="card-headline">
+                <span class="headline-title">当前登录凭证</span>
+                <span class="account-pill" :class="isLoggedIn ? 'pill-success' : 'pill-gray'">
+                  {{ isLoggedIn ? '已授权' : '未登录' }}
+                </span>
+              </div>
+
+              <div class="account-profile-box">
+                <div class="large-avatar" :class="{ 'avatar-active': isLoggedIn }">
+                  {{ isLoggedIn ? (account.name ? account.name.charAt(0).toUpperCase() : '') : '' }}
+                </div>
+                <div class="large-profile-info">
+                  <div class="profile-name">{{ account.name || '尚未登录 Apple ID' }}</div>
+                  <div class="profile-email">{{ account.email || '请在右侧输入账号密码完成登录' }}</div>
+                </div>
+              </div>
+
+              <div class="sub-alert-box mt-4">
+                <span>官方直接认证：所有凭据直接向 Apple 官方接口请求并保存在本地钥匙串，不经过任何第三方服务器。</span>
+              </div>
+
+              <div class="account-card-actions mt-4">
+                <n-button
+                  type="error"
+                  secondary
+                  :disabled="!isLoggedIn"
+                  @click="handleRevoke"
+                  :loading="isRevoking"
+                  class="height-aligned-btn"
+                >
+                  退出登录
+                </n-button>
+                <n-button
+                  secondary
+                  @click="handleClearKeychain"
+                  :loading="isClearing"
+                  title="清理本地钥匙串缓存解决校验异常"
+                  class="height-aligned-btn"
+                >
+                  清理钥匙串缓存
+                </n-button>
+                <n-button
+                  secondary
+                  @click="() => refreshAccount(false)"
+                  :loading="isAccountLoading"
+                  class="height-aligned-btn"
+                >
+                  刷新状态
+                </n-button>
+              </div>
+            </div>
+
+            <!-- Login Form Card -->
+            <div class="clean-card">
+              <div class="card-headline">
+                <span class="headline-title">登录 Apple ID</span>
+              </div>
+
+              <div class="form-item-clean">
+                <label class="clean-label">Apple ID 账户邮箱</label>
+                <input
+                  v-model="loginForm.email"
+                  class="clean-input height-aligned"
+                  placeholder="例如: your_apple_id@icloud.com"
+                />
+              </div>
+
+              <div class="form-item-clean mt-3">
+                <label class="clean-label">Apple ID 密码</label>
+                <input
+                  v-model="loginForm.password"
+                  type="password"
+                  class="clean-input height-aligned"
+                  placeholder="请输入 Apple ID 密码"
+                  @keydown.enter="handleLogin"
+                />
+              </div>
+
+              <div class="sub-alert-box mt-3">
+                <span>双重认证 (2FA)：若账号开启了 2FA，点击登录后将自动弹出 6 位验证码输入窗口。</span>
+              </div>
+
+              <div class="mt-4">
+                <n-button
+                  type="primary"
+                  block
+                  size="large"
+                  :loading="isLoggingIn"
+                  @click="handleLogin"
+                  style="height: 40px;"
+                >
+                  登录
+                </n-button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW 7: 系统设置 (settings) -->
+        <div v-show="activeTab === 'settings'" class="view-panel">
+          <div class="view-header">
+            <div>
+              <h2 class="view-title">系统设置</h2>
+              <p class="view-desc">全局参数、网络代理、下载路径与基础运行引擎配置</p>
+            </div>
+            <n-button
+              type="primary"
+              size="medium"
+              class="height-aligned-btn"
+              @click="handleSaveSettings"
+            >
+              保存并应用设置
+            </n-button>
+          </div>
+
+          <div class="clean-card settings-stack">
+            <!-- Section 1: Engine Status -->
+            <div class="settings-group">
+              <div class="settings-group-title">底层引擎与环境</div>
+              <div class="settings-field-row">
+                <div class="field-meta">
+                  <div class="field-title">CLI 引擎状态</div>
+                  <div class="field-desc">自动检测 tools/ 目录与系统环境变量中的 ipatool 和 go-ios</div>
+                </div>
+                <div class="field-control">
+                  <div class="engine-badge-box">
+                    <span class="engine-dot"></span>
+                    <span class="engine-text">引擎就绪</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section 2: Passphrase -->
+            <div class="settings-group">
+              <div class="settings-group-title">安全与钥匙串</div>
+              <div class="settings-field-row">
+                <div class="field-meta">
+                  <div class="field-title">密钥库解锁密码 (--keychain-passphrase)</div>
+                  <div class="field-desc">自动注入命令行参数，彻底杜绝 Windows 终端弹窗与死锁卡死</div>
+                </div>
+                <div class="field-control">
+                  <input
+                    v-model="settings.keychainPassphrase"
+                    class="clean-input height-aligned w-full"
+                    placeholder="输入密钥库密码（默认 123456）"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Section 3: Proxy -->
+            <div class="settings-group">
+              <div class="settings-group-title">网络与代理</div>
+              <div class="settings-field-row">
+                <div class="field-meta">
+                  <div class="field-title">启用网络代理</div>
+                  <div class="field-desc">App Store 接口认证时通过环境变量透传 HTTP / SOCKS5 代理</div>
+                </div>
+                <div class="field-control">
+                  <n-switch v-model:value="settings.enableProxy" />
+                </div>
+              </div>
+
+              <div class="settings-field-row">
+                <div class="field-meta">
+                  <div class="field-title">代理服务器地址</div>
+                  <div class="field-desc">支持 Clash / v2rayN 等常见本地代理端口（如 http://127.0.0.1:10808）</div>
+                </div>
+                <div class="field-control">
+                  <div class="setting-input-action-group">
+                    <input
+                      v-model="settings.proxyUrl"
+                      :disabled="!settings.enableProxy"
+                      class="clean-input flex-1 height-aligned"
+                      placeholder="http://127.0.0.1:10808"
+                    />
+                    <n-button
+                      secondary
+                      size="medium"
+                      class="height-aligned-btn setting-fixed-btn"
+                      :disabled="!settings.enableProxy"
+                      :loading="isTestingProxy"
+                      @click="handleTestProxy"
+                    >
+                      测试
+                    </n-button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section 4: Storage -->
+            <div class="settings-group">
+              <div class="settings-group-title">存储与下载</div>
+              <div class="settings-field-row">
+                <div class="field-meta">
+                  <div class="field-title">IPA 存储路径</div>
+                  <div class="field-desc">按登录账号动态归档至 data/downloads/账号标识 目录</div>
+                </div>
+                <div class="field-control">
+                  <div class="setting-input-action-group">
+                    <input
+                      :value="settings.defaultDownloadDir"
+                      readonly
+                      disabled
+                      class="clean-input flex-1 height-aligned"
+                    />
+                    <n-button
+                      secondary
+                      size="medium"
+                      class="height-aligned-btn setting-fixed-btn"
+                      @click="handleOpenDefaultDownloadDir"
+                    >
+                      打开
+                    </n-button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="settings-field-row">
+                <div class="field-meta">
+                  <div class="field-title">默认目标平台</div>
+                  <div class="field-desc">检索与下载默认针对的 Apple 硬件体系</div>
+                </div>
+                <div class="field-control">
+                  <n-select
+                    v-model:value="settings.defaultPlatform"
+                    :options="platformOptions"
+                    size="medium"
+                    style="width: 100%;"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW 8: 关于软件 (about) -->
+        <div v-show="activeTab === 'about'" class="view-panel">
+          <div class="view-header">
+            <div>
+              <h2 class="view-title">关于软件</h2>
+              <p class="view-desc">AppleVault (果仓助手) 软件信息、项目开源地址与使用说明</p>
+            </div>
+          </div>
+
+          <div class="clean-card about-card-stack">
+            <!-- App Banner -->
+            <div class="about-hero">
+              <div class="about-large-icon">
+                <svg class="brand-apple-svg" style="width: 38px; height: 38px;" viewBox="0 0 170 170" fill="currentColor">
+                  <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.08-7.7-7.85-12.01-14.3-6.24-9.35-11.12-20.2-14.65-32.54-3.52-12.35-5.29-24.3-5.29-35.87 0-14.12 3.52-25.75 10.57-34.89 7.05-9.14 16.03-13.88 26.94-14.21 4.79 0 10.36 1.34 16.71 4.02 6.36 2.68 10.15 4.08 11.37 4.19 1.12-.11 5.02-1.57 11.7-4.38 6.68-2.82 12.35-4.08 17.02-3.78 12.79.89 23.01 5.66 30.65 14.31-11.29 6.81-16.79 16.32-16.5 28.53.33 9.61 4.2 17.58 11.62 23.9 7.42 6.32 16.31 9.94 26.68 10.86-2.12 6.54-4.53 13.06-7.24 19.56zm-29.35-104.9c-.11 4.14-1.55 8.35-4.32 12.63-2.77 4.28-6.42 7.74-10.96 10.38-3.02 1.63-6.21 2.72-9.56 3.27-.11-1.3-.11-2.4-.11-3.27 0-4.13 1.54-8.38 4.63-12.75 3.09-4.37 7.02-7.86 11.8-10.47 2.91-1.63 5.75-2.73 8.52-3.3 0 1.2.06 2.37 0 3.51z"/>
+                </svg>
+              </div>
+              <div class="about-hero-text">
+                <div class="about-app-title">AppleVault (果仓助手)</div>
+                <div class="about-version-line">
+                  <span class="about-version-badge">版本 v1.0.0</span>
+                  <span class="about-badge-sub">基于 Wails & Go 构建</span>
+                </div>
+                <p class="about-intro">
+                  现代优雅的 Apple App Store 正版应用与历史版本下载管理工具，支持 iOS 设备一键直装。
+                </p>
+              </div>
+            </div>
+
+            <!-- GitHub Repo Section -->
+            <div class="about-section-box">
+              <div class="about-section-label">GitHub 官方开源仓库</div>
+              <div class="repo-link-bar">
+                <input
+                  value="https://github.com/wnnz/AppleVault"
+                  readonly
+                  class="clean-input flex-1 height-aligned"
+                />
+                <n-button
+                  type="primary"
+                  size="medium"
+                  class="height-aligned-btn"
+                  @click="openGitHub"
+                >
+                  访问 GitHub
+                </n-button>
+                <n-button
+                  secondary
+                  size="medium"
+                  class="height-aligned-btn"
+                  @click="copyGitHubUrl"
+                >
+                  复制地址
+                </n-button>
+              </div>
+            </div>
+
+            <!-- Info Grid -->
+            <div class="about-features-grid">
+              <div class="about-feature-item">
+                <div class="feature-title">官方正版授权</div>
+                <div class="feature-desc">使用自己的 Apple ID 账户直接对接 App Store，下载包含个人官方凭据的正版 IPA，装机稳定不闪退。</div>
+              </div>
+              <div class="about-feature-item">
+                <div class="feature-title">历史版本检索</div>
+                <div class="feature-desc">支持输入任意 Bundle ID 查询完整历史构建记录与版本详情，可指定目标版本快速查找并一键下载。</div>
+              </div>
+              <div class="about-feature-item">
+                <div class="feature-title">真机无缝安装</div>
+                <div class="feature-desc">连接 iPhone / iPad 数据线即可自动识别设备规格与系统版本，将有效签名的应用包直接安装到设备。</div>
+              </div>
+              <div class="about-feature-item">
+                <div class="feature-title">绿色纯净便携</div>
+                <div class="feature-desc">无需安装器与后台常驻，所有配置与下载文件按登录账号自动隔离归档在本地 data 目录中。</div>
+              </div>
+            </div>
+
+            <!-- Open Source Acknowledgement & Notice -->
+            <div class="about-footer-notice">
+              <span>本项目仅为 App Store 官方接口的图形化辅助工具，与 Apple Inc. 无官方隶属关系。感谢开源社区优秀项目 ipatool 与 go-ios 提供的底层能力支持。</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Minimal Status Bar -->
+      <div class="bottom-status-bar">
+        <div class="status-indicator-section">
+          <span class="status-pulse" :class="{ 'pulse-busy': isAnyOperationRunning }"></span>
+          <span class="status-summary-text text-ellipsis">{{ statusText }}</span>
+        </div>
+
+        <div class="status-bar-tools">
+          <n-button
+            v-if="isAnyOperationRunning"
+            size="tiny"
+            type="error"
+            secondary
+            @click="handleCancel"
+            class="mr-2"
+          >
+            终止操作
           </n-button>
-          <n-button v-if="showLogs" size="tiny" secondary class="btn-clear-log mr-2" @click="clearLogs">
-            清空日志
-          </n-button>
-          <n-button size="tiny" secondary class="btn-toggle-log" @click="toggleLogs">
-            {{ showLogs ? '🔽 收起日志' : '📜 展开日志' }}
-          </n-button>
+
+          <button class="status-btn" @click="toggleLogs">
+            {{ showLogs ? '收起日志' : '实时日志' }}
+          </button>
         </div>
       </div>
 
-      <!-- Log Output Box -->
-      <div v-show="showLogs" ref="logContainerRef" class="console-screen">
-        <div v-for="(log, idx) in logLines" :key="idx" class="console-line" :class="{ 'line-error': log.includes('[ERR]') }">
-          {{ log }}
+      <!-- Collapsible Sleek Terminal Drawer -->
+      <div v-show="showLogs" class="sleek-console-drawer">
+        <div class="console-action-bar">
+          <div class="console-title">实时执行日志</div>
+          <div class="console-btns">
+            <button class="console-bar-btn" @click="clearLogs">清空</button>
+            <button class="console-bar-btn" @click="toggleLogs">收起</button>
+          </div>
+        </div>
+        <div ref="logContainerRef" class="console-scroll-screen">
+          <div v-if="logLines.length === 0" class="console-empty-tip">等待命令输出...</div>
+          <div
+            v-for="(log, idx) in logLines"
+            :key="idx"
+            class="console-row"
+            :class="{ 'row-err': log.includes('[ERR]') }"
+          >
+            {{ log }}
+          </div>
         </div>
       </div>
-    </footer>
+    </section>
 
-    <!-- 5. 2FA Modal Dialog -->
-    <n-modal v-model:show="show2FAModal" preset="card" title="🔐 Apple ID 双重认证" style="width: 400px;" :mask-closable="false">
-      <div class="twofa-dialog-body">
-        <p class="twofa-desc">已向你的受信任 Apple 设备发送了验证码。请输入收到的 6 位验证码以继续登录：</p>
-        <n-input
+    <!-- 2FA Modal Dialog -->
+    <n-modal
+      v-model:show="show2FAModal"
+      preset="card"
+      title="Apple ID 双重认证"
+      style="width: 400px; border-radius: 14px;"
+      :mask-closable="false"
+    >
+      <div class="modal-dialog-inner">
+        <p class="dialog-desc">已向你的受信任 Apple 设备发送了验证码，请输入 6 位数字验证码：</p>
+        <input
           ref="twoFAInputRef"
-          v-model:value="twoFACode"
+          v-model="twoFACode"
+          class="clean-input text-center font-bold text-lg height-aligned"
           placeholder="6 位验证码"
           maxlength="6"
-          size="large"
-          class="twofa-code-input"
+          autofocus
           @keydown.enter="confirm2FA"
+          style="letter-spacing: 6px; height: 44px; font-size: 20px;"
         />
-        <div class="twofa-actions">
-          <n-button secondary @click="cancel2FA">取消</n-button>
-          <n-button type="primary" :disabled="twoFACode.length !== 6" :loading="isLoggingIn" @click="confirm2FA">
+        <div class="dialog-action-buttons mt-4">
+          <n-button secondary @click="cancel2FA" class="height-aligned-btn">取消</n-button>
+          <n-button
+            type="primary"
+            :disabled="twoFACode.length !== 6"
+            :loading="isLoggingIn"
+            @click="confirm2FA"
+            class="height-aligned-btn"
+          >
             提交验证
           </n-button>
         </div>
       </div>
     </n-modal>
 
-    <!-- 6. Target Version Modal Dialog -->
-    <n-modal v-model:show="showTargetVersionModal" preset="card" title="🎯 二分查找指定版本" style="width: 460px;">
-      <div class="target-version-dialog-body">
-        <p style="margin-bottom: 12px; font-size: 13px; color: #666; line-height: 1.6;">
-          请输入目标版本号（例如：<code>10.2.80</code> 或 <code>8.0.0</code>）。程序将在全部历史版本记录中采用<b>全局二分查找算法 (Binary Search)</b>，对数级对半逼近，只需数次请求即可快速锁定目标版本。
+    <!-- Target Version Modal Dialog -->
+    <n-modal
+      v-model:show="showTargetVersionModal"
+      preset="card"
+      title="查找指定版本"
+      style="width: 440px; border-radius: 14px;"
+    >
+      <div class="modal-dialog-inner">
+        <p class="dialog-desc">
+          请输入目标版本号（例如 <code>10.2.80</code> 或 <code>8.0.0</code>），程序将智能检索历史构建记录并快速定位匹配版本。
         </p>
-        <n-input
+        <input
           ref="targetVersionInputRef"
-          v-model:value="targetVersionInput"
+          v-model="targetVersionInput"
+          class="clean-input height-aligned"
           placeholder="例如: 10.2.80"
-          size="medium"
-          clearable
           autofocus
           @keydown.enter="confirmStartTargetQuery"
         />
-        <div style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px;">
-          <n-button secondary @click="showTargetVersionModal = false">取消</n-button>
-          <n-button type="primary" :disabled="!targetVersionInput.trim()" @click="confirmStartTargetQuery">
-            确定开始查询
+        <div class="dialog-action-buttons mt-4">
+          <n-button secondary @click="showTargetVersionModal = false" class="height-aligned-btn">取消</n-button>
+          <n-button
+            type="primary"
+            :disabled="!targetVersionInput.trim()"
+            @click="confirmStartTargetQuery"
+            class="height-aligned-btn"
+          >
+            开始查询
           </n-button>
         </div>
       </div>
@@ -652,28 +1058,12 @@ import {
   useMessage,
   useDialog,
   NButton,
-  NTag,
-  NSpace,
-  NTabs,
-  NTabPane,
-  NCard,
-  NInput,
-  NInputNumber,
-  NInputGroup,
   NSelect,
   NSwitch,
   NModal,
-  NAlert,
-  NCheckbox,
-  NSpin,
-  NPagination,
   NDataTable,
-  NGrid,
-  NGridItem,
-  NForm,
-  NFormItem,
   NProgress,
-  NEmpty
+  NSpace
 } from 'naive-ui'
 import {
   AddDownloadTask,
@@ -688,7 +1078,6 @@ import {
   Search,
   ListVersions,
   GetVersionMetadata,
-  Download,
   Purchase,
   ListPurchases,
   GetSettings,
@@ -701,7 +1090,7 @@ import {
   ListDevices,
   InstallIPA
 } from '../../wailsjs/go/main/App'
-import { EventsOn, OnFileDrop, OnFileDropOff } from '../../wailsjs/runtime/runtime'
+import { EventsOn, OnFileDrop, OnFileDropOff, BrowserOpenURL } from '../../wailsjs/runtime/runtime'
 import { main } from '../../wailsjs/go/models'
 
 const props = defineProps<{ isDark: boolean }>()
@@ -710,15 +1099,14 @@ const emit = defineEmits<{ (e: 'toggleTheme'): void }>()
 const message = useMessage()
 const dialog = useDialog()
 
-const activeTab = ref('account')
+const activeTab = ref('search')
 const isAnyOperationRunning = ref(false)
 const statusText = ref('就绪')
-const tableMaxHeight = ref(320)
 
 // Settings
 const settings = ref<main.Settings>({
   keychainPassphrase: '123456',
-  defaultDownloadDir: 'data/downloads',
+  defaultDownloadDir: 'data/downloads/default',
   defaultPlatform: 'iphone',
   enableProxy: true,
   proxyUrl: 'http://127.0.0.1:10808',
@@ -767,19 +1155,20 @@ const searchForm = ref({
 const searchResults = ref<main.AppItem[]>([])
 
 const searchColumns = [
-  { title: '应用名称', key: 'name', width: 220, ellipsis: true },
-  { title: 'Bundle Identifier', key: 'bundleID', width: 220, ellipsis: true },
-  { title: 'App ID', key: 'id', width: 120 },
+  { title: '应用名称', key: 'name', minWidth: 160, ellipsis: { tooltip: true } },
+  { title: 'Bundle ID', key: 'bundleID', minWidth: 180, ellipsis: { tooltip: true } },
+  { title: 'App ID', key: 'id', width: 100 },
   { title: '最新版本', key: 'version', width: 90 },
   { title: '价格', key: 'displayPrice', width: 80 },
   {
     title: '操作',
     key: 'actions',
-    width: 230,
+    width: 200,
+    fixed: 'right' as const,
     render(row: main.AppItem) {
-      return h(NSpace, { size: 6 }, () => [
-        h(NButton, { size: 'tiny', type: 'primary', onClick: () => selectAppForVersions(row) }, () => '历史版本'),
-        h(NButton, { size: 'tiny', secondary: true, onClick: () => downloadFromSearch(row) }, () => '直接下载'),
+      return h(NSpace, { size: 6, wrap: false }, () => [
+        h(NButton, { size: 'tiny', secondary: true, onClick: () => selectAppForVersions(row) }, () => '历史版本'),
+        h(NButton, { size: 'tiny', type: 'primary', onClick: () => downloadFromSearch(row) }, () => '下载'),
         h(NButton, { size: 'tiny', secondary: true, onClick: () => handlePurchaseApp(row.bundleID) }, () => '获取许可')
       ])
     }
@@ -850,16 +1239,16 @@ const versionItems = ref<VersionItem[]>([])
 async function querySingleVersionMetadata(row: VersionItem) {
   row.isQuerying = true
   isAnyOperationRunning.value = true
-  statusText.value = `正在查询版本 ID ${row.versionId} 的版本详情...`
+  statusText.value = `正在查询版本 ID ${row.versionId} 的详情...`
 
   try {
     const res = await GetVersionMetadata(versionForm.value.bundleId, row.versionId, versionForm.value.appId)
     row.displayVersion = res.displayVersion
     row.fileSize = res.displayFileSize
-    row.releaseDate = res.releaseDate ? new Date(res.releaseDate).toLocaleDateString() : '-'
-    statusText.value = `版本 ID ${row.versionId} 对应版本号: ${res.displayVersion} (体积: ${res.displayFileSize}, 发布日期: ${row.releaseDate})`
+    row.releaseDate = res.releaseDate ? res.releaseDate.replace(/T.*/, '') : '-'
+    statusText.value = `构建 ID ${row.versionId} 对应版本: ${res.displayVersion} (${res.displayFileSize})`
   } catch (err: any) {
-    message.error(`查询版本详情失败: ${err}`)
+    message.error(`查询详情失败: ${err}`)
   } finally {
     row.isQuerying = false
     isAnyOperationRunning.value = false
@@ -878,7 +1267,7 @@ async function downloadFromVersions(row: VersionItem) {
       row.versionId,
       row.fileSize
     )
-    message.success(`已添加下载任务: ${appName} (${ver})`)
+    message.success(`已添加任务: ${appName} (${ver})`)
     activeTab.value = 'download'
   } catch (err: any) {
     message.error(`添加下载失败: ${err}`)
@@ -897,38 +1286,39 @@ const filteredVersions = computed(() => {
 })
 
 const versionColumns = [
-  { title: '构建 ID', key: 'versionId', width: 220 },
+  { title: '构建 ID', key: 'versionId', minWidth: 160 },
   {
-    title: '对应版本号',
+    title: '版本号',
     key: 'displayVersion',
-    width: 140,
+    width: 120,
     render(row: VersionItem) {
       if (row.displayVersion === '未查询') {
-        return h('span', { style: 'color: #888; font-style: italic;' }, '未查询')
+        return h('span', { class: 'text-dim italic' }, '未查询')
       }
-      return h('span', { style: 'font-weight: 600; color: #107C41;' }, row.displayVersion)
+      return h('span', { class: 'tag-version-highlight' }, row.displayVersion)
     }
   },
-  { title: '文件体积', key: 'fileSize', width: 130 },
-  { title: '发布日期', key: 'releaseDate', width: 150 },
+  { title: '文件体积', key: 'fileSize', width: 110 },
+  { title: '发布日期', key: 'releaseDate', width: 120 },
   {
     title: '操作',
     key: 'actions',
-    width: 220,
+    width: 160,
+    fixed: 'right' as const,
     render(row: VersionItem) {
-      return h(NSpace, { size: 6 }, () => [
+      return h(NSpace, { size: 6, wrap: false }, () => [
         h(NButton, {
           size: 'tiny',
           secondary: true,
           disabled: isListingVersions.value || isBatchQuerying.value || isTargetQuerying.value,
           loading: row.isQuerying,
           onClick: () => querySingleVersionMetadata(row)
-        }, () => '查询详情'),
+        }, () => '查详情'),
         h(NButton, {
           size: 'tiny',
           type: 'primary',
           onClick: () => downloadFromVersions(row)
-        }, () => '一键下载此版本')
+        }, () => '下载')
       ])
     }
   }
@@ -971,19 +1361,32 @@ const deviceOptions = computed(() => devices.value.map(device => {
   }
 }))
 
+function formatReadableDate(raw?: string): string {
+  if (!raw) return '-'
+  return raw.replace(/T/, ' ').replace(/:\d{2}Z$/, '').replace(/Z$/, '')
+}
+
 const purchasedColumns = [
-  { title: '应用名称', key: 'name', width: 220, ellipsis: true },
-  { title: 'Bundle Identifier', key: 'bundleID', width: 220, ellipsis: true },
-  { title: 'App ID', key: 'id', width: 120 },
-  { title: '获取时间', key: 'purchaseDate', width: 160 },
+  { title: '应用名称', key: 'name', minWidth: 160, ellipsis: { tooltip: true } },
+  { title: 'Bundle ID', key: 'bundleID', minWidth: 180, ellipsis: { tooltip: true } },
+  { title: 'App ID', key: 'id', width: 100 },
+  {
+    title: '获取时间',
+    key: 'purchaseDate',
+    width: 140,
+    render(row: main.AppItem) {
+      return h('span', { class: 'text-dim' }, formatReadableDate(row.purchaseDate))
+    }
+  },
   {
     title: '操作',
     key: 'actions',
-    width: 180,
+    width: 150,
+    fixed: 'right' as const,
     render(row: main.AppItem) {
-      return h(NSpace, { size: 6 }, () => [
-        h(NButton, { size: 'tiny', type: 'primary', onClick: () => selectAppForVersions(row) }, () => '历史版本'),
-        h(NButton, { size: 'tiny', secondary: true, onClick: () => downloadFromPurchased(row) }, () => '直接下载')
+      return h(NSpace, { size: 6, wrap: false }, () => [
+        h(NButton, { size: 'tiny', secondary: true, onClick: () => selectAppForVersions(row) }, () => '历史版本'),
+        h(NButton, { size: 'tiny', type: 'primary', onClick: () => downloadFromPurchased(row) }, () => '下载')
       ])
     }
   }
@@ -1043,6 +1446,7 @@ async function refreshAccount(autoNavigate = false) {
     account.value = res
     if (res.success && res.email) {
       statusText.value = `已登录: ${res.name} (${res.email})`
+      await loadSettings()
       if (autoNavigate) {
         activeTab.value = 'search'
       }
@@ -1086,6 +1490,7 @@ async function handleLogin() {
       message.success(`登录成功: ${res.account.name}`)
       loginForm.value.password = ''
       statusText.value = `登录成功: ${res.account.name}`
+      await loadSettings()
       activeTab.value = 'search'
     } else {
       message.error(`登录失败: ${res.errorMessage}`)
@@ -1107,20 +1512,21 @@ async function confirm2FA() {
 
   isLoggingIn.value = true
   isAnyOperationRunning.value = true
-  statusText.value = '正在提交 2FA 验证码并完成登录...'
+  statusText.value = '正在提交验证码并完成登录...'
 
   try {
     const res = await Login(loginForm.value.email, loginForm.value.password, twoFACode.value)
     if (res.success) {
       show2FAModal.value = false
       account.value = res.account
-      message.success(`登录成功！用户: ${res.account.name}`)
+      message.success(`登录成功: ${res.account.name}`)
       loginForm.value.password = ''
       twoFACode.value = ''
       statusText.value = `登录成功: ${res.account.name}`
+      await loadSettings()
       activeTab.value = 'search'
     } else {
-      message.error(`2FA 验证失败: ${res.errorMessage}`)
+      message.error(`验证失败: ${res.errorMessage}`)
       statusText.value = `验证失败: ${res.errorMessage}`
     }
   } catch (err: any) {
@@ -1134,13 +1540,13 @@ async function confirm2FA() {
 function cancel2FA() {
   show2FAModal.value = false
   twoFACode.value = ''
-  statusText.value = '用户取消了双重认证验证。'
+  statusText.value = '用户取消了验证。'
 }
 
 async function handleRevoke() {
   dialog.warning({
-    title: '确认退出',
-    content: '确定要退出当前账号并清除登录凭据吗？',
+    title: '确认退出登录',
+    content: '确定要退出当前 Apple ID 账号并清除本地授权凭证吗？',
     positiveText: '确定退出',
     negativeText: '取消',
     onPositiveClick: async () => {
@@ -1152,6 +1558,7 @@ async function handleRevoke() {
           account.value = { name: '', email: '', success: false }
           message.success('已成功注销登录凭据')
           statusText.value = '已退出登录'
+          await loadSettings()
           activeTab.value = 'account'
         }
       } catch (err: any) {
@@ -1167,14 +1574,14 @@ async function handleRevoke() {
 async function handleClearKeychain() {
   dialog.warning({
     title: '清空本地密钥库缓存',
-    content: '此操作将删除本地用户目录下的 .ipatool 密钥文件夹 (%USERPROFILE%\\.ipatool)，重置所有本地缓存。确定要清理吗？',
+    content: '此操作将删除本地存储的 .ipatool 密钥数据并重置缓存。确定清理吗？',
     positiveText: '确定清理',
     negativeText: '取消',
     onPositiveClick: async () => {
       isClearing.value = true
       try {
         await ClearKeychainCache()
-        message.success('本地密钥缓存已彻底清除！')
+        message.success('本地密钥缓存已清除')
         await refreshAccount()
       } catch (err: any) {
         message.error(`清理失败: ${err}`)
@@ -1259,9 +1666,9 @@ async function handlePurchaseApp(bundleId: string) {
   try {
     const res = await Purchase(bundleId)
     if (res.alreadyOwned) {
-      message.info('你已经拥有该应用的许可，无需重复购买。')
+      message.info('你已经拥有该应用的正版许可，无需重复获取。')
     } else {
-      message.success('获取免费许可成功！')
+      message.success('获取许可成功')
     }
   } catch (err: any) {
     message.error(`获取许可失败: ${err}`)
@@ -1279,7 +1686,7 @@ async function handleListVersions() {
 
   isListingVersions.value = true
   isAnyOperationRunning.value = true
-  statusText.value = `正在查询 ${versionForm.value.bundleId} 的历史版本构建 ID 列表...`
+  statusText.value = `正在查询 ${versionForm.value.bundleId} 的历史版本列表...`
 
   try {
     const res = await ListVersions(versionForm.value.bundleId, versionForm.value.appId)
@@ -1289,7 +1696,7 @@ async function handleListVersions() {
       fileSize: '-',
       releaseDate: '-'
     }))
-    statusText.value = `共获取到 ${versionItems.value.length} 个历史版本构建 ID。`
+    statusText.value = `共获取到 ${versionItems.value.length} 个历史版本记录。`
   } catch (err: any) {
     message.error(`查询历史版本失败: ${err}`)
     statusText.value = '查询历史版本失败'
@@ -1319,7 +1726,7 @@ async function fetchItemMetadata(index: number): Promise<string> {
     const res = await GetVersionMetadata(versionForm.value.bundleId, item.versionId, versionForm.value.appId)
     item.displayVersion = res.displayVersion
     item.fileSize = res.displayFileSize
-    item.releaseDate = res.releaseDate ? new Date(res.releaseDate).toLocaleDateString() : '-'
+    item.releaseDate = res.releaseDate ? res.releaseDate.replace(/T.*/, '') : '-'
     return item.displayVersion
   } catch (err) {
     console.warn(`查询构建 ID ${item.versionId} 失败:`, err)
@@ -1338,7 +1745,7 @@ async function runBatchQuery(count: number) {
   try {
     for (let i = 0; i < count; i++) {
       if (shouldStopBatchQuery.value) {
-        statusText.value = '批量版本查询已手动停止。'
+        statusText.value = '批量查询已手动停止。'
         message.info('批量查询已停止')
         break
       }
@@ -1346,7 +1753,7 @@ async function runBatchQuery(count: number) {
       const item = versionItems.value[i]
       if (item.displayVersion !== '未查询') continue
 
-      statusText.value = `批量查询中 (${i + 1}/${count}): ${item.versionId}...`
+      statusText.value = `正在查询 (${i + 1}/${count}): ${item.versionId}...`
       await fetchItemMetadata(i)
 
       if (shouldStopBatchQuery.value) break
@@ -1354,11 +1761,11 @@ async function runBatchQuery(count: number) {
     }
 
     if (!shouldStopBatchQuery.value) {
-      statusText.value = '批量版本查询完成。'
+      statusText.value = '批量查询完成。'
       message.success('批量查询完成')
     }
   } catch (err: any) {
-    statusText.value = `批量版本查询失败: ${err}`
+    statusText.value = `批量查询失败: ${err}`
     message.error(`批量查询失败: ${err}`)
   } finally {
     isBatchQuerying.value = false
@@ -1383,9 +1790,9 @@ function stopBatchQuery() {
 function handleBatchQuery() {
   const count = Math.min(versionItems.value.length, 30)
   dialog.info({
-    title: '批量查询确认',
-    content: `即将批量查询前 ${count} 个版本的详细版本号（每秒约查询 2 个），是否继续？`,
-    positiveText: '开始查询',
+    title: '批量解析确认',
+    content: `即将批量解析前 ${count} 个版本的详细版本号与体积，是否继续？`,
+    positiveText: '开始解析',
     negativeText: '取消',
     onPositiveClick: () => {
       void runBatchQuery(count)
@@ -1399,7 +1806,7 @@ function handleTargetQueryClick() {
     return
   }
   if (versionItems.value.length === 0) {
-    message.warning('请先点击「获取历史版本列表」')
+    message.warning('请先点击「获取历史版本」')
     return
   }
   showTargetVersionModal.value = true
@@ -1410,7 +1817,7 @@ function handleTargetQueryClick() {
 
 function stopTargetQuery() {
   shouldStopTargetQuery.value = true
-  statusText.value = '正在停止指定版本查询...'
+  statusText.value = '正在停止版本检索...'
 }
 
 function confirmStartTargetQuery() {
@@ -1427,7 +1834,7 @@ async function runTargetQuery(targetVersion: string) {
   isTargetQuerying.value = true
   shouldStopTargetQuery.value = false
   isAnyOperationRunning.value = true
-  statusText.value = `启动二分查找目标版本: ${targetVersion}...`
+  statusText.value = `正在检索目标版本: ${targetVersion}...`
 
   const total = versionItems.value.length
   let found = false
@@ -1437,8 +1844,7 @@ async function runTargetQuery(targetVersion: string) {
     let low = 0
     let high = total - 1
 
-    // 步骤 1: 边界快速检查 - 最新版本 (索引 0，版本最大)
-    statusText.value = `[二分查找] 检查最新版本 (1/${total})...`
+    statusText.value = `正在核对最新版本 (1/${total})...`
     const v0 = await fetchItemMetadata(0)
     if (shouldStopTargetQuery.value) {
       statusText.value = `已停止查询指定版本 (${targetVersion})。`
@@ -1449,17 +1855,15 @@ async function runTargetQuery(targetVersion: string) {
       found = true
       foundItem = versionItems.value[0]
     } else if (v0 && compareVersions(v0, targetVersion) < 0) {
-      // 最新版本都已经小于目标版本，说明目标版本比最新版还要新，不存在
-      statusText.value = `当前最新版本 (${v0}) 小于目标版本 ${targetVersion}，历史版本中不存在该版本。`
+      statusText.value = `当前最新版本 (${v0}) 小于目标版本 ${targetVersion}，未找到该版本。`
       message.warning(`当前最新版本为 ${v0}，未找到更高版本 ${targetVersion}`)
       return
     } else {
       low = 1
     }
 
-    // 步骤 2: 边界快速检查 - 最老版本 (索引 total - 1，版本最小)
     if (!found && high >= low) {
-      statusText.value = `[二分查找] 检查最老版本 (${total}/${total})...`
+      statusText.value = `正在核对早期版本 (${total}/${total})...`
       const vLast = await fetchItemMetadata(high)
       if (shouldStopTargetQuery.value) {
         statusText.value = `已停止查询指定版本 (${targetVersion})。`
@@ -1470,20 +1874,18 @@ async function runTargetQuery(targetVersion: string) {
         found = true
         foundItem = versionItems.value[high]
       } else if (vLast && compareVersions(vLast, targetVersion) > 0) {
-        // 最老版本都已经大于目标版本，说明目标版本比历史上最早的版本还要老，不存在
-        statusText.value = `当前最老版本 (${vLast}) 大于目标版本 ${targetVersion}，历史版本中不存在该版本。`
-        message.warning(`当前最老版本为 ${vLast}，未找到更低版本 ${targetVersion}`)
+        statusText.value = `当前早期版本 (${vLast}) 大于目标版本 ${targetVersion}，未找到该版本。`
+        message.warning(`当前早期版本为 ${vLast}，未找到更低版本 ${targetVersion}`)
         return
       } else {
         high = high - 1
       }
     }
 
-    // 步骤 3: 全局二分查找 (区间 [low, high]，列表单调递减: 下标越小版本越新)
     if (!found) {
       while (low <= high && !shouldStopTargetQuery.value) {
         const mid = Math.floor((low + high) / 2)
-        statusText.value = `[二分查找] 正在核对第 ${mid + 1}/${total} 个版本 (构建 ID: ${versionItems.value[mid].versionId}，二分区间: [${low + 1} ~ ${high + 1}])...`
+        statusText.value = `正在核对版本 (构建 ID: ${versionItems.value[mid].versionId})...`
         const vMid = await fetchItemMetadata(mid)
 
         if (shouldStopTargetQuery.value) break
@@ -1497,14 +1899,11 @@ async function runTargetQuery(targetVersion: string) {
 
         if (vMid) {
           if (compareVersions(vMid, targetVersion) < 0) {
-            // 当前版本小于目标版本：当前版本太旧，目标版本更新，索引应在左半区 (更小下标处)
             high = mid - 1
           } else {
-            // 当前版本大于目标版本：当前版本太新，目标版本更旧，索引应在右半区 (更大下标处)
             low = mid + 1
           }
         } else {
-          // 极罕见未获取到元数据情况，向右推进防止死循环
           low++
         }
       }
@@ -1514,12 +1913,12 @@ async function runTargetQuery(targetVersion: string) {
       statusText.value = `已停止查询指定版本 (${targetVersion})。`
       message.info('已停止查询指定版本')
     } else if (found && foundItem) {
-      statusText.value = `🎯 已命中目标版本 ${foundItem.displayVersion} (构建 ID: ${foundItem.versionId})！`
+      statusText.value = `已找到目标版本 ${foundItem.displayVersion} (构建 ID: ${foundItem.versionId})！`
       message.success(`已查询到指定版本 ${foundItem.displayVersion}！`)
       versionForm.value.filter = targetVersion
     } else {
-      statusText.value = `二分查找完成，未在历史记录中找到指定版本: ${targetVersion}`
-      message.warning(`已完成全局二分查找，未找到版本号: ${targetVersion}`)
+      statusText.value = `检索完成，未在历史记录中找到指定版本: ${targetVersion}`
+      message.warning(`未找到版本号: ${targetVersion}`)
     }
   } catch (err: any) {
     statusText.value = `查询指定版本失败: ${err}`
@@ -1570,7 +1969,7 @@ async function handleClearCompleted() {
   try {
     await ClearCompletedDownloadTasks()
     await loadDownloadTasks()
-    message.success('已清空所有已完成任务记录')
+    message.success('已清空所有已完成任务')
   } catch (err: any) {
     message.error(`操作失败: ${err}`)
   }
@@ -1583,7 +1982,7 @@ function handleOpenDefaultDownloadDir() {
 async function handleCancelTask(id: string) {
   try {
     await CancelDownloadTask(id)
-    message.info('正在取消下载任务...')
+    message.info('正在取消任务...')
   } catch (err: any) {
     message.error(`取消失败: ${err}`)
   }
@@ -1611,16 +2010,6 @@ function handleInstallFromTask(outputPath: string) {
   }
 }
 
-function handleOpenFile(path: string) {
-  if (!path) return
-  OpenInExplorer(path)
-}
-
-function handleOpenDir(path: string) {
-  if (!path) return
-  OpenInExplorer(path)
-}
-
 async function handleRetryTask(task: main.DownloadTask) {
   try {
     await AddDownloadTask(
@@ -1646,7 +2035,7 @@ function useIPAPath(paths: string[]) {
   }
   selectedIPAPath.value = ipaPath
   activeTab.value = 'installer'
-  statusText.value = `已选择 IPA: ${ipaPath}`
+  statusText.value = `已选定 IPA: ${ipaPath}`
 }
 
 async function handleSelectIPA() {
@@ -1700,7 +2089,7 @@ async function handleInstallIPA() {
   isInstallingIPA.value = true
   isAnyOperationRunning.value = true
   statusText.value = `正在安装 ${selectedIPAFileName.value}（请保持设备屏幕常亮勿息屏）...`
-  message.info('开始安装应用，请确保设备屏幕保持常亮解锁，切勿息屏休眠...')
+  message.info('开始安装应用，请确保设备屏幕保持常亮解锁...')
   try {
     const result = await InstallIPA(selectedIPAPath.value, selectedDeviceUDID.value)
     if (result.success) {
@@ -1729,7 +2118,7 @@ async function loadPurchases() {
     const res = await ListPurchases(purchasedPage.value, 20)
     purchasedApps.value = res.apps || []
     purchasedTotal.value = res.totalCount || 0
-    statusText.value = `已购应用加载完成 (第 ${purchasedPage.value} 页，共 ${res.totalCount} 个)。`
+    statusText.value = `已购应用加载完成 (共 ${res.totalCount} 款)。`
   } catch (err: any) {
     message.error(`加载已购列表失败: ${err}`)
     statusText.value = '加载失败'
@@ -1793,18 +2182,72 @@ async function handleSaveSettings() {
   }
 }
 
+function openGitHub() {
+  BrowserOpenURL('https://github.com/wnnz/AppleVault')
+}
+
+function copyGitHubUrl() {
+  navigator.clipboard.writeText('https://github.com/wnnz/AppleVault')
+  message.success('已复制仓库地址到剪贴板！')
+}
+
 function handleCancel() {
   shouldStopBatchQuery.value = true
   shouldStopTargetQuery.value = true
   CancelRunningCommand()
   isAnyOperationRunning.value = false
+  statusText.value = '已终止当前操作'
 }
 
 // Lifecycle
 onMounted(() => {
-  loadSettings()
-  refreshAccount(true)
-  loadDownloadTasks()
+  const urlParams = new URLSearchParams(window.location.search)
+  const tabParam = urlParams.get('tab')
+  const isDemo = urlParams.get('demo') === '1'
+
+  if (isDemo) {
+    account.value = { name: 'AppleVault User', email: 'user@icloud.com', success: true }
+    searchResults.value = [
+      { id: 414478124, bundleID: 'com.tencent.xin', name: '微信 (WeChat)', version: '8.0.50', price: 0, displayPrice: '免费' },
+      { id: 333206289, bundleID: 'com.alipay.iphoneclient', name: '支付宝 - 生活好 支付宝', version: '10.5.88', price: 0, displayPrice: '免费' },
+      { id: 835599320, bundleID: 'com.zhiliaoapp.musically', name: 'TikTok - Videos, Music & LIVE', version: '35.8.0', price: 0, displayPrice: '免费' },
+      { id: 590338362, bundleID: 'com.netease.cloudmusic', name: '网易云音乐', version: '9.0.70', price: 0, displayPrice: '免费' },
+      { id: 736536022, bundleID: 'tv.danmaku.bilianime', name: '哔哩哔哩 (Bilibili)', version: '7.82.0', price: 0, displayPrice: '免费' }
+    ]
+    versionForm.value.bundleId = 'com.tencent.xin'
+    versionForm.value.appName = '微信'
+    versionItems.value = [
+      { versionId: '868192301', displayVersion: '8.0.50', fileSize: '286.4 MB', releaseDate: '2024-08-15' },
+      { versionId: '867204918', displayVersion: '8.0.49', fileSize: '284.1 MB', releaseDate: '2024-07-20' },
+      { versionId: '865819021', displayVersion: '8.0.48', fileSize: '279.8 MB', releaseDate: '2024-06-12' },
+      { versionId: '864201990', displayVersion: '8.0.47', fileSize: '275.2 MB', releaseDate: '2024-05-08' },
+      { versionId: '862901124', displayVersion: '8.0.46', fileSize: '270.5 MB', releaseDate: '2024-04-01' }
+    ]
+    downloadTasks.value = [
+      { id: '1', appName: '微信 (WeChat)', bundleID: 'com.tencent.xin', appId: 414478124, version: '8.0.50', versionId: '868192301', fileSize: '286.4 MB', totalBytes: 300312000, currBytes: 192200000, progress: 64, speed: '8.6 MB/s', status: 'downloading', outputPath: '', errorMessage: '', createdAt: '2024-08-20 15:30:12' },
+      { id: '2', appName: '支付宝', bundleID: 'com.alipay.iphoneclient', appId: 333206289, version: '10.5.88', versionId: '865001129', fileSize: '142.0 MB', totalBytes: 148897000, currBytes: 148897000, progress: 100, speed: '已完成', status: 'completed', outputPath: 'data/downloads/user@icloud.com/alipay.ipa', errorMessage: '', createdAt: '2024-08-20 15:24:05' }
+    ]
+    purchasedApps.value = [
+      { id: 414478124, bundleID: 'com.tencent.xin', name: '微信 (WeChat)', version: '8.0.50', price: 0, purchaseDate: '2024-01-15 10:20', displayPrice: '已购' },
+      { id: 333206289, bundleID: 'com.alipay.iphoneclient', name: '支付宝', version: '10.5.88', price: 0, purchaseDate: '2024-02-08 14:12', displayPrice: '已购' },
+      { id: 1136220934, bundleID: 'com.firecore.infuse', name: 'Infuse • 精彩影音播放器', version: '7.7.2', price: 0, purchaseDate: '2024-03-22 09:45', displayPrice: '已购' },
+      { id: 1596487405, bundleID: 'com.taguirov.adam.WebDAV', name: 'WebDAV Manager', version: '2.1.0', price: 0, purchaseDate: '2024-05-19 16:30', displayPrice: '已购' }
+    ]
+    purchasedTotal.value = 4
+    devices.value = [
+      { udid: '00008130-001A49021E28001C', name: 'iPhone 15 Pro Max', productType: 'iPhone 15 Pro Max', productVersion: '17.5.1', connectionType: 'USB' }
+    ]
+    selectedDeviceUDID.value = '00008130-001A49021E28001C'
+    selectedIPAPath.value = 'data\\downloads\\user@icloud.com\\WeChat_8.0.50.ipa'
+  } else {
+    loadSettings()
+    refreshAccount(true)
+    loadDownloadTasks()
+  }
+
+  if (tabParam) {
+    activeTab.value = tabParam
+  }
 
   OnFileDrop((_x: number, _y: number, paths: string[]) => {
     useIPAPath(paths)
@@ -1834,639 +2277,1541 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+/* Base Structure & Layout */
 .app-layout {
   display: flex;
-  flex-direction: column;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background-color: #f3f4f6;
-  color: #1f2937;
-  font-family: Segoe UI, "Microsoft YaHei UI", sans-serif;
+  background-color: #f8fafc;
+  color: #1e293b;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  user-select: none;
 }
 
 .dark-mode {
-  background-color: #18181b;
-  color: #e4e4e7;
+  background-color: #0f172a;
+  color: #f1f5f9;
 }
 
-/* 1. Header */
-.top-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 20px;
+/* 1. Sidebar Styles */
+.app-sidebar {
+  width: 220px;
+  min-width: 220px;
   background-color: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
-  flex-shrink: 0;
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px 12px 12px 12px;
+  box-sizing: border-box;
+  z-index: 10;
 }
 
-.dark-mode .top-header {
-  background-color: #1f1f23;
-  border-bottom-color: #2e2e32;
+.dark-mode .app-sidebar {
+  background-color: #1e293b;
+  border-right-color: rgba(255, 255, 255, 0.08);
 }
 
-.header-brand {
+.sidebar-brand {
   display: flex;
   align-items: center;
+  padding: 2px 6px 14px 6px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
 }
 
-.brand-emoji {
-  font-size: 20px;
-  margin-right: 6px;
+.dark-mode .sidebar-brand {
+  border-bottom-color: rgba(255, 255, 255, 0.05);
 }
 
-.brand-title {
-  font-size: 18px;
-  font-weight: bold;
-  color: #0078d4;
+.brand-icon-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #0071e3 0%, #409cff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  margin-right: 10px;
+  box-shadow: 0 4px 10px rgba(0, 113, 227, 0.25);
+}
+
+.brand-apple-svg {
+  width: 18px;
+  height: 18px;
+}
+
+.brand-text {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.brand-name {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: #0f172a;
+}
+
+.dark-mode .brand-name {
+  color: #f8fafc;
+}
+
+.brand-tag {
+  font-size: 10px;
+  font-weight: 600;
+  color: #0071e3;
+  background: rgba(0, 113, 227, 0.08);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.dark-mode .brand-tag {
+  background: rgba(10, 132, 255, 0.2);
+  color: #38bdf8;
+}
+
+/* Nav Menu */
+.sidebar-nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding-top: 12px;
+  overflow-y: auto;
+}
+
+.nav-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  padding: 6px 10px 4px 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 3px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #475569;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.dark-mode .nav-item {
+  color: #94a3b8;
+}
+
+.nav-item:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+  color: #0f172a;
+}
+
+.dark-mode .nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+  color: #f8fafc;
+}
+
+.nav-item.active {
+  background-color: #0071e3;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.25);
+}
+
+.dark-mode .nav-item.active {
+  background-color: #0284c7;
+  color: #ffffff;
+}
+
+.nav-label {
+  flex: 1;
+}
+
+.nav-badge {
+  background: #ff3b30;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 1px 6px;
+  min-width: 14px;
+  text-align: center;
+}
+
+.account-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.dot-online {
+  background-color: #34c759;
+  box-shadow: 0 0 5px rgba(52, 199, 89, 0.5);
+}
+
+.dot-offline {
+  background-color: #cbd5e1;
+}
+
+/* Sidebar Footer */
+.sidebar-footer {
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dark-mode .sidebar-footer {
+  border-top-color: rgba(255, 255, 255, 0.06);
+}
+
+.sidebar-account-card {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background-color: #f1f5f9;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.dark-mode .sidebar-account-card {
+  background-color: #0f172a;
+}
+
+.sidebar-account-card:hover {
+  background-color: #e2e8f0;
+}
+
+.dark-mode .sidebar-account-card:hover {
+  background-color: #334155;
+}
+
+.user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
   margin-right: 8px;
 }
 
-.brand-badge {
-  font-size: 11px;
+.user-avatar.avatar-logged {
+  background: linear-gradient(135deg, #0071e3 0%, #00c6ff 100%);
+  color: #ffffff;
+}
+
+.user-info-text {
+  flex: 1;
+  overflow: hidden;
+}
+
+.user-name {
+  font-size: 12px;
   font-weight: 600;
-  padding: 1px 6px;
-  border-radius: 6px;
-  background-color: rgba(0, 120, 212, 0.12);
-  color: #0078d4;
-  margin-right: 2px;
-  line-height: 1.4;
-  vertical-align: middle;
+  color: #1e293b;
 }
 
-.dark-mode .brand-badge {
-  background-color: rgba(0, 120, 212, 0.25);
-  color: #4daafc;
+.dark-mode .user-name {
+  color: #e2e8f0;
 }
 
-.brand-subtitle {
+.user-email {
+  font-size: 10.5px;
+  color: #64748b;
+}
+
+.dark-mode .user-email {
+  color: #94a3b8;
+}
+
+.sidebar-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+
+.quick-tool {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.quick-tool-label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.icon-action-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.dark-mode .icon-action-btn {
+  background: #0f172a;
+  border-color: #334155;
+  color: #94a3b8;
+}
+
+.icon-action-btn:hover {
+  border-color: #0071e3;
+  color: #0071e3;
+  background: #f8fafc;
+}
+
+.dark-mode .icon-action-btn:hover {
+  border-color: #0284c7;
+  color: #38bdf8;
+  background: #1e293b;
+}
+
+.icon-action-btn.active {
+  background: rgba(0, 113, 227, 0.12);
+  border-color: #0071e3;
+  color: #0071e3;
+}
+
+.dark-mode .icon-action-btn.active {
+  background: rgba(2, 132, 199, 0.2);
+  border-color: #0284c7;
+  color: #38bdf8;
+}
+
+/* 2. Main Workspace Layout */
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+.view-content-wrapper {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 20px 8px 20px;
+  box-sizing: border-box;
+}
+
+.view-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.view-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.view-title {
+  margin: 0 0 2px 0;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  color: #0f172a;
+}
+
+.dark-mode .view-title {
+  color: #f8fafc;
+}
+
+.view-desc {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.dark-mode .view-desc {
+  color: #94a3b8;
+}
+
+/* Clean Apple-style Card */
+.clean-card {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 2px 8px rgba(0, 0, 0, 0.02);
+  box-sizing: border-box;
+}
+
+.dark-mode .clean-card {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.table-flex-card {
+  flex: 1;
+  overflow: hidden;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Uniform Height Standards */
+.height-aligned {
+  height: 36px !important;
+  box-sizing: border-box !important;
+  line-height: 34px !important;
+}
+
+.height-aligned-btn {
+  height: 36px !important;
+  box-sizing: border-box !important;
+  padding: 0 16px !important;
+  font-size: 13px !important;
+}
+
+.small-aligned-btn {
+  height: 30px !important;
+  box-sizing: border-box !important;
+  padding: 0 12px !important;
+  font-size: 12px !important;
+}
+
+/* Clean Input Elements */
+.clean-input {
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  color: #0f172a;
+  border-radius: 8px;
+  padding: 0 12px;
   font-size: 13px;
-  color: #6b7280;
-  margin-left: 10px;
+  outline: none;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
 }
 
-.dark-mode .brand-subtitle {
-  color: #9ca3af;
+.dark-mode .clean-input {
+  border-color: #334155;
+  background-color: #0f172a;
+  color: #f1f5f9;
 }
 
-.header-tools {
+.clean-input:focus {
+  border-color: #0071e3;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.12);
+}
+
+.dark-mode .clean-input:focus {
+  background-color: #1e293b;
+  border-color: #0284c7;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+}
+
+/* Search View Specifics */
+.search-input-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.search-input-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.search-input {
+  width: 100%;
+  border-radius: 8px;
+}
+
+.filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.filter-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+}
+
+.filter-label {
+  font-size: 12.5px;
+  color: #64748b;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Versions View Specifics */
+.versions-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bundle-input-row {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.pill-badge {
-  display: inline-flex;
+.clean-input-prefix-box {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  padding: 0 8px;
+}
+
+.dark-mode .clean-input-prefix-box {
+  border-color: #334155;
+  background-color: #0f172a;
+}
+
+.prefix-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  padding-right: 8px;
+  border-right: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.dark-mode .prefix-label {
+  border-right-color: #334155;
+  color: #94a3b8;
+}
+
+.border-none {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.filter-search-row {
+  display: flex;
+  align-items: center;
+}
+
+.filter-search-box {
+  width: 100%;
+}
+
+.filter-input {
+  width: 100%;
+  font-size: 12.5px;
+}
+
+.count-pill {
+  font-size: 12px;
+  font-weight: 500;
+  background: rgba(0, 113, 227, 0.08);
+  color: #0071e3;
+  padding: 3px 9px;
+  border-radius: 20px;
+}
+
+.dark-mode .count-pill {
+  background: rgba(2, 132, 199, 0.2);
+  color: #38bdf8;
+}
+
+.tag-version-highlight {
+  font-weight: 600;
+  color: #107c41;
+  background: rgba(16, 124, 65, 0.08);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.dark-mode .tag-version-highlight {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.12);
+}
+
+/* Download View Tasks */
+.tasks-container {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.empty-state-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px dashed #cbd5e1;
+}
+
+.dark-mode .empty-state-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.empty-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 6px;
+}
+
+.dark-mode .empty-title {
+  color: #f1f5f9;
+}
+
+.empty-desc {
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+.task-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modern-task-card {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 12px 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dark-mode .modern-task-card {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.task-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.task-app-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.dark-mode .task-name {
+  color: #f8fafc;
+}
+
+.task-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.task-pill-ver {
+  background: rgba(52, 199, 89, 0.12);
+  color: #28a745;
+}
+
+.task-pill-build {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.dark-mode .task-pill-build {
+  background: #334155;
+  color: #94a3b8;
+}
+
+.task-actions-group {
+  display: flex;
+  gap: 6px;
+}
+
+.task-meta-bundle {
+  font-size: 11px;
+  color: #94a3b8;
+  font-family: Menlo, Monaco, Consolas, monospace;
+}
+
+.task-progress-section {
+  margin: 2px 0;
+}
+
+.task-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+}
+
+.footer-status-tag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.indicator-downloading {
+  background-color: #0071e3;
+  box-shadow: 0 0 5px rgba(0, 113, 227, 0.6);
+}
+
+.indicator-completed {
+  background-color: #34c759;
+}
+
+.indicator-error {
+  background-color: #ff3b30;
+}
+
+.indicator-canceled {
+  background-color: #94a3b8;
+}
+
+.indicator-pending {
+  background-color: #f59e0b;
+}
+
+.task-speed {
+  font-weight: 600;
+  color: #0071e3;
+}
+
+.dark-mode .task-speed {
+  color: #38bdf8;
+}
+
+.task-bytes-info {
+  color: #64748b;
+}
+
+.task-error-text {
+  color: #ff3b30;
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.footer-right-info {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.pct-text {
+  font-size: 12.5px;
+  color: #0071e3;
+}
+
+.dark-mode .pct-text {
+  color: #38bdf8;
+}
+
+.time-text {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* Purchased View Controls */
+.purchased-page-controls {
+  display: flex;
   align-items: center;
   gap: 6px;
-  background-color: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  padding: 4px 12px;
+}
+
+.page-indicator {
   font-size: 12px;
+  color: #64748b;
+  margin: 0 4px;
 }
 
-.dark-mode .pill-badge {
-  background-color: #27272a;
-  border-color: #3f3f46;
+.dark-mode .page-indicator {
+  color: #94a3b8;
 }
 
-.pill-label {
-  font-weight: 600;
-  color: #4b5563;
+/* Installer View */
+.installer-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  flex: 1;
+  overflow: hidden;
 }
 
-.dark-mode .pill-label {
-  color: #a1a1aa;
+.flex-col {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.pill-value {
-  color: #111827;
+.card-headline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
 }
 
-.dark-mode .pill-value {
-  color: #f4f4f5;
+.headline-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
 }
 
-.pill-sub {
-  color: #6b7280;
+.dark-mode .headline-title {
+  color: #f8fafc;
+}
+
+.headline-badge {
   font-size: 11px;
+  font-weight: 600;
+  color: #34c759;
+  background: rgba(52, 199, 89, 0.12);
+  padding: 2px 7px;
+  border-radius: 4px;
 }
 
-.indicator-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.dot-active {
-  background-color: #10b981;
-}
-
-.dot-inactive {
-  background-color: #ef4444;
-}
-
-/* 2. Main Body Tabs */
-.main-body {
+.clean-drop-zone {
   flex: 1;
-  overflow: hidden;
-  padding: 8px 18px 4px 18px;
+  min-height: 130px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: #f8fafc;
+  transition: all 0.2s ease;
+  padding: 16px;
+  box-sizing: border-box;
 }
 
-:deep(.custom-tabs) {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
+.dark-mode .clean-drop-zone {
+  border-color: #334155;
+  background: #0f172a;
 }
 
-:deep(.custom-tabs > .n-tabs-nav) {
-  padding-bottom: 4px;
-  flex-shrink: 0;
+.clean-drop-zone:hover {
+  border-color: #0071e3;
+  background: rgba(0, 113, 227, 0.03);
 }
 
-:deep(.custom-tabs > .n-tabs-pane-wrapper) {
-  flex: 1;
-  overflow: hidden;
+.clean-drop-zone.drop-active {
+  border-color: #34c759;
+  background: rgba(52, 199, 89, 0.04);
 }
 
-:deep(.custom-tabs > .n-tabs-pane-wrapper > .n-tab-pane) {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  padding: 0;
+.drop-primary-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 4px;
+  text-align: center;
 }
 
-.tab-scroll-container {
-  flex: 1;
-  height: 100%;
-  overflow-y: auto;
-  padding: 8px 2px 14px 2px;
+.dark-mode .drop-primary-title {
+  color: #f1f5f9;
 }
 
-.tab-table-container {
-  flex: 1;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: 8px 2px 4px 2px;
+.drop-secondary-path {
+  font-size: 11px;
+  color: #94a3b8;
+  max-width: 90%;
+  text-align: center;
 }
 
-/* Cards */
-.fluent-card {
-  background-color: #ffffff;
-  border: 1px solid #e5e7eb;
+.device-spec-box {
+  background: #f8fafc;
   border-radius: 8px;
-  padding: 18px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
-.dark-mode .fluent-card {
-  background-color: #202023;
-  border-color: #333338;
+.dark-mode .device-spec-box {
+  background: #0f172a;
 }
 
-.toolbar-card {
-  padding: 12px;
-  margin-bottom: 10px;
-  flex-shrink: 0;
+.spec-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11.5px;
 }
 
-.table-card {
-  flex: 1;
-  padding: 0;
-  overflow: hidden;
+.spec-k {
+  color: #64748b;
 }
 
-.card-title {
-  margin: 0 0 14px 0;
-  font-size: 16px;
-  font-weight: bold;
+.spec-v {
+  color: #0f172a;
 }
 
+.dark-mode .spec-v {
+  color: #f1f5f9;
+}
+
+.no-device-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 10px;
+  text-align: center;
+}
+
+.no-device-text {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.no-device-sub {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+.sub-alert-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: rgba(0, 113, 227, 0.06);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 11.5px;
+  color: #0369a1;
+  line-height: 1.5;
+}
+
+.dark-mode .sub-alert-box {
+  background: rgba(2, 132, 199, 0.15);
+  color: #7dd3fc;
+}
+
+.installer-action-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: #ffffff;
+}
+
+.dark-mode .installer-action-banner {
+  background: #1e293b;
+}
+
+.action-banner-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+
+.dark-mode .action-banner-title {
+  color: #f8fafc;
+}
+
+.action-banner-desc {
+  font-size: 11.5px;
+  color: #64748b;
+}
+
+.install-submit-btn {
+  height: 40px;
+  padding: 0 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Account Center View */
 .two-columns-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
-.centered-card {
-  max-width: 700px;
-  margin: 0 auto;
-}
-
-.installer-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.installer-card-header {
+.account-profile-box {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
+  gap: 14px;
+  padding: 12px 0 6px 0;
 }
 
-.installer-card-header .card-title {
-  margin-bottom: 0;
-}
-
-.ipa-drop-zone {
-  --wails-drop-target: drop;
-  min-height: 180px;
+.large-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  color: #475569;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24px;
-  border: 2px dashed #93c5fd;
-  border-radius: 8px;
-  background-color: #eff6ff;
-  cursor: pointer;
-  text-align: center;
-  transition: border-color 0.2s ease, background-color 0.2s ease;
-}
-
-.ipa-drop-zone:hover,
-.ipa-drop-zone.has-file {
-  border-color: #0078d4;
-  background-color: #dbeafe;
-}
-
-.dark-mode .ipa-drop-zone {
-  border-color: #2563eb;
-  background-color: #172554;
-}
-
-.dark-mode .ipa-drop-zone:hover,
-.dark-mode .ipa-drop-zone.has-file {
-  border-color: #60a5fa;
-  background-color: #1e3a8a;
-}
-
-.drop-icon {
-  font-size: 42px;
-  margin-bottom: 10px;
-}
-
-.drop-title {
-  font-size: 15px;
+  font-size: 22px;
   font-weight: 700;
 }
 
-.drop-subtitle {
-  max-width: 100%;
-  margin-top: 8px;
-  overflow: hidden;
-  color: #6b7280;
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.large-avatar.avatar-active {
+  background: linear-gradient(135deg, #0071e3 0%, #00c6ff 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
 }
 
-.dark-mode .drop-subtitle {
-  color: #bfdbfe;
+.profile-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 2px;
 }
 
-.device-detail-card {
-  margin-top: 14px;
-  padding: 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background-color: #f9fafb;
+.dark-mode .profile-name {
+  color: #f8fafc;
 }
 
-.dark-mode .device-detail-card {
-  border-color: #3f3f46;
-  background-color: #27272a;
+.profile-email {
+  font-size: 12.5px;
+  color: #64748b;
 }
 
-.device-detail-card .key-value-row:last-child {
-  margin-bottom: 0;
-}
-
-.device-wake-tip {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #b45309;
-  background-color: #fffbeb;
-  padding: 6px 10px;
-  border-radius: 4px;
-  border: 1px solid #fef3c7;
+.account-card-actions {
   display: flex;
-  align-items: center;
+  gap: 8px;
+}
+
+.form-item-clean {
+  display: flex;
+  flex-direction: column;
   gap: 6px;
-  line-height: 1.4;
 }
 
-.dark-mode .device-wake-tip {
-  color: #fde68a;
-  background-color: #451a03;
-  border-color: #78350f;
-}
-
-.device-empty-container {
-  padding: 14px 0;
-}
-
-.empty-guide-box {
-  margin-top: 10px;
-  text-align: left;
+.clean-label {
   font-size: 12px;
-  color: #4b5563;
-  background: #f9fafb;
-  padding: 10px 14px;
-  border-radius: 6px;
-  border: 1px dashed #e5e7eb;
+  font-weight: 600;
+  color: #475569;
 }
 
-.dark-mode .empty-guide-box {
-  background: #1f1f23;
-  color: #d4d4d8;
-  border-color: #3f3f46;
+.dark-mode .clean-label {
+  color: #94a3b8;
 }
 
-.empty-guide-title {
-  color: #111827;
-  margin-bottom: 4px;
+.account-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
 }
 
-.dark-mode .empty-guide-title {
-  color: #f4f4f5;
+.pill-success {
+  background: rgba(52, 199, 89, 0.12);
+  color: #28a745;
 }
 
-.empty-guide-list {
-  margin: 0;
-  padding-left: 18px;
-  line-height: 1.6;
+.pill-gray {
+  background: #f1f5f9;
+  color: #64748b;
 }
 
-.installer-action-card {
+.dark-mode .pill-gray {
+  background: #334155;
+  color: #94a3b8;
+}
+
+/* Settings View */
+.settings-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.dark-mode .settings-group {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.settings-group:last-child {
+  border-bottom: none;
+}
+
+.settings-group-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0071e3;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dark-mode .settings-group-title {
+  color: #38bdf8;
+}
+
+.settings-field-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-height: 44px;
+  padding: 4px 0;
   gap: 20px;
 }
 
-.installer-tips-container {
+.field-meta {
   flex: 1;
-  min-width: 0;
 }
 
-.notice-header {
+.field-control {
+  width: 360px;
+  min-width: 360px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.setting-input-action-group {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.setting-fixed-btn {
+  width: 68px !important;
+  min-width: 68px !important;
+  padding: 0 !important;
+  text-align: center;
+}
+
+.w-full {
+  width: 100% !important;
+}
+
+.field-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.dark-mode .field-title {
+  color: #f8fafc;
+}
+
+.field-desc {
+  font-size: 11.5px;
+  color: #64748b;
+  margin-top: 1px;
+}
+
+.engine-badge-box {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 4px;
+  background: rgba(52, 199, 89, 0.12);
+  color: #28a745;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 600;
 }
 
-.notice-icon {
-  font-size: 14px;
+.engine-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #34c759;
 }
 
-.installer-tips-list {
-  margin: 0;
-  padding-left: 18px;
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.installer-btn-wrapper {
+/* About View */
+.about-card-stack {
   display: flex;
   flex-direction: column;
+  gap: 18px;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+.about-hero {
+  display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.dark-mode .about-hero {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.about-large-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #0071e3 0%, #409cff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(0, 113, 227, 0.25);
   flex-shrink: 0;
 }
 
-.install-submit-btn {
-  height: 48px;
-  padding: 0 28px;
-  font-size: 15px;
-  font-weight: bold;
-}
-
-.text-blue {
-  color: #0078d4;
-}
-
-.dark-mode .text-blue {
-  color: #60a5fa;
-}
-
-.notice-info {
-  background-color: #eff6ff;
-  border: 1px solid #bfdbfe;
-  color: #1e40af;
-}
-
-.dark-mode .notice-info {
-  background-color: #172554;
-  border-color: #1e40af;
-  color: #bfdbfe;
-}
-
-@media (max-width: 1000px) {
-  .installer-layout {
-    grid-template-columns: 1fr;
-  }
-  .installer-action-card {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .install-submit-btn {
-    width: 100%;
-  }
-}
-
-/* Form Styles */
-.form-group {
-  margin-bottom: 12px;
-}
-
-.field-label {
-  display: block;
-  font-size: 13px;
-  color: #6b7280;
-  margin-bottom: 4px;
-}
-
-.dark-mode .field-label {
-  color: #9ca3af;
-}
-
-.field-tip {
-  font-size: 11px;
-  color: #6b7280;
-  margin-top: 4px;
-}
-
-.key-value-row {
-  display: flex;
-  margin-bottom: 10px;
-  font-size: 13px;
-}
-
-.row-label {
-  width: 90px;
-  color: #6b7280;
-}
-
-.dark-mode .row-label {
-  color: #9ca3af;
-}
-
-.row-value {
+.about-hero-text {
   flex: 1;
 }
 
-/* Notice Box */
-.notice-box {
-  padding: 10px 12px;
-  border-radius: 4px;
-  font-size: 12px;
+.about-app-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.4px;
+}
+
+.dark-mode .about-app-title {
+  color: #f8fafc;
+}
+
+.about-version-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 6px 0;
+}
+
+.about-version-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #0071e3;
+  background: rgba(0, 113, 227, 0.08);
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+
+.dark-mode .about-version-badge {
+  background: rgba(2, 132, 199, 0.2);
+  color: #38bdf8;
+}
+
+.about-badge-sub {
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+
+.about-intro {
+  margin: 0;
+  font-size: 12.5px;
+  color: #64748b;
   line-height: 1.5;
-  margin-bottom: 14px;
 }
 
-.notice-warning {
-  background-color: #fef3c7;
-  border: 1px solid #fde68a;
-  color: #92400e;
+.dark-mode .about-intro {
+  color: #94a3b8;
 }
 
-.dark-mode .notice-warning {
-  background-color: #451a03;
-  border-color: #78350f;
-  color: #fde68a;
+.about-section-box {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 12px 14px;
 }
 
-.notice-gray {
-  background-color: #f3f4f6;
-  color: #4b5563;
+.dark-mode .about-section-box {
+  background: #0f172a;
 }
 
-.dark-mode .notice-gray {
-  background-color: #27272a;
-  color: #d4d4d8;
+.about-section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 8px;
 }
 
-.notice-success {
-  background-color: #ecfdf5;
-  border: 1px solid #a7f3d0;
-  color: #065f46;
+.dark-mode .about-section-label {
+  color: #94a3b8;
 }
 
-.dark-mode .notice-success {
-  background-color: #064e3b;
-  border-color: #047857;
-  color: #a7f3d0;
-}
-
-.notice-green {
-  background-color: #ecfdf5;
-  border: 1px solid #a7f3d0;
-  color: #065f46;
-}
-
-.dark-mode .notice-green {
-  background-color: #064e3b;
-  border-color: #047857;
-  color: #a7f3d0;
-}
-
-/* Toolbars */
-.search-toolbar {
+.repo-link-bar {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.version-toolbar-rows {
+.about-features-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.about-feature-item {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.dark-mode .about-feature-item {
+  background: #0f172a;
+}
+
+.feature-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 3px;
+}
+
+.dark-mode .feature-title {
+  color: #f8fafc;
+}
+
+.feature-desc {
+  font-size: 11.5px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.dark-mode .feature-desc {
+  color: #94a3b8;
+}
+
+.about-footer-notice {
+  font-size: 11.5px;
+  color: #94a3b8;
+  line-height: 1.5;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  padding-top: 10px;
+}
+
+.dark-mode .about-footer-notice {
+  border-top-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Bottom Status Bar */
+.bottom-status-bar {
+  height: 30px;
+  min-height: 30px;
+  background-color: #ffffff;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  box-sizing: border-box;
+  font-size: 11.5px;
+  flex-shrink: 0;
+}
+
+.dark-mode .bottom-status-bar {
+  background-color: #1e293b;
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.status-indicator-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  max-width: 70%;
+}
+
+.status-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #34c759;
+}
+
+.status-pulse.pulse-busy {
+  background-color: #0071e3;
+  animation: pulse-ring 1.5s infinite;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(0, 113, 227, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 5px rgba(0, 113, 227, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(0, 113, 227, 0);
+  }
+}
+
+.status-summary-text {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.dark-mode .status-summary-text {
+  color: #94a3b8;
+}
+
+.status-bar-tools {
+  display: flex;
+  align-items: center;
+}
+
+.status-btn {
+  background: transparent;
+  border: none;
+  font-size: 11px;
+  color: #64748b;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.status-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.dark-mode .status-btn:hover {
+  background: #334155;
+  color: #ffffff;
+}
+
+/* Console Terminal Drawer */
+.sleek-console-drawer {
+  height: 150px;
+  background: #090d16;
+  border-top: 1px solid #1e293b;
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
 }
 
-.toolbar-row {
+.console-action-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
-}
-
-.purchased-toolbar {
-  display: flex;
   justify-content: space-between;
-  align-items: center;
+  padding: 4px 14px;
+  background: #111827;
+  border-bottom: 1px solid #1f2937;
 }
 
-.pagination-area {
+.console-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+}
+
+.console-btns {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
-.pagination-info {
-  font-size: 13px;
-  color: #4b5563;
-  font-weight: 500;
+.console-bar-btn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 1px 6px;
+  border-radius: 3px;
 }
 
-.label-inline {
-  font-size: 13px;
-  color: #6b7280;
+.console-bar-btn:hover {
+  background: #1f2937;
+  color: #f1f5f9;
+}
+
+.console-scroll-screen {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 14px;
+  font-family: Menlo, Monaco, Consolas, monospace;
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+
+.console-empty-tip {
+  color: #475569;
+  font-style: italic;
+}
+
+.console-row {
+  color: #cbd5e1;
+  word-break: break-all;
+}
+
+.console-row.row-err {
+  color: #f87171;
+}
+
+/* Utilities */
+.text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.select-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.count-tag {
-  font-size: 12px;
-  color: #6b7280;
-  margin-left: 6px;
-}
-
-.btn-group-row {
-  display: flex;
-  gap: 10px;
-}
-
-.sub-card {
-  background-color: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
-  padding: 12px;
-}
-
-.dark-mode .sub-card {
-  background-color: #1f1f23;
-  border-color: #333338;
-}
-
-.status-box {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
-  padding: 10px 14px;
-}
-
-.dark-mode .status-box {
-  background-color: #1f1f23;
-  border-color: #333338;
 }
 
 .flex-align-center {
@@ -2474,370 +3819,28 @@ onBeforeUnmount(() => {
   align-items: center;
 }
 
-.mr-2 { margin-right: 8px; }
-.ml-2 { margin-left: 8px; }
+.flex-1 {
+  flex: 1;
+}
+
+.font-bold {
+  font-weight: 700;
+}
+
+.italic {
+  font-style: italic;
+}
+
+.text-dim {
+  color: #94a3b8;
+}
+
 .mt-2 { margin-top: 8px; }
 .mt-3 { margin-top: 12px; }
 .mt-4 { margin-top: 16px; }
-.mb-1 { margin-bottom: 4px; }
 .mb-2 { margin-bottom: 8px; }
 .mb-3 { margin-bottom: 12px; }
-.flex-1 { flex: 1; }
-.font-bold { font-weight: bold; }
-.font-semibold { font-weight: 600; }
-.text-xs { font-size: 11px; }
-.text-sm { font-size: 13px; }
-.text-gray-sub { color: #6b7280; }
-.break-all { word-break: break-all; }
-
-.text-ellipsis {
-  max-width: 140px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* 3. Splitter Divider */
-.panel-divider {
-  height: 4px;
-  background-color: #e5e7eb;
-  cursor: ns-resize;
-  flex-shrink: 0;
-}
-
-.dark-mode .panel-divider {
-  background-color: #27272a;
-}
-
-/* 4. Console Drawer */
-.console-drawer {
-  height: 180px;
-  display: flex;
-  flex-direction: column;
-  background-color: #1e1e1e;
-  flex-shrink: 0;
-  transition: height 0.2s ease;
-}
-
-.console-drawer.collapsed {
-  height: 28px;
-  background-color: #f9fafb;
-}
-
-.dark-mode .console-drawer.collapsed {
-  background-color: #18181b;
-}
-
-.console-header {
-  height: 28px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 12px;
-  background-color: #f3f4f6;
-  border-top: 1px solid #e5e7eb;
-  flex-shrink: 0;
-  font-size: 12px;
-  transition: background-color 0.2s ease;
-}
-
-.dark-mode .console-header {
-  background-color: #27272a;
-  border-top-color: #3f3f46;
-}
-
-.console-drawer:not(.collapsed) .console-header {
-  height: 32px;
-  background-color: #252526;
-  border-top-color: #333333;
-  border-bottom: 1px solid #333333;
-}
-
-.console-status-left {
-  display: flex;
-  align-items: center;
-  font-size: 12px;
-}
-
-.status-prefix {
-  color: #6b7280;
-  margin-right: 6px;
-}
-
-.dark-mode .status-prefix {
-  color: #9ca3af;
-}
-
-.console-drawer:not(.collapsed) .status-prefix {
-  color: #858585;
-}
-
-.status-val {
-  color: #374151;
-  font-weight: 600;
-}
-
-.dark-mode .status-val {
-  color: #e4e4e7;
-}
-
-.console-drawer:not(.collapsed) .status-val {
-  color: #cccccc;
-}
-
-.console-actions-right {
-  display: flex;
-  align-items: center;
-}
-
-.btn-toggle-log {
-  font-size: 11px !important;
-  height: 20px !important;
-  padding: 0 6px !important;
-}
-
-.btn-clear-log {
-  font-size: 11px !important;
-  height: 20px !important;
-  padding: 0 6px !important;
-}
-
-.console-drawer:not(.collapsed) .btn-clear-log,
-.console-drawer:not(.collapsed) .btn-toggle-log {
-  background-color: #333333 !important;
-  color: #cccccc !important;
-  border: none !important;
-}
-
-.console-screen {
-  flex: 1;
-  padding: 8px 12px;
-  overflow-y: auto;
-  font-family: Consolas, Cascadia Code, "Courier New", monospace;
-  font-size: 12px;
-  line-height: 1.5;
-  color: #d4d4d4;
-  background-color: #1e1e1e;
-}
-
-.console-line {
-  word-break: break-all;
-  white-space: pre-wrap;
-}
-
-.line-error {
-  color: #f87171;
-}
-
-/* 2FA Modal */
-.twofa-dialog-body {
-  padding: 8px 0;
-}
-
-.twofa-desc {
-  font-size: 13px;
-  color: #6b7280;
-  margin-bottom: 16px;
-  line-height: 1.5;
-}
-
-.twofa-code-input {
-  text-align: center;
-  font-size: 24px;
-  font-weight: bold;
-  letter-spacing: 8px;
-  margin-bottom: 20px;
-}
-
-.twofa-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-/* Task Manager Styles */
-.empty-tasks-box {
-  padding: 60px 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.task-items-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.task-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background-color: #ffffff;
-  padding: 12px 16px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-}
-
-.dark-mode .task-card {
-  border-color: #333338;
-  background-color: #26262a;
-}
-
-.task-main {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.task-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.task-title-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-
-.task-app-name {
-  font-size: 14px;
-  font-weight: bold;
-}
-
-.task-ver-tag {
-  font-weight: 600;
-  font-size: 11px;
-}
-
-.task-bundle-id {
-  font-size: 11px;
-  color: #6b7280;
-}
-
-.task-build-id {
-  font-size: 11px;
-  color: #9ca3af;
-  background: #f3f4f6;
-  padding: 1px 6px;
-  border-radius: 3px;
-}
-
-.dark-mode .task-build-id {
-  background: #18181b;
-  color: #a1a1aa;
-}
-
-.task-progress-bar {
-  margin-bottom: 6px;
-}
-
-.task-meta-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 11px;
-  color: #6b7280;
-}
-
-.dark-mode .task-meta-row {
-  color: #9ca3af;
-}
-
-.task-meta-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.task-badge-status {
-  padding: 1px 6px;
-  border-radius: 3px;
-  font-weight: 600;
-  font-size: 11px;
-}
-
-.badge-pending {
-  background: #fef3c7;
-  color: #b45309;
-}
-
-.badge-downloading {
-  background: #e0f2fe;
-  color: #0369a1;
-}
-
-.badge-completed {
-  background: #dcfce7;
-  color: #15803d;
-}
-
-.badge-error {
-  background: #fee2e2;
-  color: #b91c1c;
-}
-
-.badge-canceled {
-  background: #f3f4f6;
-  color: #4b5563;
-}
-
-.task-speed {
-  color: #0078d4;
-}
-
-.task-bytes {
-  color: #4b5563;
-}
-
-.dark-mode .task-bytes {
-  color: #a1a1aa;
-}
-
-.task-path {
-  max-width: 320px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.task-err-msg {
-  color: #ef4444;
-}
-
-.task-meta-right {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-.task-pct {
-  color: #0078d4;
-  font-size: 12px;
-  font-weight: bold;
-  line-height: 1;
-}
-
-.task-time {
-  font-size: 11px;
-  color: #6b7280;
-  line-height: 1;
-}
-
-.dark-mode .task-time {
-  color: #9ca3af;
-}
-
-.task-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
+.mb-4 { margin-bottom: 16px; }
+.mr-2 { margin-right: 8px; }
+.ml-2 { margin-left: 8px; }
 </style>

@@ -1,4 +1,4 @@
-module ipatool-gui
+module AppleVault
 
 go 1.23.0
 
