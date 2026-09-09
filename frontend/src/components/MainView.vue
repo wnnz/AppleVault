@@ -533,14 +533,14 @@
           <div class="clean-card mb-3 purchased-search-toolbar">
             <div class="purchased-search-left">
               <!-- 搜索输入框 -->
-              <div class="clean-input-box purchased-search-input-box">
+              <div class="purchased-search-input-box">
                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" class="search-icon">
                   <circle cx="11" cy="11" r="8"></circle>
                   <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
                 <input
                   v-model="purchasedSearchKeyword"
-                  class="clean-input purchased-search-input"
+                  class="purchased-search-input"
                   placeholder="搜索已购应用名称、Bundle ID 或 App ID..."
                   @keydown.esc="purchasedSearchKeyword = ''"
                 />
@@ -3100,6 +3100,18 @@ onBeforeUnmount(() => {
   background-color: #0f172a;
 }
 
+.clean-input-prefix-box:focus-within {
+  border-color: #0071e3;
+  box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.12);
+  background-color: #ffffff;
+}
+
+.dark-mode .clean-input-prefix-box:focus-within {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+  background-color: #1e293b;
+}
+
 .prefix-label {
   font-size: 12px;
   font-weight: 600;
@@ -3385,40 +3397,51 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   background: #f8fafc;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
   padding: 0 10px;
   height: 32px;
   width: 330px;
   max-width: 100%;
   transition: all 0.2s ease;
+  box-sizing: border-box;
 }
 
 .dark-mode .purchased-search-input-box {
   background: #0f172a;
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: #334155;
 }
 
 .purchased-search-input-box:focus-within {
   border-color: #0071e3;
-  box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.15);
+  box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.12);
   background: #ffffff;
 }
 
 .dark-mode .purchased-search-input-box:focus-within {
-  border-color: #38bdf8;
-  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+  border-color: #0284c7;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
   background: #1e293b;
 }
 
 .purchased-search-input {
-  border: none;
-  background: transparent;
-  outline: none;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
   font-size: 12.5px;
   padding: 0 8px;
-  color: #1e293b;
+  color: #0f172a;
   width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.purchased-search-input:focus {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 .dark-mode .purchased-search-input {
