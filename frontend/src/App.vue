@@ -38,18 +38,12 @@ import MainView from './components/MainView.vue'
 import { AppTheme, THEME_STORAGE_KEY } from './types/theme'
 
 const storedTheme = localStorage.getItem(THEME_STORAGE_KEY)
-const migratedTheme: AppTheme = storedTheme === 'handdrawn-dark'
-  ? 'minimal-dark'
-  : storedTheme === 'handdrawn-light'
-    ? 'minimal-light'
-    : storedTheme === 'minimal-dark'
-      ? 'minimal-dark'
-      : 'minimal-light'
+const initialTheme: AppTheme = storedTheme === 'minimal-dark' ? 'minimal-dark' : 'minimal-light'
 
-const currentTheme = ref<AppTheme>(migratedTheme)
+const currentTheme = ref<AppTheme>(initialTheme)
 
-if (storedTheme !== migratedTheme) {
-  localStorage.setItem(THEME_STORAGE_KEY, migratedTheme)
+if (storedTheme !== initialTheme) {
+  localStorage.setItem(THEME_STORAGE_KEY, initialTheme)
 }
 
 const isDark = computed(() => currentTheme.value === 'minimal-dark')

@@ -171,11 +171,9 @@
                   </div>
                 </div>
                 
-                <!-- 简约风格 -->
-                <div class="theme-group-label">简约风格</div>
                 <div class="theme-options-list">
                   <div
-                    v-for="item in themeList.filter(t => t.category === 'minimal')"
+                    v-for="item in themeList"
                     :key="item.key"
                     class="theme-select-item"
                     :class="{ active: effectiveTheme === item.key }"
@@ -1292,8 +1290,6 @@ const themeList: ThemeOption[] = [
   {
     key: 'minimal-light',
     name: '简约 - 浅色',
-    category: 'minimal',
-    categoryName: '简约风格',
     description: '清爽现代、明亮通透',
     preview: {
       bg: '#f8fafc',
@@ -1306,8 +1302,6 @@ const themeList: ThemeOption[] = [
   {
     key: 'minimal-dark',
     name: '简约 - 深色',
-    category: 'minimal',
-    categoryName: '简约风格',
     description: '沉浸暗色、夜间舒适',
     preview: {
       bg: '#0f172a',
@@ -1316,7 +1310,8 @@ const themeList: ThemeOption[] = [
       accent: '#0284c7',
       text: '#f1f5f9'
     }
-  }]
+  }
+]
 
 function selectTheme(themeKey: AppTheme) {
   emit('update:currentTheme', themeKey)
