@@ -52,7 +52,7 @@
         <div class="brand-text">
           <div class="brand-title-row">
             <div class="brand-name">果仓助手</div>
-            <div class="brand-tag">v1.0</div>
+            <div class="brand-tag">v1.1</div>
           </div>
           <div class="brand-sub">AppleVault</div>
         </div>
@@ -348,7 +348,7 @@
                     v-model:value="searchForm.platform"
                     :options="platformOptions"
                     size="medium"
-                    style="width: 130px;"
+                    :style="{ width: isSketchTheme ? '166px' : '130px' }"
                   />
                 </div>
 
@@ -358,7 +358,7 @@
                     v-model:value="searchForm.limit"
                     :options="limitOptions"
                     size="medium"
-                    style="width: 90px;"
+                    :style="{ width: isSketchTheme ? '116px' : '90px' }"
                   />
                 </div>
 
@@ -1151,7 +1151,7 @@
               <div class="about-hero-text">
                 <div class="about-app-title">果仓助手 (AppleVault)</div>
                 <div class="about-version-line">
-                  <span class="about-version-badge">版本 v1.0.0</span>
+                  <span class="about-version-badge">版本 v1.1.0</span>
                   <span class="about-badge-sub">基于 Wails & Go 构建</span>
                 </div>
                 <p class="about-intro">

@@ -52,8 +52,8 @@ if (-not (Test-Path $SysoFile)) {
             "--manifest", "gui",
             "--product-name", "果仓助手",
             "--file-description", "果仓助手 (AppleVault)",
-            "--product-version", "1.0.0",
-            "--file-version", "1.0.0",
+            "--product-version", "1.1.0",
+            "--file-version", "1.1.0",
             "--copyright", "AppleVault (果仓助手)",
             "--arch", "amd64"
         )
