@@ -26,6 +26,10 @@ type App struct {
 	cancelMu   sync.Mutex
 	cancelFn   context.CancelFunc
 
+	purchaseCancelMu     sync.Mutex
+	purchaseCancelers    map[uint64]context.CancelFunc
+	nextPurchaseCancelID uint64
+
 	tasksMu     sync.RWMutex
 	tasks       []*DownloadTask
 	taskCancels map[string]context.CancelFunc
@@ -42,8 +46,9 @@ func NewApp() *App {
 			EnableProxy:        true,
 			ProxyUrl:           "http://127.0.0.1:10808",
 		},
-		tasks:       make([]*DownloadTask, 0),
-		taskCancels: make(map[string]context.CancelFunc),
+		tasks:             make([]*DownloadTask, 0),
+		taskCancels:       make(map[string]context.CancelFunc),
+		purchaseCancelers: make(map[uint64]context.CancelFunc),
 	}
 	app.settings.DefaultDownloadDir = app.getDownloadsDir()
 	return app
@@ -619,11 +624,52 @@ func (a *App) OpenInExplorer(targetPath string) error {
 
 func (a *App) CancelRunningCommand() {
 	a.cancelMu.Lock()
-	defer a.cancelMu.Unlock()
-	if a.cancelFn != nil {
-		a.cancelFn()
-		a.cancelFn = nil
+	cancel := a.cancelFn
+	a.cancelFn = nil
+	a.cancelMu.Unlock()
+
+	if cancel != nil {
+		cancel()
+	}
+	purchaseCancelled := a.cancelPurchaseCommands()
+	cancelled := cancel != nil || purchaseCancelled
+	if cancelled {
 		a.emitLog("用户取消了当前操作。")
+	}
+}
+
+func (a *App) cancelPurchaseCommands() bool {
+	a.purchaseCancelMu.Lock()
+	cancelers := make([]context.CancelFunc, 0, len(a.purchaseCancelers))
+	for id, cancel := range a.purchaseCancelers {
+		cancelers = append(cancelers, cancel)
+		delete(a.purchaseCancelers, id)
+	}
+	a.purchaseCancelMu.Unlock()
+
+	for _, cancel := range cancelers {
+		cancel()
+	}
+	return len(cancelers) > 0
+}
+
+func (a *App) startPurchaseCommandContext() (context.Context, func()) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	a.purchaseCancelMu.Lock()
+	a.nextPurchaseCancelID++
+	id := a.nextPurchaseCancelID
+	a.purchaseCancelers[id] = cancel
+	a.purchaseCancelMu.Unlock()
+
+	cleanup := func() {
+		a.purchaseCancelMu.Lock()
+		delete(a.purchaseCancelers, id)
+		a.purchaseCancelMu.Unlock()
+	}
+	return ctx, func() {
+		cancel()
+		cleanup()
 	}
 }
 
@@ -887,9 +933,10 @@ func (a *App) ListPurchases(page, limit int) (PurchasedResult, error) {
 		pageSize := 100
 
 		for {
-			ctx := a.startCommandContext()
+			ctx, cleanup := a.startPurchaseCommandContext()
 			args := []string{"list-purchases", "-p", fmt.Sprintf("%d", currentPage), "-l", fmt.Sprintf("%d", pageSize), "--format", "json"}
 			out, err := a.runIpaTool(ctx, args...)
+			cleanup()
 			if err != nil {
 				return PurchasedResult{}, err
 			}
@@ -931,10 +978,11 @@ func (a *App) ListPurchases(page, limit int) (PurchasedResult, error) {
 		}, nil
 	}
 
-	ctx := a.startCommandContext()
+	ctx, cleanup := a.startPurchaseCommandContext()
 	args := []string{"list-purchases", "-p", fmt.Sprintf("%d", page), "-l", fmt.Sprintf("%d", limit), "--format", "json"}
 
 	out, err := a.runIpaTool(ctx, args...)
+	cleanup()
 	if err != nil {
 		return PurchasedResult{}, err
 	}

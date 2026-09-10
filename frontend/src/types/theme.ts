@@ -1,4 +1,4 @@
-export type AppTheme = 'minimal-light' | 'minimal-dark' | 'sketch-light'
+export type AppTheme = 'minimal-light' | 'minimal-dark'
 
 export interface ThemeOption {
   key: AppTheme

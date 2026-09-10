@@ -17,10 +17,10 @@ func main() {
 
 	err := wails.Run(&options.App{
 		Title:     "果仓助手 (AppleVault) v1.1 - 苹果 App Store 官方正版 / 历史版本 IPA 下载",
-		Width:     1536,
-		Height:    1024,
-		MinWidth:  1280,
-		MinHeight: 800,
+		Width:     1120,
+		Height:    800,
+		MinWidth:  960,
+		MinHeight: 680,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},

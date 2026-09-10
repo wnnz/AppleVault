@@ -9,45 +9,10 @@
   >
     <!-- Left Modern Sidebar -->
     <aside class="app-sidebar">
-      <!-- Floating Sketch Decorations on Sidebar -->
-      <img
-        v-if="isSketchTheme"
-        src="../assets/sketch/sidebar_leaf.png"
-        class="sketch-sidebar-leaf"
-        alt=""
-      />
-      <img
-        v-if="isSketchTheme"
-        src="../assets/sketch/sidebar_star.png"
-        class="sketch-sidebar-star"
-        alt=""
-      />
-      <img
-        v-if="isSketchTheme"
-        src="../assets/sketch/sidebar_plane.png"
-        class="sketch-sidebar-plane"
-        alt=""
-      />
-      <img
-        v-if="isSketchTheme"
-        src="../assets/sketch/sidebar_bottom_plants.png"
-        class="sketch-sidebar-bot"
-        alt=""
-      />
-
       <!-- Brand Header -->
       <div class="sidebar-brand">
-        <!-- Sketch logo rays decoration -->
-        <img
-          v-if="isSketchTheme"
-          src="../assets/sketch/logo_rays.png"
-          class="sketch-logo-rays"
-          alt=""
-        />
         <div class="brand-icon-box">
-          <svg class="brand-apple-svg" viewBox="0 0 170 170" fill="currentColor">
-            <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.08-7.7-7.85-12.01-14.3-6.24-9.35-11.12-20.2-14.65-32.54-3.52-12.35-5.29-24.3-5.29-35.87 0-14.12 3.52-25.75 10.57-34.89 7.05-9.14 16.03-13.88 26.94-14.21 4.79 0 10.36 1.34 16.71 4.02 6.36 2.68 10.15 4.08 11.37 4.19 1.12-.11 5.02-1.57 11.7-4.38 6.68-2.82 12.35-4.08 17.02-3.78 12.79.89 23.01 5.66 30.65 14.31-11.29 6.81-16.79 16.32-16.5 28.53.33 9.61 4.2 17.58 11.62 23.9 7.42 6.32 16.31 9.94 26.68 10.86-2.12 6.54-4.53 13.06-7.24 19.56zm-29.35-104.9c-.11 4.14-1.55 8.35-4.32 12.63-2.77 4.28-6.42 7.74-10.96 10.38-3.02 1.63-6.21 2.72-9.56 3.27-.11-1.3-.11-2.4-.11-3.27 0-4.13 1.54-8.38 4.63-12.75 3.09-4.37 7.02-7.86 11.8-10.47 2.91-1.63 5.75-2.73 8.52-3.3 0 1.2.06 2.37 0 3.51z"/>
-          </svg>
+          <img class="brand-logo-image" src="../assets/applevault-logo.png" alt="AppleVault" />
         </div>
         <div class="brand-text">
           <div class="brand-title-row">
@@ -68,10 +33,6 @@
           :class="{ active: activeTab === 'search' }"
           @click="activeTab = 'search'"
         >
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
           <span class="nav-label">应用搜索</span>
         </button>
 
@@ -80,10 +41,6 @@
           :class="{ active: activeTab === 'versions' }"
           @click="activeTab = 'versions'"
         >
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <polyline points="12 6 12 12 16 14"></polyline>
-          </svg>
           <span class="nav-label">历史版本</span>
         </button>
 
@@ -92,15 +49,8 @@
           :class="{ active: activeTab === 'download' }"
           @click="activeTab = 'download'"
         >
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="7 10 12 15 17 10"></polyline>
-            <line x1="12" y1="15" x2="12" y2="3"></line>
-          </svg>
           <span class="nav-label">下载中心</span>
-          <span v-if="activeTaskCount > 0 || isSketchTheme" class="nav-badge" :class="{ 'sketch-badge-pill': isSketchTheme }">
-            {{ activeTaskCount > 0 ? activeTaskCount : 1 }}
-          </span>
+          <span v-if="activeTaskCount > 0" class="nav-badge">{{ activeTaskCount }}</span>
         </button>
 
         <button
@@ -108,11 +58,6 @@
           :class="{ active: activeTab === 'purchased' }"
           @click="activeTab = 'purchased'"
         >
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <path d="M16 10a4 4 0 0 1-8 0"></path>
-          </svg>
           <span class="nav-label">已购应用</span>
         </button>
 
@@ -121,27 +66,19 @@
           :class="{ active: activeTab === 'installer' }"
           @click="activeTab = 'installer'"
         >
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
-            <line x1="12" y1="18" x2="12.01" y2="18"></line>
-          </svg>
-          <span class="nav-label">{{ isSketchTheme ? '设备套餐' : '设备直装' }}</span>
+          <span class="nav-label">设备直装</span>
         </button>
 
         <div class="nav-section-title mt-4">
-          <span>{{ isSketchTheme ? '临时与设置' : '偏好与设置' }}</span>
+          <span>偏好与设置</span>
         </div>
         <button
           class="nav-item"
           :class="{ active: activeTab === 'account' }"
           @click="activeTab = 'account'"
         >
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-            <circle cx="12" cy="7" r="4"></circle>
-          </svg>
           <span class="nav-label">账号中心</span>
-          <span class="account-dot" :class="isLoggedIn || isSketchTheme ? 'dot-online' : 'dot-offline'"></span>
+          <span class="account-dot" :class="isLoggedIn ? 'dot-online' : 'dot-offline'"></span>
         </button>
 
         <button
@@ -149,10 +86,6 @@
           :class="{ active: activeTab === 'settings' }"
           @click="activeTab = 'settings'"
         >
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-          </svg>
           <span class="nav-label">系统设置</span>
         </button>
 
@@ -161,11 +94,6 @@
           :class="{ active: activeTab === 'about' }"
           @click="activeTab = 'about'"
         >
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="16" x2="12" y2="12"></line>
-            <line x1="12" y1="8" x2="12.01" y2="8"></line>
-          </svg>
           <span class="nav-label">关于软件</span>
         </button>
       </nav>
@@ -175,12 +103,12 @@
 
         <!-- Account Quick Card -->
         <div class="sidebar-account-card" @click="activeTab = 'account'">
-          <div class="user-avatar" :class="{ 'avatar-logged': isLoggedIn, 'sketch-user-avatar': isSketchTheme }">
-            {{ isSketchTheme ? 'A' : (isLoggedIn ? (account.name ? account.name.charAt(0).toUpperCase() : '') : '?') }}
+          <div class="user-avatar" :class="{ 'avatar-logged': isLoggedIn }">
+            {{ isLoggedIn ? (account.name ? account.name.charAt(0).toUpperCase() : '') : '?' }}
           </div>
           <div class="user-info-text">
-            <div class="user-name text-ellipsis">{{ isSketchTheme && !account.name ? '果仓助手 User' : (account.name || '未登录 Apple ID') }}</div>
-            <div class="user-email text-ellipsis">{{ isSketchTheme && !account.email ? 'user@icloud.com' : (account.email || '点击前往登录') }}</div>
+            <div class="user-name text-ellipsis">{{ account.name || '未登录 Apple ID' }}</div>
+            <div class="user-email text-ellipsis">{{ account.email || '点击前往登录' }}</div>
           </div>
         </div>
 
@@ -194,20 +122,6 @@
               @update:value="onProxyToggle"
             />
             <span class="quick-tool-label">代理</span>
-          </div>
-
-          <!-- Quick Action Buttons for Sketch Theme -->
-          <div v-if="isSketchTheme" class="sidebar-tool-btns">
-            <!-- Reset/History Button -->
-            <button class="icon-action-btn quick-action-btn" title="刷新状态" @click="handleRefreshState">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
-              </svg>
-            </button>
-            <!-- Terminal Drawer Button -->
-            <button class="icon-action-btn quick-action-btn" title="实时日志" @click="toggleLogs">
-              <span style="font-family: monospace; font-size: 11px; font-weight: 700;">&gt;_</span>
-            </button>
           </div>
 
           <!-- Theme Switcher (靠右显示) -->
@@ -294,49 +208,22 @@
 
         <!-- VIEW 1: 应用搜索 (search) -->
         <div v-show="activeTab === 'search'" class="view-panel">
-          <!-- Top Right Art Decor -->
-          <img
-            v-if="isSketchTheme"
-            src="../assets/sketch/top_right_art.png"
-            class="sketch-top-right-art"
-            alt=""
-          />
-          <!-- Bottom Right Plants Decor -->
-          <img
-            v-if="isSketchTheme"
-            src="../assets/sketch/bottom_right_plants.png"
-            class="sketch-bottom-right-plants"
-            alt=""
-          />
-
           <div class="view-header">
             <div>
               <div class="title-with-badge">
                 <h2 class="view-title">应用搜索</h2>
-                <img
-                  v-if="isSketchTheme"
-                  src="../assets/sketch/title_sparks.png"
-                  class="sketch-title-sparks"
-                  alt=""
-                />
               </div>
-              <p class="view-desc">
-                {{ isSketchTheme ? '在 Apple App Store 全球庞大热忱搜索中轻松查证正版应用信息' : '在 Apple App Store 全球库中精准检索正版应用信息' }}
-              </p>
+              <p class="view-desc">在 Apple App Store 全球库中精准检索正版应用信息</p>
             </div>
           </div>
 
           <div class="clean-card mb-4 search-bar-card">
             <div class="search-input-group">
               <div class="search-input-wrapper">
-                <svg v-if="isSketchTheme" class="search-prefix-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
                 <input
                   v-model="searchForm.term"
                   class="clean-input search-input height-aligned"
-                  placeholder="输入应用名称、关键词或开发商（如：微信、支付宝、TikTok）"
+                  placeholder="输入应用名称、关键字或开发商（如：微信、支付宝、TikTok）"
                   @keydown.enter="handleSearch"
                 />
               </div>
@@ -347,8 +234,9 @@
                   <n-select
                     v-model:value="searchForm.platform"
                     :options="platformOptions"
-                    size="medium"
-                    :style="{ width: isSketchTheme ? '166px' : '130px' }"
+                    size="small"
+                    class="height-aligned-select"
+                    style="width: 130px;"
                   />
                 </div>
 
@@ -357,17 +245,18 @@
                   <n-select
                     v-model:value="searchForm.limit"
                     :options="limitOptions"
-                    size="medium"
-                    :style="{ width: isSketchTheme ? '116px' : '90px' }"
+                    size="small"
+                    class="height-aligned-select"
+                    style="width: 90px;"
                   />
                 </div>
 
                 <n-button
                   type="primary"
-                  size="medium"
+                  size="small"
                   :loading="isSearching"
                   @click="handleSearch"
-                  class="height-aligned-btn search-submit-btn"
+                  class="height-aligned-btn"
                 >
                   搜索
                 </n-button>
@@ -375,17 +264,16 @@
             </div>
           </div>
 
-          <div class="clean-card table-flex-card sketch-table-card">
+          <div class="clean-card table-flex-card">
             <n-data-table
               :columns="searchColumns"
-              :data="displayedSearchResults"
-              :row-key="(row: any) => row.bundleID || row.id"
+              :data="searchResults"
               :loading="isSearching"
               :pagination="{ pageSize: 10 }"
               :scroll-x="780"
               size="small"
-              :flex-height="!isSketchTheme"
-              :style="isSketchTheme ? 'min-height: 380px;' : 'height: 100%;'"
+              flex-height
+              style="height: 100%;"
             >
               <template #empty>
                 <div class="table-empty-box">
@@ -426,7 +314,7 @@
 
                 <n-button
                   type="primary"
-                  size="medium"
+                  size="small"
                   class="height-aligned-btn"
                   :loading="isListingVersions"
                   :disabled="isListingVersions || isBatchQuerying || isTargetQuerying"
@@ -438,7 +326,7 @@
                 <n-button
                   :type="isBatchQuerying ? 'error' : 'default'"
                   :secondary="!isBatchQuerying"
-                  size="medium"
+                  size="small"
                   class="height-aligned-btn"
                   :loading="isBatchQuerying"
                   :disabled="versionItems.length === 0 || isListingVersions || isTargetQuerying"
@@ -450,7 +338,7 @@
                 <n-button
                   :type="isTargetQuerying ? 'error' : 'default'"
                   :secondary="!isTargetQuerying"
-                  size="medium"
+                  size="small"
                   class="height-aligned-btn"
                   :loading="isTargetQuerying"
                   :disabled="versionItems.length === 0 || isListingVersions || isBatchQuerying"
@@ -618,21 +506,26 @@
               <p class="view-desc">浏览与检索当前 Apple ID 名下已获得正版许可的历史应用库</p>
             </div>
             <div class="purchased-header-actions">
-              <n-button
-                v-if="purchasedApps.length < purchasedTotal"
-                secondary
-                size="small"
-                class="small-aligned-btn"
-                :loading="isLoadingAllPurchases"
-                @click="loadAllPurchases"
-                title="拉取名下所有已购记录，以便完整检索所有应用"
-              >
-                加载全部已购 ({{ purchasedApps.length }}/{{ purchasedTotal }})
-              </n-button>
+              <div v-if="isPurchasedLoading" class="purchased-loading-progress" role="status" aria-live="polite">
+                <n-progress
+                  v-if="purchasedLoadTotal > 0"
+                  class="purchased-loading-bar"
+                  type="line"
+                  :percentage="purchasedLoadProgress"
+                  :show-indicator="false"
+                  :height="6"
+                  border-radius="3"
+                />
+                <div v-else class="purchased-loading-bar purchased-loading-bar-indeterminate" aria-hidden="true"></div>
+                <span v-if="purchasedLoadTotal > 0" class="purchased-loading-count">
+                  {{ purchasedLoadLoaded }}/{{ purchasedLoadTotal }}
+                </span>
+                <span v-else class="purchased-loading-count loading-total-text">读取总数…</span>
+              </div>
               <n-button
                 type="primary"
                 size="small"
-                class="small-aligned-btn ml-2"
+                class="small-aligned-btn"
                 :loading="isPurchasedLoading"
                 @click="loadPurchases"
               >
@@ -672,10 +565,10 @@
               <!-- 搜索匹配统计标签 -->
               <div class="purchased-search-badge" :class="{ 'has-filter': !!purchasedSearchKeyword }">
                 <span v-if="purchasedSearchKeyword">
-                  找到 <b>{{ filteredPurchasedApps.length }}</b> 款匹配应用 (共 {{ purchasedApps.length }} 款)
+                  找到 <b>{{ purchasedMatchTotal }}</b> 款匹配应用 (共 {{ purchasedApps.length }} 款)
                 </span>
                 <span v-else>
-                  当前显示 <b>{{ purchasedApps.length }}</b> 款 (账户共 {{ purchasedTotal }} 款)
+                  共 <b>{{ purchasedTotal }}</b> 款已购应用
                 </span>
               </div>
             </div>
@@ -686,7 +579,8 @@
                 <span class="size-label">每页</span>
                 <n-select
                   v-model:value="purchasedPageSize"
-                  size="tiny"
+                  size="small"
+                  class="height-aligned-select"
                   style="width: 76px;"
                   :options="[
                     { label: '20', value: 20 },
@@ -710,7 +604,7 @@
                 secondary
                 size="small"
                 class="small-aligned-btn"
-                :disabled="purchasedPage * purchasedPageSize >= purchasedTotal || isPurchasedLoading"
+                :disabled="purchasedPage * purchasedPageSize >= purchasedMatchTotal || isPurchasedLoading"
                 @click="nextPurchasedPage"
               >
                 下一页
@@ -741,7 +635,7 @@
                   </div>
                   <div v-else class="search-none-state">
                     <div class="search-none-title">暂无已购应用记录</div>
-                    <div class="search-none-desc">点击右上角「加载全部已购」或刷新获取当前 Apple ID 历史正版应用</div>
+                    <div class="search-none-desc">点击右上角「刷新列表」获取当前 Apple ID 历史正版应用</div>
                   </div>
                 </div>
               </template>
@@ -788,7 +682,7 @@
                   class="clean-input flex-1 mr-2 height-aligned"
                   placeholder="尚未选择文件"
                 />
-                <n-button secondary size="medium" class="height-aligned-btn" @click="handleSelectIPA">浏览文件</n-button>
+                <n-button secondary size="small" class="height-aligned-btn" @click="handleSelectIPA">浏览文件</n-button>
               </div>
             </div>
 
@@ -798,7 +692,8 @@
                 <span class="headline-title">2. 选择苹果设备</span>
                 <n-button
                   secondary
-                  size="tiny"
+                  size="small"
+                  class="small-aligned-btn"
                   :loading="isLoadingDevices"
                   :disabled="isInstallingIPA"
                   @click="loadConnectedDevices"
@@ -813,7 +708,8 @@
                 :loading="isLoadingDevices"
                 :disabled="isInstallingIPA"
                 placeholder="请选择已连接的 iOS 设备"
-                size="large"
+                size="small"
+                class="height-aligned-select"
               />
 
               <div class="sub-alert-box mt-3">
@@ -975,10 +871,10 @@
                 <n-button
                   type="primary"
                   block
-                  size="large"
+                  size="small"
+                  class="height-aligned-btn"
                   :loading="isLoggingIn"
                   @click="handleLogin"
-                  style="height: 40px;"
                 >
                   登录
                 </n-button>
@@ -998,7 +894,7 @@
             </div>
             <n-button
               type="primary"
-              size="medium"
+              size="small"
               class="height-aligned-btn"
               @click="handleSaveSettings"
             >
@@ -1070,7 +966,7 @@
                     />
                     <n-button
                       secondary
-                      size="medium"
+                      size="small"
                       class="height-aligned-btn setting-fixed-btn"
                       :disabled="!settings.enableProxy"
                       :loading="isTestingProxy"
@@ -1101,7 +997,7 @@
                     />
                     <n-button
                       secondary
-                      size="medium"
+                      size="small"
                       class="height-aligned-btn setting-fixed-btn"
                       @click="handleOpenDefaultDownloadDir"
                     >
@@ -1120,7 +1016,8 @@
                   <n-select
                     v-model:value="settings.defaultPlatform"
                     :options="platformOptions"
-                    size="medium"
+                    size="small"
+                    class="height-aligned-select"
                     style="width: 100%;"
                   />
                 </div>
@@ -1144,9 +1041,7 @@
             <!-- App Banner -->
             <div class="about-hero">
               <div class="about-large-icon">
-                <svg class="brand-apple-svg" style="width: 38px; height: 38px;" viewBox="0 0 170 170" fill="currentColor">
-                  <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.08-7.7-7.85-12.01-14.3-6.24-9.35-11.12-20.2-14.65-32.54-3.52-12.35-5.29-24.3-5.29-35.87 0-14.12 3.52-25.75 10.57-34.89 7.05-9.14 16.03-13.88 26.94-14.21 4.79 0 10.36 1.34 16.71 4.02 6.36 2.68 10.15 4.08 11.37 4.19 1.12-.11 5.02-1.57 11.7-4.38 6.68-2.82 12.35-4.08 17.02-3.78 12.79.89 23.01 5.66 30.65 14.31-11.29 6.81-16.79 16.32-16.5 28.53.33 9.61 4.2 17.58 11.62 23.9 7.42 6.32 16.31 9.94 26.68 10.86-2.12 6.54-4.53 13.06-7.24 19.56zm-29.35-104.9c-.11 4.14-1.55 8.35-4.32 12.63-2.77 4.28-6.42 7.74-10.96 10.38-3.02 1.63-6.21 2.72-9.56 3.27-.11-1.3-.11-2.4-.11-3.27 0-4.13 1.54-8.38 4.63-12.75 3.09-4.37 7.02-7.86 11.8-10.47 2.91-1.63 5.75-2.73 8.52-3.3 0 1.2.06 2.37 0 3.51z"/>
-                </svg>
+                <img class="about-logo-image" src="../assets/applevault-logo.png" alt="AppleVault" />
               </div>
               <div class="about-hero-text">
                 <div class="about-app-title">果仓助手 (AppleVault)</div>
@@ -1171,7 +1066,7 @@
                 />
                 <n-button
                   type="primary"
-                  size="medium"
+                  size="small"
                   class="height-aligned-btn"
                   @click="openGitHub"
                 >
@@ -1179,7 +1074,7 @@
                 </n-button>
                 <n-button
                   secondary
-                  size="medium"
+                  size="small"
                   class="height-aligned-btn"
                   @click="copyGitHubUrl"
                 >
@@ -1336,7 +1231,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, nextTick, h } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, h } from 'vue'
 import {
   useMessage,
   useDialog,
@@ -1383,7 +1278,7 @@ const props = withDefaults(
     isDark?: boolean
   }>(),
   {
-    currentTheme: 'sketch-light',
+    currentTheme: 'minimal-light',
     isDark: false
   }
 )
@@ -1395,23 +1290,10 @@ const emit = defineEmits<{
 
 const showThemePopover = ref(false)
 
-const effectiveTheme = computed<AppTheme>(() => props.currentTheme || (props.isDark ? 'minimal-dark' : 'sketch-light'))
+const effectiveTheme = computed<AppTheme>(() => props.currentTheme || (props.isDark ? 'minimal-dark' : 'minimal-light'))
 const isDarkTheme = computed(() => effectiveTheme.value.endsWith('-dark') || props.isDark)
-const isSketchTheme = computed(() => effectiveTheme.value === 'sketch-light')
 
 const themeList: ThemeOption[] = [
-  {
-    key: 'sketch-light',
-    name: '手绘 - 浅色',
-    description: '手绘插画、蜡笔纸张',
-    preview: {
-      bg: '#fcfdfa',
-      card: '#ffffff',
-      border: '#7dd3fc',
-      accent: '#0ea5e9',
-      text: '#1e293b'
-    }
-  },
   {
     key: 'minimal-light',
     name: '简约 - 浅色',
@@ -1441,10 +1323,6 @@ const themeList: ThemeOption[] = [
 function selectTheme(themeKey: AppTheme) {
   emit('update:currentTheme', themeKey)
   showThemePopover.value = false
-}
-
-function handleRefreshState() {
-  message.success('状态已更新')
 }
 
 const message = useMessage()
@@ -1505,84 +1383,26 @@ const searchForm = ref({
 })
 const searchResults = ref<main.AppItem[]>([])
 
-const defaultSketchApps: (main.AppItem & { key: string })[] = [
-  {
-    key: '414473124',
-    name: '微信 (WeChat)',
-    bundleID: 'com.tencent.xin',
-    id: 414473124,
-    version: '8.0.50',
-    price: 0,
-    displayPrice: '免费'
-  },
-  {
-    key: '333206289',
-    name: '支付宝 - 生活好 支付宝',
-    bundleID: 'com.alipay.iphoneclient',
-    id: 333206289,
-    version: '10.5.88',
-    price: 0,
-    displayPrice: '免费'
-  },
-  {
-    key: '835599320',
-    name: 'TikTok - Videos, Music & LIVE',
-    bundleID: 'com.zhiliaoapp.musically',
-    id: 835599320,
-    version: '35.8.0',
-    price: 0,
-    displayPrice: '免费'
-  },
-  {
-    key: '590333362',
-    name: '网易云音乐',
-    bundleID: 'com.netease.cloudmusic',
-    id: 590333362,
-    version: '9.0.70',
-    price: 0,
-    displayPrice: '免费'
-  },
-  {
-    key: '736536022',
-    name: '哔哩哔哩 (Bilibili)',
-    bundleID: 'tv.danmaku.bilianime',
-    id: 736536022,
-    version: '7.82.0',
-    price: 0,
-    displayPrice: '免费'
-  }
-]
-
-const displayedSearchResults = computed<main.AppItem[]>(() => {
-  if (searchResults.value && searchResults.value.length > 0) {
-    return searchResults.value
-  }
-  if (isSketchTheme.value && !searchForm.value.term) {
-    return defaultSketchApps
-  }
-  return []
-})
-
-const searchColumns = computed(() => [
-  { title: '应用名称', key: 'name', minWidth: isSketchTheme.value ? 240 : 160, ellipsis: { tooltip: true } },
-  { title: 'Bundle ID', key: 'bundleID', minWidth: isSketchTheme.value ? 250 : 180, ellipsis: { tooltip: true } },
-  { title: 'App ID', key: 'id', width: isSketchTheme.value ? 130 : 100 },
-  { title: '最新版本', key: 'version', width: isSketchTheme.value ? 110 : 90 },
-  { title: '价格', key: 'displayPrice', width: isSketchTheme.value ? 90 : 80 },
+const searchColumns = [
+  { title: '应用名称', key: 'name', minWidth: 160, ellipsis: { tooltip: true } },
+  { title: 'Bundle ID', key: 'bundleID', minWidth: 180, ellipsis: { tooltip: true } },
+  { title: 'App ID', key: 'id', width: 100 },
+  { title: '最新版本', key: 'version', width: 90 },
+  { title: '价格', key: 'displayPrice', width: 80 },
   {
     title: '操作',
     key: 'actions',
-    width: isSketchTheme.value ? 250 : 200,
+    width: 200,
     fixed: 'right' as const,
     render(row: main.AppItem) {
-      return h(NSpace, { size: 8, wrap: false }, () => [
+      return h(NSpace, { size: 6, wrap: false }, () => [
         h(NButton, { size: 'tiny', secondary: true, onClick: () => selectAppForVersions(row) }, () => '历史版本'),
         h(NButton, { size: 'tiny', type: 'primary', onClick: () => downloadFromSearch(row) }, () => '下载'),
         h(NButton, { size: 'tiny', secondary: true, onClick: () => handlePurchaseApp(row.bundleID) }, () => '获取许可')
       ])
     }
   }
-])
+]
 
 // Versions State
 const isListingVersions = ref(false)
@@ -1744,14 +1564,20 @@ const completedTaskCount = computed(() =>
 
 // Purchased State
 const isPurchasedLoading = ref(false)
-const isLoadingAllPurchases = ref(false)
+const purchasedLoadLoaded = ref(0)
+const purchasedLoadTotal = ref(0)
 const purchasedPage = ref(1)
 const purchasedPageSize = ref(20)
 const purchasedTotal = ref(0)
 const purchasedApps = ref<main.AppItem[]>([])
 const purchasedSearchKeyword = ref('')
 
-const filteredPurchasedApps = computed(() => {
+const purchasedLoadProgress = computed(() => {
+  if (!purchasedLoadTotal.value) return 0
+  return Math.min(100, Math.round((purchasedLoadLoaded.value / purchasedLoadTotal.value) * 100))
+})
+
+const matchingPurchasedApps = computed(() => {
   const kw = purchasedSearchKeyword.value.trim().toLowerCase()
   if (!kw) return purchasedApps.value
   return purchasedApps.value.filter(app => {
@@ -1760,6 +1586,17 @@ const filteredPurchasedApps = computed(() => {
     const idMatch = Boolean(app.id && String(app.id).includes(kw))
     return nameMatch || bundleMatch || idMatch
   })
+})
+
+const purchasedMatchTotal = computed(() => matchingPurchasedApps.value.length)
+const purchasedPageCount = computed(() => Math.max(1, Math.ceil(purchasedMatchTotal.value / purchasedPageSize.value)))
+const filteredPurchasedApps = computed(() => {
+  const start = (purchasedPage.value - 1) * purchasedPageSize.value
+  return matchingPurchasedApps.value.slice(start, start + purchasedPageSize.value)
+})
+
+watch(purchasedSearchKeyword, () => {
+  purchasedPage.value = 1
 })
 
 // IPA Installer State
@@ -2535,13 +2372,46 @@ async function handleInstallIPA() {
 async function loadPurchases() {
   isPurchasedLoading.value = true
   isAnyOperationRunning.value = true
-  statusText.value = `正在加载第 ${purchasedPage.value} 页已购应用列表...`
+  purchasedLoadLoaded.value = 0
+  purchasedLoadTotal.value = 0
+  statusText.value = '正在获取已购应用总数...'
 
   try {
-    const res = await ListPurchases(purchasedPage.value, purchasedPageSize.value)
-    purchasedApps.value = res.apps || []
-    purchasedTotal.value = res.totalCount || 0
-    statusText.value = `已购应用加载完成 (共 ${res.totalCount} 款)。`
+    const pageSize = 100
+    const firstPage = await ListPurchases(1, pageSize)
+    const firstApps = firstPage.apps || []
+    const firstTotal = firstPage.totalCount || firstApps.length
+    const allApps = [...firstApps]
+    const totalPages = Math.max(1, Math.ceil(firstTotal / pageSize))
+
+    purchasedLoadTotal.value = firstTotal
+    purchasedLoadLoaded.value = allApps.length
+    purchasedTotal.value = firstTotal
+
+    const maxConcurrentPages = 4
+    for (let batchStart = 2; batchStart <= totalPages; batchStart += maxConcurrentPages) {
+      const pages = Array.from(
+        { length: Math.min(maxConcurrentPages, totalPages - batchStart + 1) },
+        (_, index) => batchStart + index
+      )
+      const pageResults = await Promise.all(pages.map(async page => {
+        const pageResult = await ListPurchases(page, pageSize)
+        const pageApps = pageResult.apps || []
+        purchasedLoadLoaded.value = Math.min(purchasedLoadLoaded.value + pageApps.length, firstTotal)
+        statusText.value = `正在加载已购应用 (${purchasedLoadLoaded.value}/${firstTotal})...`
+        return { page, apps: pageApps }
+      }))
+
+      pageResults.sort((a, b) => a.page - b.page)
+      for (const result of pageResults) {
+        allApps.push(...result.apps)
+      }
+    }
+
+    purchasedApps.value = allApps
+    purchasedTotal.value = firstTotal || allApps.length
+    purchasedPage.value = 1
+    statusText.value = `已购应用加载完成 (共 ${purchasedApps.value.length} 款)。`
   } catch (err: any) {
     message.error(`加载已购列表失败: ${err}`)
     statusText.value = '加载失败'
@@ -2551,48 +2421,20 @@ async function loadPurchases() {
   }
 }
 
-async function loadAllPurchases() {
-  if (isLoadingAllPurchases.value || isPurchasedLoading.value) return
-  isLoadingAllPurchases.value = true
-  isAnyOperationRunning.value = true
-  statusText.value = `正在拉取全部已购应用 (共 ${purchasedTotal.value} 款)...`
-
-  try {
-    const limit = Math.max(purchasedTotal.value || 200, 100)
-    const res = await ListPurchases(1, limit)
-    if (res.apps && res.apps.length > 0) {
-      purchasedApps.value = res.apps
-      purchasedTotal.value = res.totalCount || res.apps.length
-      purchasedPage.value = 1
-      statusText.value = `已成功载入全部 ${res.apps.length} 款已购应用。`
-      message.success(`已成功加载全部 ${res.apps.length} 款已购应用`)
-    }
-  } catch (err: any) {
-    message.error(`加载全部已购失败: ${err}`)
-    statusText.value = '加载失败'
-  } finally {
-    isLoadingAllPurchases.value = false
-    isAnyOperationRunning.value = false
-  }
-}
-
 function onPurchasedPageSizeChange(val: number) {
   purchasedPageSize.value = val
   purchasedPage.value = 1
-  loadPurchases()
 }
 
 function prevPurchasedPage() {
   if (purchasedPage.value > 1) {
     purchasedPage.value--
-    loadPurchases()
   }
 }
 
 function nextPurchasedPage() {
-  if (purchasedPage.value * purchasedPageSize.value < purchasedTotal.value) {
+  if (purchasedPage.value < purchasedPageCount.value) {
     purchasedPage.value++
-    loadPurchases()
   }
 }
 
@@ -2782,18 +2624,21 @@ onBeforeUnmount(() => {
   width: 32px;
   height: 32px;
   border-radius: 9px;
-  background: linear-gradient(135deg, #0071e3 0%, #409cff 100%);
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
   margin-right: 10px;
   box-shadow: 0 4px 10px rgba(0, 113, 227, 0.25);
+  overflow: hidden;
 }
 
-.brand-apple-svg {
-  width: 18px;
-  height: 18px;
+.brand-logo-image,
+.about-logo-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
 }
 
 .brand-text {
@@ -3171,16 +3016,16 @@ onBeforeUnmount(() => {
 
 /* Uniform Height Standards */
 .height-aligned {
-  height: 36px !important;
+  height: 30px !important;
   box-sizing: border-box !important;
-  line-height: 34px !important;
+  line-height: 28px !important;
 }
 
 .height-aligned-btn {
-  height: 36px !important;
+  height: 30px !important;
   box-sizing: border-box !important;
-  padding: 0 16px !important;
-  font-size: 13px !important;
+  padding: 0 12px !important;
+  font-size: 12px !important;
 }
 
 .small-aligned-btn {
@@ -3249,7 +3094,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 36px;
+  height: 30px;
 }
 
 .filter-label {
@@ -3587,7 +3432,7 @@ onBeforeUnmount(() => {
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   padding: 0 10px;
-  height: 32px;
+  height: 30px;
   width: 330px;
   max-width: 100%;
   transition: all 0.2s ease;
@@ -3695,6 +3540,15 @@ onBeforeUnmount(() => {
   margin-right: 4px;
 }
 
+:deep(.height-aligned-select .n-base-selection) {
+  min-height: 30px;
+  height: 30px;
+}
+
+:deep(.height-aligned-select .n-base-selection-label) {
+  height: 30px;
+}
+
 .size-label {
   font-size: 12px;
   color: #64748b;
@@ -3719,6 +3573,68 @@ onBeforeUnmount(() => {
 .purchased-header-actions {
   display: flex;
   align-items: center;
+  gap: 10px;
+}
+
+.purchased-loading-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 170px;
+}
+
+.purchased-loading-bar {
+  flex: 1;
+  min-width: 90px;
+}
+
+.purchased-loading-bar-indeterminate {
+  position: relative;
+  height: 6px;
+  overflow: hidden;
+  background: #e2e8f0;
+  border-radius: 3px;
+}
+
+.purchased-loading-bar-indeterminate::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 38%;
+  border-radius: 3px;
+  background: #0071e3;
+  animation: purchased-loading-slide 1.1s ease-in-out infinite;
+}
+
+@keyframes purchased-loading-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(270%);
+  }
+}
+
+.purchased-loading-count {
+  min-width: 54px;
+  color: #64748b;
+  font-size: 12px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.dark-mode .purchased-loading-count {
+  color: #94a3b8;
+}
+
+.dark-mode .purchased-loading-bar-indeterminate {
+  background: #334155;
+}
+
+.dark-mode .purchased-loading-bar-indeterminate::after {
+  background: #38bdf8;
 }
 
 .purchased-empty-box {
@@ -4188,14 +4104,14 @@ onBeforeUnmount(() => {
   width: 68px;
   height: 68px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #0071e3 0%, #409cff 100%);
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
   box-shadow: 0 6px 16px rgba(0, 113, 227, 0.25);
   flex-shrink: 0;
   margin-left: 6px;
+  overflow: hidden;
 }
 
 .about-hero-text {

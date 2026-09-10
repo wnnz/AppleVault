@@ -39,13 +39,15 @@ if ((Test-Path "$ScriptDir/ios.exe") -and -not (Test-Path "$ToolsDir/ios.exe")) 
 
 Write-Host "==> [3/4] 检查 Windows Logo 图标与应用资源嵌入..." -ForegroundColor Cyan
 $SysoFile = "$ScriptDir/rsrc_windows_amd64.syso"
-if (-not (Test-Path $SysoFile)) {
+$IconFile = "$ScriptDir/build/appicon.png"
+$ShouldRegenerateResources = -not (Test-Path $SysoFile) -or `
+    ((Test-Path $IconFile) -and ((Get-Item $IconFile).LastWriteTimeUtc -gt (Get-Item $SysoFile).LastWriteTimeUtc))
+if ($ShouldRegenerateResources) {
     $WinresCmd = Get-Command go-winres -ErrorAction SilentlyContinue
     if (-not $WinresCmd -and (Test-Path "$env:USERPROFILE/go/bin/go-winres.exe")) {
         $WinresCmd = "$env:USERPROFILE/go/bin/go-winres.exe"
     }
     if ($WinresCmd) {
-        $IconFile = "$ScriptDir/build/appicon.png"
         $winresArgs = @(
             "simply",
             "--icon", $IconFile,
