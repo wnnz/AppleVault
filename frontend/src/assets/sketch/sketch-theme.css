@@ -1,0 +1,620 @@
+/* Sketch Light (手绘-浅色) Theme Styles - 1:1 Precise Match */
+
+/* 1. Base App Layout */
+.theme-sketch-light.app-layout {
+  background-color: #fbfdfa;
+  background-image: 
+    radial-gradient(ellipse at 88% 3%, rgba(205, 246, 238, 0.6) 0%, rgba(255, 255, 255, 0) 50%),
+    radial-gradient(ellipse at 12% 4%, rgba(215, 242, 255, 0.55) 0%, rgba(255, 255, 255, 0) 45%),
+    radial-gradient(ellipse at 95% 85%, rgba(228, 250, 236, 0.45) 0%, rgba(255, 255, 255, 0) 50%);
+  color: #1e293b;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Chalkboard SE", "Comic Sans MS", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 2. Left Sidebar (Width 308px) */
+.theme-sketch-light .app-sidebar {
+  width: 308px !important;
+  min-width: 308px !important;
+  max-width: 308px !important;
+  background-color: rgba(254, 254, 250, 0.7) !important;
+  border-right: 1.5px solid rgba(186, 230, 253, 0.75) !important;
+  padding: 20px 18px 14px 18px !important;
+  position: relative;
+  backdrop-filter: blur(10px);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Brand Header */
+.theme-sketch-light .sidebar-brand {
+  position: relative;
+  border-bottom: none !important;
+  padding: 4px 6px 16px 6px !important;
+  display: flex;
+  align-items: center;
+}
+
+.theme-sketch-light .brand-icon-box {
+  width: 42px !important;
+  height: 42px !important;
+  background: #0ea5e9 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.35) !important;
+  margin-right: 12px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-sketch-light .brand-apple-svg {
+  width: 24px !important;
+  height: 24px !important;
+  fill: #ffffff;
+}
+
+.theme-sketch-light .brand-name {
+  font-size: 18px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.2px;
+}
+
+.theme-sketch-light .brand-tag {
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  color: #0284c7 !important;
+  background: rgba(14, 165, 233, 0.12) !important;
+  padding: 2px 8px !important;
+  border-radius: 10px !important;
+  border: 1px solid rgba(14, 165, 233, 0.25) !important;
+  margin-left: 6px;
+}
+
+.theme-sketch-light .brand-sub {
+  display: none !important;
+}
+
+/* Navigation Section Titles */
+.theme-sketch-light .nav-section-title {
+  color: #64748b !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  padding: 14px 10px 6px 10px !important;
+}
+
+/* Navigation Items */
+.theme-sketch-light .sidebar-nav {
+  padding-top: 8px !important;
+  position: relative;
+  flex: 1;
+}
+
+.theme-sketch-light .nav-item {
+  position: relative;
+  margin-bottom: 6px !important;
+  padding: 10px 14px !important;
+  border-radius: 12px !important;
+  color: #334155 !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  transition: all 0.15s ease !important;
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.theme-sketch-light .nav-icon {
+  width: 20px !important;
+  height: 20px !important;
+  color: #475569 !important;
+  flex-shrink: 0 !important;
+}
+
+.theme-sketch-light .nav-item:hover:not(.active) {
+  background-color: rgba(224, 242, 254, 0.55) !important;
+  color: #0284c7 !important;
+}
+
+.theme-sketch-light .nav-item:hover:not(.active) .nav-icon {
+  color: #0284c7 !important;
+}
+
+/* Active Nav Item - 1:1 Authentic Crayon Texture */
+.theme-sketch-light .nav-item.active {
+  background-image: url('./crayon_nav_active.png') !important;
+  background-size: 100% 100% !important;
+  background-repeat: no-repeat !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border-radius: 14px !important;
+  min-height: 52px !important;
+}
+
+.theme-sketch-light .nav-item.active .nav-icon {
+  color: #ffffff !important;
+}
+
+.theme-sketch-light .nav-item.active::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  right: -2px;
+  width: 16px;
+  height: 16px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23facc15' stroke-width='3.5' stroke-linecap='round'%3E%3Cpath d='M4 14L10 6L16 12'/%3E%3C/svg%3E") no-repeat center;
+  pointer-events: none;
+}
+
+/* Red Crayon Badge for Download Center */
+.theme-sketch-light .sketch-badge-pill {
+  background: #ef4444;
+  background-image: url('./badge_red_crayon.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 11.5px;
+  width: 24px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 10px;
+}
+
+/* Sidebar Footer (Account Card & Bottom Switch Bar) */
+.theme-sketch-light .sidebar-footer {
+  border-top: none !important;
+  padding-top: 12px !important;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  z-index: 5;
+}
+
+.theme-sketch-light .sidebar-account-card {
+  background: linear-gradient(135deg, #e0f2fe 0%, #ecfeff 100%) !important;
+  border: 1.5px solid #bae6fd !important;
+  border-radius: 14px !important;
+  padding: 10px 14px !important;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 2px 10px rgba(186, 230, 253, 0.35) !important;
+}
+
+.theme-sketch-light .sketch-user-avatar {
+  background: #0284c7 !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  font-size: 16px !important;
+  border-radius: 50% !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.theme-sketch-light .user-name {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+}
+
+.theme-sketch-light .user-email {
+  color: #64748b !important;
+  font-size: 12px !important;
+}
+
+.theme-sketch-light .sidebar-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 6px;
+}
+
+.theme-sketch-light .sidebar-tool-btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.theme-sketch-light .quick-action-btn {
+  border: 1.5px solid #bae6fd !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  color: #0284c7 !important;
+  width: 30px !important;
+  height: 30px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.theme-sketch-light .quick-action-btn:hover {
+  background: #f0f9ff !important;
+  border-color: #7dd3fc !important;
+}
+
+/* 3. Main Workspace Area */
+.theme-sketch-light .app-main {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.theme-sketch-light .view-content-wrapper {
+  padding: 26px 36px 12px 36px !important;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.theme-sketch-light .view-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+}
+
+/* Header Area */
+.theme-sketch-light .view-header {
+  padding-bottom: 16px !important;
+}
+
+.theme-sketch-light .view-title {
+  font-size: 25px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.3px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.theme-sketch-light .view-desc {
+  font-size: 13.5px !important;
+  color: #64748b !important;
+  margin-top: 6px !important;
+}
+
+/* Search Controls Bar */
+.theme-sketch-light .search-bar-card {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin-bottom: 22px !important;
+}
+
+.theme-sketch-light .search-input-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.theme-sketch-light .search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.theme-sketch-light .search-prefix-icon {
+  position: absolute;
+  left: 14px;
+  width: 19px;
+  height: 19px;
+  color: #0284c7;
+  pointer-events: none;
+}
+
+.theme-sketch-light .search-input {
+  border: 1.5px solid #a8daf9 !important;
+  border-radius: 10px !important;
+  padding-left: 40px !important;
+  background: #fdfefe !important;
+  font-size: 14px !important;
+  height: 42px !important;
+  color: #334155 !important;
+  box-shadow: 0 2px 6px rgba(186, 230, 253, 0.15) !important;
+}
+
+.theme-sketch-light .search-input::placeholder {
+  color: #94a3b8;
+}
+
+.theme-sketch-light .filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.theme-sketch-light .filter-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.theme-sketch-light .filter-item .filter-label {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #334155 !important;
+}
+
+.theme-sketch-light .filter-item .n-base-selection {
+  border: 1.5px solid #a8daf9 !important;
+  border-radius: 10px !important;
+  background: #ffffff !important;
+  height: 42px !important;
+  box-shadow: 0 2px 6px rgba(186, 230, 253, 0.15) !important;
+}
+
+/* Deep Blue Crayon Search Button */
+.theme-sketch-light .search-submit-btn {
+  background-image: url('./crayon_btn_search.png') !important;
+  background-size: 100% 100% !important;
+  background-repeat: no-repeat !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  font-size: 15.5px !important;
+  min-width: 80px !important;
+  height: 42px !important;
+  border-radius: 10px !important;
+  cursor: pointer !important;
+  transition: transform 0.1s ease !important;
+}
+
+.theme-sketch-light .search-submit-btn:hover {
+  transform: scale(1.02);
+}
+
+.theme-sketch-light .search-submit-btn:active {
+  transform: scale(0.98);
+}
+
+/* Table Large Card (Border #a8daf9 with rounded corners) */
+.theme-sketch-light .sketch-table-card {
+  border: 1.5px solid #a8daf9 !important;
+  border-radius: 18px !important;
+  background: #ffffff !important;
+  box-shadow: 0 6px 24px rgba(186, 230, 253, 0.22) !important;
+  padding: 12px 18px 16px 18px !important;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.theme-sketch-light .n-data-table {
+  background: #ffffff !important;
+}
+
+.theme-sketch-light .n-data-table-th {
+  background-color: #ffffff !important;
+  border-bottom: 1.5px solid #f1f5f9 !important;
+  color: #1e293b !important;
+  font-weight: 700 !important;
+  font-size: 14.5px !important;
+  padding: 16px 12px !important;
+}
+
+.theme-sketch-light .n-data-table-td {
+  background-color: #ffffff !important;
+  border-bottom: 1px solid #f8fafc !important;
+  color: #334155 !important;
+  font-size: 14px !important;
+  padding: 16px 12px !important;
+}
+
+.theme-sketch-light .n-data-table-tr:hover .n-data-table-td {
+  background-color: #f8fafc !important;
+}
+
+/* Table Operation Buttons */
+.theme-sketch-light .n-data-table .n-button.n-button--primary-type {
+  background-image: url('./crayon_btn_download.png') !important;
+  background-size: 100% 100% !important;
+  background-repeat: no-repeat !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border-radius: 6px !important;
+  padding: 0 14px !important;
+  height: 30px !important;
+  font-size: 13px !important;
+}
+
+.theme-sketch-light .n-data-table .n-button:not(.n-button--primary-type) {
+  border: 1px solid #cbd5e1 !important;
+  background: #ffffff !important;
+  color: #334155 !important;
+  font-weight: 600 !important;
+  border-radius: 6px !important;
+  padding: 0 12px !important;
+  height: 30px !important;
+  font-size: 13px !important;
+}
+
+.theme-sketch-light .n-data-table .n-button:not(.n-button--primary-type):hover {
+  background: #f0f9ff !important;
+  border-color: #93c5fd !important;
+  color: #0284c7 !important;
+}
+
+/* Pagination (Bottom Right of Table Card) */
+.theme-sketch-light .n-pagination {
+  margin-top: 16px !important;
+  justify-content: flex-end !important;
+}
+
+.theme-sketch-light .n-pagination .n-pagination-item {
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 7px !important;
+  background: #ffffff !important;
+  color: #475569 !important;
+  font-weight: 600 !important;
+  min-width: 30px !important;
+  height: 30px !important;
+  line-height: 27px !important;
+  font-size: 13.5px !important;
+}
+
+.theme-sketch-light .n-pagination .n-pagination-item--active {
+  border: 1.5px solid #0284c7 !important;
+  color: #0284c7 !important;
+  background: #ffffff !important;
+}
+
+/* 4. Decorative Sketch Layers */
+/* Top-Right Calligraphy Art '发现更好的应用' + Leaves */
+.sketch-top-right-art {
+  position: absolute;
+  top: 6px;
+  right: 18px;
+  width: 330px;
+  pointer-events: none;
+  z-index: 5;
+  user-select: none;
+}
+
+/* Bottom-Right Large Plant Cluster */
+.sketch-bottom-right-plants {
+  position: absolute;
+  bottom: 25px;
+  right: 0px;
+  width: 215px;
+  pointer-events: none;
+  z-index: 5;
+  user-select: none;
+}
+
+/* Sidebar Middle Leaf */
+.sketch-sidebar-leaf {
+  position: absolute;
+  top: 365px;
+  right: 32px;
+  width: 50px;
+  pointer-events: none;
+  z-index: 1;
+  user-select: none;
+}
+
+/* Sidebar Airplane with Dash Trail */
+.sketch-sidebar-plane {
+  position: absolute;
+  bottom: 185px;
+  left: 15px;
+  width: 125px;
+  pointer-events: none;
+  z-index: 1;
+  user-select: none;
+}
+
+/* Sidebar Little Yellow Star */
+.sketch-sidebar-star {
+  position: absolute;
+  bottom: 255px;
+  right: 38px;
+  width: 32px;
+  pointer-events: none;
+  z-index: 1;
+  user-select: none;
+}
+
+/* Sidebar Bottom Flowers & Plants */
+.sketch-sidebar-bot {
+  position: absolute;
+  bottom: 110px;
+  right: 16px;
+  width: 98px;
+  pointer-events: none;
+  z-index: 1;
+  user-select: none;
+}
+
+/* Logo Burst Rays */
+.sketch-logo-rays {
+  position: absolute;
+  top: 8px;
+  right: 48px;
+  width: 38px;
+  pointer-events: none;
+  z-index: 2;
+  user-select: none;
+}
+
+/* Title Sparks */
+.sketch-title-sparks {
+  width: 26px;
+  height: 26px;
+  margin-left: 6px;
+  pointer-events: none;
+  user-select: none;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* 5. Bottom Status Bar */
+.theme-sketch-light .bottom-status-bar {
+  background: transparent !important;
+  border-top: 1px solid rgba(186, 230, 253, 0.5) !important;
+  padding: 8px 24px !important;
+  font-size: 13px !important;
+  color: #64748b !important;
+}
+
+.theme-sketch-light .status-pulse {
+  background-color: #22c55e !important;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.6) !important;
+}
+
+.theme-sketch-light .status-btn {
+  background: transparent !important;
+  border: none !important;
+  color: #64748b !important;
+  font-size: 13px !important;
+  cursor: pointer;
+}
+
+.theme-sketch-light .status-btn:hover {
+  color: #0284c7 !important;
+}
+
+/* Theme Selector Popover Menu */
+.theme-popover-menu.theme-sketch-light {
+  background: #fdfdfa !important;
+  border: 1.5px solid #a8daf9 !important;
+  box-shadow: 0 12px 28px -4px rgba(14, 165, 233, 0.15), 0 6px 12px -2px rgba(0, 0, 0, 0.05) !important;
+  color: #1e293b !important;
+}
+
+.theme-popover-menu.theme-sketch-light .theme-select-item.active {
+  background: rgba(14, 165, 233, 0.1) !important;
+  border-color: rgba(14, 165, 233, 0.4) !important;
+}

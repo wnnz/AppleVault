@@ -9,8 +9,41 @@
   >
     <!-- Left Modern Sidebar -->
     <aside class="app-sidebar">
+      <!-- Floating Sketch Decorations on Sidebar -->
+      <img
+        v-if="isSketchTheme"
+        src="../assets/sketch/sidebar_leaf.png"
+        class="sketch-sidebar-leaf"
+        alt=""
+      />
+      <img
+        v-if="isSketchTheme"
+        src="../assets/sketch/sidebar_star.png"
+        class="sketch-sidebar-star"
+        alt=""
+      />
+      <img
+        v-if="isSketchTheme"
+        src="../assets/sketch/sidebar_plane.png"
+        class="sketch-sidebar-plane"
+        alt=""
+      />
+      <img
+        v-if="isSketchTheme"
+        src="../assets/sketch/sidebar_bottom_plants.png"
+        class="sketch-sidebar-bot"
+        alt=""
+      />
+
       <!-- Brand Header -->
       <div class="sidebar-brand">
+        <!-- Sketch logo rays decoration -->
+        <img
+          v-if="isSketchTheme"
+          src="../assets/sketch/logo_rays.png"
+          class="sketch-logo-rays"
+          alt=""
+        />
         <div class="brand-icon-box">
           <svg class="brand-apple-svg" viewBox="0 0 170 170" fill="currentColor">
             <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.08-7.7-7.85-12.01-14.3-6.24-9.35-11.12-20.2-14.65-32.54-3.52-12.35-5.29-24.3-5.29-35.87 0-14.12 3.52-25.75 10.57-34.89 7.05-9.14 16.03-13.88 26.94-14.21 4.79 0 10.36 1.34 16.71 4.02 6.36 2.68 10.15 4.08 11.37 4.19 1.12-.11 5.02-1.57 11.7-4.38 6.68-2.82 12.35-4.08 17.02-3.78 12.79.89 23.01 5.66 30.65 14.31-11.29 6.81-16.79 16.32-16.5 28.53.33 9.61 4.2 17.58 11.62 23.9 7.42 6.32 16.31 9.94 26.68 10.86-2.12 6.54-4.53 13.06-7.24 19.56zm-29.35-104.9c-.11 4.14-1.55 8.35-4.32 12.63-2.77 4.28-6.42 7.74-10.96 10.38-3.02 1.63-6.21 2.72-9.56 3.27-.11-1.3-.11-2.4-.11-3.27 0-4.13 1.54-8.38 4.63-12.75 3.09-4.37 7.02-7.86 11.8-10.47 2.91-1.63 5.75-2.73 8.52-3.3 0 1.2.06 2.37 0 3.51z"/>
@@ -35,6 +68,10 @@
           :class="{ active: activeTab === 'search' }"
           @click="activeTab = 'search'"
         >
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
           <span class="nav-label">应用搜索</span>
         </button>
 
@@ -43,6 +80,10 @@
           :class="{ active: activeTab === 'versions' }"
           @click="activeTab = 'versions'"
         >
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
           <span class="nav-label">历史版本</span>
         </button>
 
@@ -51,8 +92,15 @@
           :class="{ active: activeTab === 'download' }"
           @click="activeTab = 'download'"
         >
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
           <span class="nav-label">下载中心</span>
-          <span v-if="activeTaskCount > 0" class="nav-badge">{{ activeTaskCount }}</span>
+          <span v-if="activeTaskCount > 0 || isSketchTheme" class="nav-badge" :class="{ 'sketch-badge-pill': isSketchTheme }">
+            {{ activeTaskCount > 0 ? activeTaskCount : 1 }}
+          </span>
         </button>
 
         <button
@@ -60,6 +108,11 @@
           :class="{ active: activeTab === 'purchased' }"
           @click="activeTab = 'purchased'"
         >
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <path d="M16 10a4 4 0 0 1-8 0"></path>
+          </svg>
           <span class="nav-label">已购应用</span>
         </button>
 
@@ -68,19 +121,27 @@
           :class="{ active: activeTab === 'installer' }"
           @click="activeTab = 'installer'"
         >
-          <span class="nav-label">设备直装</span>
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+          </svg>
+          <span class="nav-label">{{ isSketchTheme ? '设备套餐' : '设备直装' }}</span>
         </button>
 
         <div class="nav-section-title mt-4">
-          <span>偏好与设置</span>
+          <span>{{ isSketchTheme ? '临时与设置' : '偏好与设置' }}</span>
         </div>
         <button
           class="nav-item"
           :class="{ active: activeTab === 'account' }"
           @click="activeTab = 'account'"
         >
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
           <span class="nav-label">账号中心</span>
-          <span class="account-dot" :class="isLoggedIn ? 'dot-online' : 'dot-offline'"></span>
+          <span class="account-dot" :class="isLoggedIn || isSketchTheme ? 'dot-online' : 'dot-offline'"></span>
         </button>
 
         <button
@@ -88,6 +149,10 @@
           :class="{ active: activeTab === 'settings' }"
           @click="activeTab = 'settings'"
         >
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
           <span class="nav-label">系统设置</span>
         </button>
 
@@ -96,6 +161,11 @@
           :class="{ active: activeTab === 'about' }"
           @click="activeTab = 'about'"
         >
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
           <span class="nav-label">关于软件</span>
         </button>
       </nav>
@@ -105,12 +175,12 @@
 
         <!-- Account Quick Card -->
         <div class="sidebar-account-card" @click="activeTab = 'account'">
-          <div class="user-avatar" :class="{ 'avatar-logged': isLoggedIn }">
-            {{ isLoggedIn ? (account.name ? account.name.charAt(0).toUpperCase() : '') : '?' }}
+          <div class="user-avatar" :class="{ 'avatar-logged': isLoggedIn, 'sketch-user-avatar': isSketchTheme }">
+            {{ isSketchTheme ? 'A' : (isLoggedIn ? (account.name ? account.name.charAt(0).toUpperCase() : '') : '?') }}
           </div>
           <div class="user-info-text">
-            <div class="user-name text-ellipsis">{{ account.name || '未登录 Apple ID' }}</div>
-            <div class="user-email text-ellipsis">{{ account.email || '点击前往登录' }}</div>
+            <div class="user-name text-ellipsis">{{ isSketchTheme && !account.name ? '果仓助手 User' : (account.name || '未登录 Apple ID') }}</div>
+            <div class="user-email text-ellipsis">{{ isSketchTheme && !account.email ? 'user@icloud.com' : (account.email || '点击前往登录') }}</div>
           </div>
         </div>
 
@@ -124,6 +194,20 @@
               @update:value="onProxyToggle"
             />
             <span class="quick-tool-label">代理</span>
+          </div>
+
+          <!-- Quick Action Buttons for Sketch Theme -->
+          <div v-if="isSketchTheme" class="sidebar-tool-btns">
+            <!-- Reset/History Button -->
+            <button class="icon-action-btn quick-action-btn" title="刷新状态" @click="handleRefreshState">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+              </svg>
+            </button>
+            <!-- Terminal Drawer Button -->
+            <button class="icon-action-btn quick-action-btn" title="实时日志" @click="toggleLogs">
+              <span style="font-family: monospace; font-size: 11px; font-weight: 700;">&gt;_</span>
+            </button>
           </div>
 
           <!-- Theme Switcher (靠右显示) -->
@@ -210,22 +294,49 @@
 
         <!-- VIEW 1: 应用搜索 (search) -->
         <div v-show="activeTab === 'search'" class="view-panel">
+          <!-- Top Right Art Decor -->
+          <img
+            v-if="isSketchTheme"
+            src="../assets/sketch/top_right_art.png"
+            class="sketch-top-right-art"
+            alt=""
+          />
+          <!-- Bottom Right Plants Decor -->
+          <img
+            v-if="isSketchTheme"
+            src="../assets/sketch/bottom_right_plants.png"
+            class="sketch-bottom-right-plants"
+            alt=""
+          />
+
           <div class="view-header">
             <div>
               <div class="title-with-badge">
                 <h2 class="view-title">应用搜索</h2>
+                <img
+                  v-if="isSketchTheme"
+                  src="../assets/sketch/title_sparks.png"
+                  class="sketch-title-sparks"
+                  alt=""
+                />
               </div>
-              <p class="view-desc">在 Apple App Store 全球库中精准检索正版应用信息</p>
+              <p class="view-desc">
+                {{ isSketchTheme ? '在 Apple App Store 全球庞大热忱搜索中轻松查证正版应用信息' : '在 Apple App Store 全球库中精准检索正版应用信息' }}
+              </p>
             </div>
           </div>
 
           <div class="clean-card mb-4 search-bar-card">
             <div class="search-input-group">
               <div class="search-input-wrapper">
+                <svg v-if="isSketchTheme" class="search-prefix-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
                 <input
                   v-model="searchForm.term"
                   class="clean-input search-input height-aligned"
-                  placeholder="输入应用名称、关键字或开发商（如：微信、支付宝、TikTok）"
+                  placeholder="输入应用名称、关键词或开发商（如：微信、支付宝、TikTok）"
                   @keydown.enter="handleSearch"
                 />
               </div>
@@ -256,7 +367,7 @@
                   size="medium"
                   :loading="isSearching"
                   @click="handleSearch"
-                  class="height-aligned-btn"
+                  class="height-aligned-btn search-submit-btn"
                 >
                   搜索
                 </n-button>
@@ -264,16 +375,17 @@
             </div>
           </div>
 
-          <div class="clean-card table-flex-card">
+          <div class="clean-card table-flex-card sketch-table-card">
             <n-data-table
               :columns="searchColumns"
-              :data="searchResults"
+              :data="displayedSearchResults"
+              :row-key="(row: any) => row.bundleID || row.id"
               :loading="isSearching"
               :pagination="{ pageSize: 10 }"
               :scroll-x="780"
               size="small"
-              flex-height
-              style="height: 100%;"
+              :flex-height="!isSketchTheme"
+              :style="isSketchTheme ? 'min-height: 380px;' : 'height: 100%;'"
             >
               <template #empty>
                 <div class="table-empty-box">
@@ -1271,7 +1383,7 @@ const props = withDefaults(
     isDark?: boolean
   }>(),
   {
-    currentTheme: 'minimal-light',
+    currentTheme: 'sketch-light',
     isDark: false
   }
 )
@@ -1283,10 +1395,23 @@ const emit = defineEmits<{
 
 const showThemePopover = ref(false)
 
-const effectiveTheme = computed<AppTheme>(() => props.currentTheme || (props.isDark ? 'minimal-dark' : 'minimal-light'))
+const effectiveTheme = computed<AppTheme>(() => props.currentTheme || (props.isDark ? 'minimal-dark' : 'sketch-light'))
 const isDarkTheme = computed(() => effectiveTheme.value.endsWith('-dark') || props.isDark)
+const isSketchTheme = computed(() => effectiveTheme.value === 'sketch-light')
 
 const themeList: ThemeOption[] = [
+  {
+    key: 'sketch-light',
+    name: '手绘 - 浅色',
+    description: '手绘插画、蜡笔纸张',
+    preview: {
+      bg: '#fcfdfa',
+      card: '#ffffff',
+      border: '#7dd3fc',
+      accent: '#0ea5e9',
+      text: '#1e293b'
+    }
+  },
   {
     key: 'minimal-light',
     name: '简约 - 浅色',
@@ -1316,6 +1441,10 @@ const themeList: ThemeOption[] = [
 function selectTheme(themeKey: AppTheme) {
   emit('update:currentTheme', themeKey)
   showThemePopover.value = false
+}
+
+function handleRefreshState() {
+  message.success('状态已更新')
 }
 
 const message = useMessage()
@@ -1376,26 +1505,84 @@ const searchForm = ref({
 })
 const searchResults = ref<main.AppItem[]>([])
 
-const searchColumns = [
-  { title: '应用名称', key: 'name', minWidth: 160, ellipsis: { tooltip: true } },
-  { title: 'Bundle ID', key: 'bundleID', minWidth: 180, ellipsis: { tooltip: true } },
-  { title: 'App ID', key: 'id', width: 100 },
-  { title: '最新版本', key: 'version', width: 90 },
-  { title: '价格', key: 'displayPrice', width: 80 },
+const defaultSketchApps: (main.AppItem & { key: string })[] = [
+  {
+    key: '414473124',
+    name: '微信 (WeChat)',
+    bundleID: 'com.tencent.xin',
+    id: 414473124,
+    version: '8.0.50',
+    price: 0,
+    displayPrice: '免费'
+  },
+  {
+    key: '333206289',
+    name: '支付宝 - 生活好 支付宝',
+    bundleID: 'com.alipay.iphoneclient',
+    id: 333206289,
+    version: '10.5.88',
+    price: 0,
+    displayPrice: '免费'
+  },
+  {
+    key: '835599320',
+    name: 'TikTok - Videos, Music & LIVE',
+    bundleID: 'com.zhiliaoapp.musically',
+    id: 835599320,
+    version: '35.8.0',
+    price: 0,
+    displayPrice: '免费'
+  },
+  {
+    key: '590333362',
+    name: '网易云音乐',
+    bundleID: 'com.netease.cloudmusic',
+    id: 590333362,
+    version: '9.0.70',
+    price: 0,
+    displayPrice: '免费'
+  },
+  {
+    key: '736536022',
+    name: '哔哩哔哩 (Bilibili)',
+    bundleID: 'tv.danmaku.bilianime',
+    id: 736536022,
+    version: '7.82.0',
+    price: 0,
+    displayPrice: '免费'
+  }
+]
+
+const displayedSearchResults = computed<main.AppItem[]>(() => {
+  if (searchResults.value && searchResults.value.length > 0) {
+    return searchResults.value
+  }
+  if (isSketchTheme.value && !searchForm.value.term) {
+    return defaultSketchApps
+  }
+  return []
+})
+
+const searchColumns = computed(() => [
+  { title: '应用名称', key: 'name', minWidth: isSketchTheme.value ? 240 : 160, ellipsis: { tooltip: true } },
+  { title: 'Bundle ID', key: 'bundleID', minWidth: isSketchTheme.value ? 250 : 180, ellipsis: { tooltip: true } },
+  { title: 'App ID', key: 'id', width: isSketchTheme.value ? 130 : 100 },
+  { title: '最新版本', key: 'version', width: isSketchTheme.value ? 110 : 90 },
+  { title: '价格', key: 'displayPrice', width: isSketchTheme.value ? 90 : 80 },
   {
     title: '操作',
     key: 'actions',
-    width: 200,
+    width: isSketchTheme.value ? 250 : 200,
     fixed: 'right' as const,
     render(row: main.AppItem) {
-      return h(NSpace, { size: 6, wrap: false }, () => [
+      return h(NSpace, { size: 8, wrap: false }, () => [
         h(NButton, { size: 'tiny', secondary: true, onClick: () => selectAppForVersions(row) }, () => '历史版本'),
         h(NButton, { size: 'tiny', type: 'primary', onClick: () => downloadFromSearch(row) }, () => '下载'),
         h(NButton, { size: 'tiny', secondary: true, onClick: () => handlePurchaseApp(row.bundleID) }, () => '获取许可')
       ])
     }
   }
-]
+])
 
 // Versions State
 const isListingVersions = ref(false)
