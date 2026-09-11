@@ -1,4 +1,4 @@
-export type AppTheme = 'minimal-light' | 'minimal-dark'
+export type AppTheme = 'minimal-light' | 'minimal-dark' | 'handdrawn'
 
 export interface ThemeOption {
   key: AppTheme
