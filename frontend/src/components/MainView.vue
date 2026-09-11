@@ -5030,6 +5030,8 @@ onBeforeUnmount(() => {
 
 .theme-handdrawn.active-tab-versions .bundle-input-row :deep(.n-button:nth-of-type(1)) {
   width: 105px;
+  height: 31px !important;
+  align-self: center;
 }
 
 .theme-handdrawn.active-tab-versions .bundle-input-row :deep(.n-button:nth-of-type(2)) {
