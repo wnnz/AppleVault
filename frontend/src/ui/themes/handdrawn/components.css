@@ -484,7 +484,10 @@
 }
 
 .theme-handdrawn.active-tab-versions .view-panel > .clean-card.mb-4 {
-  padding: 23px 16px 9px 24px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .theme-handdrawn.active-tab-versions .bundle-input-row,

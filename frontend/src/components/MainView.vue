@@ -3207,6 +3207,7 @@ onBeforeUnmount(() => {
 .versions-toolbar {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 10px;
 }
 
