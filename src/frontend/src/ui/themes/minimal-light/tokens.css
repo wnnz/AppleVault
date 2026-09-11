@@ -1,0 +1,21 @@
+:root,
+.theme-minimal-light {
+  color-scheme: light;
+  --ui-canvas: #f8fafc;
+  --ui-surface: #ffffff;
+  --ui-control-bg: #ffffff;
+  --ui-control-hover: #f1f5f9;
+  --ui-table-header: #f8fafc;
+  --ui-table-hover: #f8fbff;
+  --ui-text: #1e293b;
+  --ui-muted: #64748b;
+  --ui-border: #e2e8f0;
+  --ui-primary: #0071e3;
+  --ui-primary-hover: #0077ed;
+  --ui-focus: rgba(0, 113, 227, .14);
+  --ui-success: #22c55e;
+  --ui-warning: #f59e0b;
+  --ui-danger: #ef4444;
+  --ui-switch-off: #cbd5e1;
+  --ui-progress-track: #e2e8f0;
+}

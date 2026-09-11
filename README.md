@@ -85,6 +85,24 @@
 
 ---
 
+## 📂 源码目录结构
+
+```text
+AppleVault/
+├── src/                     # 应用源码
+│   ├── *.go                 # Go / Wails 后端与入口
+│   └── frontend/            # Vue 前端源码
+├── tools/                   # 开发与发布所需的外部工具
+├── build/                   # Wails 资源与发布产物
+├── docs/                    # 项目文档和截图
+├── third_party/             # 第三方许可证
+├── build_release.ps1        # Windows 发布构建脚本
+├── go.mod
+└── wails.json
+```
+
+---
+
 ## 📂 便携目录结构
 
 本程序为纯净免安装设计，所有数据和依赖均在同一目录下：

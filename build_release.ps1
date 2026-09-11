@@ -5,6 +5,9 @@ param (
 
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+$SourceDir = "$ScriptDir/src"
+$FrontendDir = "$SourceDir/frontend"
+$ExternalToolsDir = "$ScriptDir/tools"
 Set-Location $ScriptDir
 
 # 确保 Go 与 go-winres 环境变量可用（支持便携式 Go）
@@ -15,10 +18,13 @@ if (-not (Get-Command go -ErrorAction SilentlyContinue)) {
     }
 }
 
-Write-Host "==> [1/3] 检查前端构建..." -ForegroundColor Cyan
+Write-Host "==> [1/4] 检查前端构建..." -ForegroundColor Cyan
 if (-not $SkipFrontend) {
-    Set-Location "$ScriptDir/frontend"
+    Set-Location $FrontendDir
     npm run build
+    if ($LASTEXITCODE -ne 0) {
+        throw "前端构建失败"
+    }
     Set-Location $ScriptDir
 }
 
@@ -29,16 +35,16 @@ if (-not (Test-Path $ToolsDir)) {
     New-Item -ItemType Directory -Force $ToolsDir | Out-Null
 }
 
-# 若根目录下有外部依赖，自动补充同步至 tools/ 目录（不覆盖已有）
-if ((Test-Path "$ScriptDir/ipatool.exe") -and -not (Test-Path "$ToolsDir/ipatool.exe")) {
-    Copy-Item "$ScriptDir/ipatool.exe" "$ToolsDir/" -Force
+# 若源码仓库 tools 目录下有外部依赖，自动补充同步至发布目录（不覆盖已有）
+if ((Test-Path "$ExternalToolsDir/ipatool.exe") -and -not (Test-Path "$ToolsDir/ipatool.exe")) {
+    Copy-Item "$ExternalToolsDir/ipatool.exe" "$ToolsDir/" -Force
 }
-if ((Test-Path "$ScriptDir/ios.exe") -and -not (Test-Path "$ToolsDir/ios.exe")) {
-    Copy-Item "$ScriptDir/ios.exe" "$ToolsDir/" -Force
+if ((Test-Path "$ExternalToolsDir/ios.exe") -and -not (Test-Path "$ToolsDir/ios.exe")) {
+    Copy-Item "$ExternalToolsDir/ios.exe" "$ToolsDir/" -Force
 }
 
 Write-Host "==> [3/4] 检查 Windows Logo 图标与应用资源嵌入..." -ForegroundColor Cyan
-$SysoFile = "$ScriptDir/rsrc_windows_amd64.syso"
+$SysoFile = "$SourceDir/rsrc_windows_amd64.syso"
 $IconFile = "$ScriptDir/build/appicon.png"
 $ShouldRegenerateResources = -not (Test-Path $SysoFile) -or `
     ((Test-Path $IconFile) -and ((Get-Item $IconFile).LastWriteTimeUtc -gt (Get-Item $SysoFile).LastWriteTimeUtc))
@@ -59,12 +65,20 @@ if ($ShouldRegenerateResources) {
             "--copyright", "AppleVault (果仓助手)",
             "--arch", "amd64"
         )
-        & $WinresCmd @winresArgs
+        Push-Location $SourceDir
+        try {
+            & $WinresCmd @winresArgs
+        } finally {
+            Pop-Location
+        }
     }
 }
 
 Write-Host "==> [4/4] 编译主程序 AppleVault.exe (增量覆盖输出，保留所有依赖与数据)..." -ForegroundColor Cyan
-go build -tags "desktop,production" -ldflags "-w -s -H windowsgui" -o "$BinDir/AppleVault.exe" .
+go build -tags "desktop,production" -ldflags "-w -s -H windowsgui" -o "$BinDir/AppleVault.exe" ./src
+if ($LASTEXITCODE -ne 0) {
+    throw "Go 主程序构建失败"
+}
 
 Write-Host "`n✅ 发布构建完成！主程序输出于: $BinDir/AppleVault.exe" -ForegroundColor Green
 Write-Host "   目录结构："
