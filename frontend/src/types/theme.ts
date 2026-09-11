@@ -1,16 +1,2 @@
-export type AppTheme = 'minimal-light' | 'minimal-dark' | 'handdrawn'
-
-export interface ThemeOption {
-  key: AppTheme
-  name: string
-  description: string
-  preview: {
-    bg: string
-    card: string
-    border: string
-    accent: string
-    text: string
-  }
-}
-
-export const THEME_STORAGE_KEY = 'apple_vault_theme'
+export type { AppTheme, ThemeOption } from '../ui/theme'
+export { THEME_STORAGE_KEY } from '../ui/theme'

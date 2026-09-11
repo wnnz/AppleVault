@@ -137,22 +137,19 @@
         <div class="sidebar-actions-bar">
           <!-- Proxy Switch -->
           <div class="quick-tool" title="网络代理">
-            <n-switch
-              v-model:value="settings.enableProxy"
+            <AppSwitch
+              v-model="settings.enableProxy"
               size="small"
-              @update:value="onProxyToggle"
+              @update:model-value="onProxyToggle"
             />
             <span class="quick-tool-label">代理</span>
           </div>
 
           <!-- Theme Switcher (靠右显示) -->
           <div class="theme-switcher-wrapper">
-            <n-popover
-              v-model:show="showThemePopover"
-              trigger="click"
+            <AppPopover
+              v-model="showThemePopover"
               placement="top-end"
-              :show-arrow="false"
-              raw
             >
               <template #trigger>
                 <button
@@ -215,7 +212,7 @@
                   </div>
                 </div>
               </div>
-            </n-popover>
+            </AppPopover>
           </div>
         </div>
       </div>
@@ -237,10 +234,10 @@
             </div>
           </div>
 
-          <div class="clean-card mb-4 search-bar-card">
+          <AppCard class="clean-card mb-4 search-bar-card">
             <div class="search-input-group">
               <div class="search-input-wrapper">
-                <input
+                <AppInput
                   v-model="searchForm.term"
                   class="clean-input search-input height-aligned"
                   placeholder="输入应用名称、关键字或开发商（如：微信、支付宝、TikTok）"
@@ -251,8 +248,8 @@
               <div class="filter-controls">
                 <div class="filter-item">
                   <span class="filter-label">平台</span>
-                  <n-select
-                    v-model:value="searchForm.platform"
+                  <AppSelect
+                    v-model="searchForm.platform"
                     :options="platformOptions"
                     size="small"
                     class="height-aligned-select"
@@ -262,8 +259,8 @@
 
                 <div class="filter-item">
                   <span class="filter-label">条数</span>
-                  <n-select
-                    v-model:value="searchForm.limit"
+                  <AppSelect
+                    v-model="searchForm.limit"
                     :options="limitOptions"
                     size="small"
                     class="height-aligned-select"
@@ -282,10 +279,10 @@
                 </AppButton>
               </div>
             </div>
-          </div>
+          </AppCard>
 
-          <div class="clean-card table-flex-card">
-            <n-data-table
+          <AppCard class="clean-card table-flex-card">
+            <AppTable
               :columns="displayedSearchColumns"
               :data="searchResults"
               :loading="isSearching"
@@ -301,8 +298,8 @@
                   <div class="empty-state-desc">{{ searchForm.term ? '请尝试更换关键词，或切换不同国家/地区搜索' : '输入应用名称、开发商或拼音，随时开始检索正版应用' }}</div>
                 </div>
               </template>
-            </n-data-table>
-          </div>
+            </AppTable>
+          </AppCard>
         </div>
 
         <!-- VIEW 2: 历史版本 (versions) -->
@@ -319,12 +316,12 @@
             </div>
           </div>
 
-          <div class="clean-card mb-4">
+          <AppCard class="clean-card mb-4">
             <div class="versions-toolbar">
               <div class="bundle-input-row">
                 <div class="clean-input-prefix-box height-aligned">
                   <span class="prefix-label">Bundle ID</span>
-                  <input
+                  <AppInput
                     v-model="versionForm.bundleId"
                     class="clean-input flex-1 border-none"
                     placeholder="例如: com.alipay.iphoneclient"
@@ -370,7 +367,7 @@
 
               <div class="filter-search-row">
                 <div class="filter-search-box">
-                  <input
+                  <AppInput
                     v-model="versionForm.filter"
                     class="clean-input filter-input height-aligned"
                     placeholder="输入版本号 (如 10.2.80)、构建 ID 或体积进行实时筛选..."
@@ -378,14 +375,13 @@
                 </div>
               </div>
             </div>
-          </div>
+          </AppCard>
 
-          <div class="clean-card table-flex-card">
-            <n-data-table
+          <AppCard class="clean-card table-flex-card">
+            <AppTable
               :columns="displayedVersionColumns"
               :data="filteredVersions"
               :loading="isListingVersions"
-              :virtual-scroll="true"
               :scroll-x="720"
               flex-height
               style="height: 100%;"
@@ -397,8 +393,8 @@
                   <div class="empty-state-desc">{{ versionForm.bundleId ? '请检查 Bundle ID 是否正确，或当前账号是否具备权限' : '输入应用 Bundle ID 并点击「获取历史版本」，即可枚举所有构建历史' }}</div>
                 </div>
               </template>
-            </n-data-table>
-          </div>
+            </AppTable>
+          </AppCard>
         </div>
 
         <!-- VIEW 3: 下载中心 (download) -->
@@ -480,14 +476,11 @@
                 <div class="task-meta-bundle">{{ task.bundleID }}</div>
 
                 <div class="task-progress-section">
-                  <n-progress
-                    type="line"
+                  <AppProgress
                     :percentage="task.progress"
                     :status="getTaskProgressStatus(task.status)"
                     :class="'task-progress-' + task.status"
-                    :show-indicator="false"
                     :height="6"
-                    border-radius="3"
                   />
                 </div>
 
@@ -528,14 +521,11 @@
             </div>
             <div class="purchased-header-actions">
               <div v-if="isPurchasedLoading" class="purchased-loading-progress" role="status" aria-live="polite">
-                <n-progress
+                <AppProgress
                   v-if="purchasedLoadTotal > 0"
                   class="purchased-loading-bar"
-                  type="line"
                   :percentage="purchasedLoadProgress"
-                  :show-indicator="false"
                   :height="6"
-                  border-radius="3"
                 />
                 <div v-else class="purchased-loading-bar purchased-loading-bar-indeterminate" aria-hidden="true"></div>
                 <span v-if="purchasedLoadTotal > 0" class="purchased-loading-count">
@@ -556,7 +546,7 @@
           </div>
 
           <!-- 搜索与筛选工具栏 -->
-          <div class="clean-card mb-3 purchased-search-toolbar">
+          <AppCard class="clean-card mb-3 purchased-search-toolbar">
             <div class="purchased-search-left">
               <!-- 搜索输入框 -->
               <div class="purchased-search-input-box">
@@ -564,7 +554,7 @@
                   <circle cx="11" cy="11" r="8"></circle>
                   <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
-                <input
+                <AppInput
                   v-model="purchasedSearchKeyword"
                   class="purchased-search-input"
                   placeholder="搜索已购应用名称、Bundle ID 或 App ID..."
@@ -594,48 +584,12 @@
               </div>
             </div>
 
-            <!-- 右侧分页控制 -->
-            <div class="purchased-page-controls">
-              <div class="page-size-selector">
-                <span class="size-label">每页</span>
-                <n-select
-                  v-model:value="purchasedPageSize"
-                  size="small"
-                  class="height-aligned-select"
-                  style="width: 76px;"
-                  :options="[
-                    { label: '20', value: 20 },
-                    { label: '50', value: 50 },
-                    { label: '100', value: 100 }
-                  ]"
-                  @update:value="onPurchasedPageSizeChange"
-                />
-              </div>
-              <AppButton
-                secondary
-                size="small"
-                class="small-aligned-btn"
-                :disabled="purchasedPage <= 1 || isPurchasedLoading"
-                @click="prevPurchasedPage"
-              >
-                上一页
-              </AppButton>
-              <span class="page-indicator">第 {{ purchasedPage }} 页</span>
-              <AppButton
-                secondary
-                size="small"
-                class="small-aligned-btn"
-                :disabled="purchasedPage * purchasedPageSize >= purchasedMatchTotal || isPurchasedLoading"
-                @click="nextPurchasedPage"
-              >
-                下一页
-              </AppButton>
-            </div>
-          </div>
+          </AppCard>
 
           <!-- 表格主体 -->
-          <div class="clean-card table-flex-card">
-            <n-data-table
+          <AppCard class="clean-card table-flex-card">
+            <AppTable
+              class="purchased-table"
               :columns="displayedPurchasedColumns"
               :data="filteredPurchasedApps"
               :loading="isPurchasedLoading"
@@ -660,8 +614,44 @@
                   </div>
                 </div>
               </template>
-            </n-data-table>
-          </div>
+            </AppTable>
+            <div v-if="purchasedPageCount > 1" class="purchased-bottom-pagination" aria-label="已购应用分页">
+              <div class="page-size-selector">
+                <span class="size-label">每页</span>
+                <AppSelect
+                  v-model="purchasedPageSize"
+                  size="small"
+                  class="height-aligned-select"
+                  style="width: 76px;"
+                  :options="[
+                    { label: '20', value: 20 },
+                    { label: '50', value: 50 },
+                    { label: '100', value: 100 }
+                  ]"
+                  @update:model-value="onPurchasedPageSizeChange"
+                />
+              </div>
+              <AppButton
+                secondary
+                size="small"
+                class="small-aligned-btn"
+                :disabled="purchasedPage <= 1 || isPurchasedLoading"
+                @click="prevPurchasedPage"
+              >
+                上一页
+              </AppButton>
+              <span class="page-indicator">第 {{ purchasedPage }} / {{ purchasedPageCount }} 页</span>
+              <AppButton
+                secondary
+                size="small"
+                class="small-aligned-btn"
+                :disabled="purchasedPage >= purchasedPageCount || isPurchasedLoading"
+                @click="nextPurchasedPage"
+              >
+                下一页
+              </AppButton>
+            </div>
+          </AppCard>
         </div>
 
         <!-- VIEW 5: 设备直装 (installer) -->
@@ -677,7 +667,7 @@
 
           <div class="installer-grid">
             <!-- Left: IPA File Selection -->
-            <div class="clean-card flex-col">
+            <AppCard class="clean-card flex-col">
               <div class="card-headline">
                 <span class="headline-title">1. 选择安装包</span>
                 <span v-if="selectedIPAPath" class="headline-badge">已就绪</span>
@@ -697,18 +687,18 @@
               </div>
 
               <div class="mt-3 flex-align-center">
-                <input
-                  :value="selectedIPAPath"
+                <AppInput
+                  :model-value="selectedIPAPath"
                   readonly
                   class="clean-input flex-1 mr-2 height-aligned"
                   placeholder="尚未选择文件"
                 />
                 <AppButton secondary size="small" class="height-aligned-btn" @click="handleSelectIPA">浏览文件</AppButton>
               </div>
-            </div>
+            </AppCard>
 
             <!-- Right: Device Selection -->
-            <div class="clean-card flex-col">
+            <AppCard class="clean-card flex-col">
               <div class="card-headline">
                 <span class="headline-title">2. 选择苹果设备</span>
                 <AppButton
@@ -723,8 +713,8 @@
                 </AppButton>
               </div>
 
-              <n-select
-                v-model:value="selectedDeviceUDID"
+              <AppSelect
+                v-model="selectedDeviceUDID"
                 :options="deviceOptions"
                 :loading="isLoadingDevices"
                 :disabled="isInstallingIPA"
@@ -765,11 +755,11 @@
                 <div class="no-device-text">未检测到已连接的苹果设备</div>
                 <div class="no-device-sub">请直连电脑 USB 接口、点亮屏幕、输入密码并信任此电脑</div>
               </div>
-            </div>
+            </AppCard>
           </div>
 
           <!-- Bottom Action Bar for Installer -->
-          <div class="clean-card mt-4 installer-action-banner">
+          <AppCard class="clean-card mt-4 installer-action-banner">
             <div class="installer-action-info">
               <div class="action-banner-title">
                 {{ !selectedIPAPath ? '请先选择待安装的 IPA 文件' : (!selectedDeviceUDID ? '请选择目标苹果设备' : '就绪，可以开始安装') }}
@@ -789,7 +779,7 @@
             >
               {{ isInstallingIPA ? '正在安装中...' : '开始安装到设备' }}
             </AppButton>
-          </div>
+          </AppCard>
         </div>
 
         <!-- VIEW 6: 账号中心 (account) -->
@@ -805,7 +795,7 @@
 
           <div class="two-columns-layout">
             <!-- Account Status Card -->
-            <div class="clean-card">
+            <AppCard class="clean-card">
               <div class="card-headline">
                 <span class="headline-title">当前登录凭证</span>
                 <span class="account-pill" :class="isLoggedIn ? 'pill-success' : 'pill-gray'">
@@ -856,17 +846,17 @@
                   刷新状态
                 </AppButton>
               </div>
-            </div>
+            </AppCard>
 
             <!-- Login Form Card -->
-            <div class="clean-card">
+            <AppCard class="clean-card">
               <div class="card-headline">
                 <span class="headline-title">登录 Apple ID</span>
               </div>
 
               <div class="form-item-clean">
                 <label class="clean-label">Apple ID 账户邮箱</label>
-                <input
+                <AppInput
                   v-model="loginForm.email"
                   class="clean-input height-aligned"
                   placeholder="例如: your_apple_id@icloud.com"
@@ -875,7 +865,7 @@
 
               <div class="form-item-clean mt-3">
                 <label class="clean-label">Apple ID 密码</label>
-                <input
+                <AppInput
                   v-model="loginForm.password"
                   type="password"
                   class="clean-input height-aligned"
@@ -900,7 +890,7 @@
                   登录
                 </AppButton>
               </div>
-            </div>
+            </AppCard>
           </div>
         </div>
 
@@ -923,7 +913,7 @@
             </AppButton>
           </div>
 
-          <div class="clean-card settings-stack">
+          <AppCard class="clean-card settings-stack">
             <!-- Section 1: Engine Status -->
             <div class="settings-group">
               <div class="settings-group-title">底层引擎与环境</div>
@@ -950,7 +940,7 @@
                   <div class="field-desc">自动注入命令行参数，彻底杜绝 Windows 终端弹窗与死锁卡死</div>
                 </div>
                 <div class="field-control">
-                  <input
+                  <AppInput
                     v-model="settings.keychainPassphrase"
                     type="password"
                     class="clean-input height-aligned w-full"
@@ -969,7 +959,7 @@
                   <div class="field-desc">App Store 接口认证时通过环境变量透传 HTTP / SOCKS5 代理</div>
                 </div>
                 <div class="field-control">
-                  <n-switch v-model:value="settings.enableProxy" />
+                  <AppSwitch v-model="settings.enableProxy" />
                 </div>
               </div>
 
@@ -980,7 +970,7 @@
                 </div>
                 <div class="field-control">
                   <div class="setting-input-action-group">
-                    <input
+                    <AppInput
                       v-model="settings.proxyUrl"
                       :disabled="!settings.enableProxy"
                       class="clean-input flex-1 height-aligned"
@@ -1011,8 +1001,8 @@
                 </div>
                 <div class="field-control">
                   <div class="setting-input-action-group">
-                    <input
-                      :value="settings.defaultDownloadDir"
+                    <AppInput
+                      :model-value="settings.defaultDownloadDir"
                       readonly
                       disabled
                       class="clean-input flex-1 height-aligned"
@@ -1035,8 +1025,8 @@
                   <div class="field-desc">检索与下载默认针对的 Apple 硬件体系</div>
                 </div>
                 <div class="field-control">
-                  <n-select
-                    v-model:value="settings.defaultPlatform"
+                  <AppSelect
+                    v-model="settings.defaultPlatform"
                     :options="platformOptions"
                     size="small"
                     class="height-aligned-select"
@@ -1045,7 +1035,7 @@
                 </div>
               </div>
             </div>
-          </div>
+          </AppCard>
         </div>
 
         <!-- VIEW 8: 关于软件 (about) -->
@@ -1059,7 +1049,7 @@
             </div>
           </div>
 
-          <div class="clean-card about-card-stack">
+          <AppCard class="clean-card about-card-stack">
             <!-- App Banner -->
             <div class="about-hero">
               <div class="about-large-icon">
@@ -1081,8 +1071,8 @@
             <div class="about-section-box">
               <div class="about-section-label">GitHub 官方开源仓库</div>
               <div class="repo-link-bar">
-                <input
-                  value="https://github.com/wnnz/AppleVault"
+                <AppInput
+                  model-value="https://github.com/wnnz/AppleVault"
                   readonly
                   class="clean-input flex-1 height-aligned"
                 />
@@ -1129,7 +1119,7 @@
             <div class="about-footer-notice">
               <span>本项目仅为 App Store 官方接口的图形化辅助工具，与 Apple Inc. 无官方隶属关系。感谢开源社区优秀项目 ipatool 与 go-ios 提供的底层能力支持。</span>
             </div>
-          </div>
+          </AppCard>
         </div>
 
       </div>
@@ -1183,16 +1173,15 @@
     </section>
 
     <!-- 2FA Modal Dialog -->
-    <n-modal
-      v-model:show="show2FAModal"
-      preset="card"
+    <AppDialog
+      v-model="show2FAModal"
       title="Apple ID 双重认证"
       style="width: 400px; border-radius: 14px;"
       :mask-closable="false"
     >
       <div class="modal-dialog-inner">
         <p class="dialog-desc">已向你的受信任 Apple 设备发送了验证码，请输入 6 位数字验证码：</p>
-        <input
+        <AppInput
           ref="twoFAInputRef"
           v-model="twoFACode"
           class="clean-input text-center font-bold text-lg height-aligned"
@@ -1215,12 +1204,11 @@
           </AppButton>
         </div>
       </div>
-    </n-modal>
+    </AppDialog>
 
     <!-- Target Version Modal Dialog -->
-    <n-modal
-      v-model:show="showTargetVersionModal"
-      preset="card"
+    <AppDialog
+      v-model="showTargetVersionModal"
       title="查找指定版本"
       style="width: 440px; border-radius: 14px;"
     >
@@ -1228,7 +1216,7 @@
         <p class="dialog-desc">
           请输入目标版本号（例如 <code>10.2.80</code> 或 <code>8.0.0</code>），程序将智能检索历史构建记录并快速定位匹配版本。
         </p>
-        <input
+        <AppInput
           ref="targetVersionInputRef"
           v-model="targetVersionInput"
           class="clean-input height-aligned"
@@ -1248,23 +1236,23 @@
           </AppButton>
         </div>
       </div>
-    </n-modal>
+    </AppDialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, h, defineComponent } from 'vue'
-import {
-  useMessage,
-  useDialog,
-  NSelect,
-  NSwitch,
-  NModal,
-  NDataTable,
-  NProgress,
-  NSpace
-} from 'naive-ui'
-import AppButton from './AppButton.vue'
+import { useClipboard } from '@vueuse/core'
+import AppButton from '../ui/components/AppButton.vue'
+import AppCard from '../ui/components/AppCard.vue'
+import AppDialog from '../ui/components/AppDialog.vue'
+import AppInput from '../ui/components/AppInput.vue'
+import AppPopover from '../ui/components/AppPopover.vue'
+import AppProgress from '../ui/components/AppProgress.vue'
+import AppSelect from '../ui/components/AppSelect.vue'
+import AppSwitch from '../ui/components/AppSwitch.vue'
+import AppTable from '../ui/components/AppTable.vue'
+import { useAppDialog, useAppMessage } from '../ui/feedback'
 import {
   AddDownloadTask,
   GetDownloadTasks,
@@ -1292,10 +1280,10 @@ import {
 } from '../../wailsjs/go/main/App'
 import { EventsOn, OnFileDrop, OnFileDropOff, BrowserOpenURL } from '../../wailsjs/runtime/runtime'
 import { main } from '../../wailsjs/go/models'
-import { AppTheme, ThemeOption } from '../types/theme'
+import { type AppTheme, themeOptions } from '../ui/theme'
 import standardLogo from '../assets/applevault-logo.webp'
-import handdrawnSidebarArt from '../assets/sketch-sidebar-art.svg'
-import handdrawnSidebarFloatingLeaf from '../assets/sketch-floating-leaf.svg'
+import handdrawnSidebarArt from '../ui/themes/handdrawn/assets/sketch-sidebar-art.svg'
+import handdrawnSidebarFloatingLeaf from '../ui/themes/handdrawn/assets/sketch-floating-leaf.svg'
 
 const sketchNavPaths: Record<string, string[]> = {
   search: ['M10.8 4.2a6.6 6.6 0 1 0 0 13.2 6.6 6.6 0 0 0 0-13.2Z', 'm15.8 15.8 4 4'],
@@ -1350,52 +1338,16 @@ const showThemePopover = ref(false)
 const effectiveTheme = computed<AppTheme>(() => props.currentTheme || (props.isDark ? 'minimal-dark' : 'minimal-light'))
 const isDarkTheme = computed(() => effectiveTheme.value.endsWith('-dark') || props.isDark)
 
-const themeList: ThemeOption[] = [
-  {
-    key: 'minimal-light',
-    name: '简约 - 浅色',
-    description: '清爽现代、明亮通透',
-    preview: {
-      bg: '#f8fafc',
-      card: '#ffffff',
-      border: '#cbd5e1',
-      accent: '#0071e3',
-      text: '#1e293b'
-    }
-  },
-  {
-    key: 'minimal-dark',
-    name: '简约 - 深色',
-    description: '沉浸暗色、夜间舒适',
-    preview: {
-      bg: '#0f172a',
-      card: '#1e293b',
-      border: '#334155',
-      accent: '#0284c7',
-      text: '#f1f5f9'
-    }
-  },
-  {
-    key: 'handdrawn',
-    name: '手绘 - 果仓助手',
-    description: '纸张纹理、蓝色蜡笔与温柔涂鸦',
-    preview: {
-      bg: '#fffdf5',
-      card: '#ffffff',
-      border: '#a9ddfb',
-      accent: '#168ff0',
-      text: '#173b6a'
-    }
-  }
-]
+const themeList = themeOptions
 
 function selectTheme(themeKey: AppTheme) {
   emit('update:currentTheme', themeKey)
   showThemePopover.value = false
 }
 
-const message = useMessage()
-const dialog = useDialog()
+const message = useAppMessage()
+const dialog = useAppDialog()
+const { copy } = useClipboard({ legacy: true })
 
 const activeTab = ref('search')
 const isAnyOperationRunning = ref(false)
@@ -1464,7 +1416,7 @@ const searchColumns = [
     width: 200,
     fixed: 'right' as const,
     render(row: main.AppItem) {
-      return h(NSpace, { size: 6, wrap: false }, () => [
+      return h('div', { class: 'app-button-group' }, [
         h(AppButton, { size: 'tiny', secondary: true, onClick: () => selectAppForVersions(row) }, () => '历史版本'),
         h(AppButton, { size: 'tiny', type: 'primary', onClick: () => downloadFromSearch(row) }, () => '下载'),
         h(AppButton, { size: 'tiny', secondary: true, onClick: () => handlePurchaseApp(row.bundleID) }, () => '获取许可')
@@ -1615,7 +1567,7 @@ const versionColumns = [
     width: 160,
     fixed: 'right' as const,
     render(row: VersionItem) {
-      return h(NSpace, { size: 6, wrap: false }, () => [
+      return h('div', { class: 'app-button-group' }, [
         h(AppButton, {
           size: 'tiny',
           secondary: true,
@@ -1724,7 +1676,7 @@ const purchasedColumns = [
     width: 150,
     fixed: 'right' as const,
     render(row: main.AppItem) {
-      return h(NSpace, { size: 6, wrap: false }, () => [
+      return h('div', { class: 'app-button-group' }, [
         h(AppButton, { size: 'tiny', secondary: true, onClick: () => selectAppForVersions(row) }, () => '历史版本'),
         h(AppButton, { size: 'tiny', type: 'primary', onClick: () => downloadFromPurchased(row) }, () => '下载')
       ])
@@ -2523,8 +2475,9 @@ async function loadPurchases() {
   }
 }
 
-function onPurchasedPageSizeChange(val: number) {
-  purchasedPageSize.value = val
+function onPurchasedPageSizeChange(val: string | number | null) {
+  if (val === null) return
+  purchasedPageSize.value = Number(val)
   purchasedPage.value = 1
 }
 
@@ -2584,8 +2537,8 @@ function openGitHub() {
   BrowserOpenURL('https://github.com/wnnz/AppleVault')
 }
 
-function copyGitHubUrl() {
-  navigator.clipboard.writeText('https://github.com/wnnz/AppleVault')
+async function copyGitHubUrl() {
+  await copy('https://github.com/wnnz/AppleVault')
   message.success('已复制仓库地址到剪贴板！')
 }
 
@@ -3657,6 +3610,22 @@ onBeforeUnmount(() => {
   gap: 8px;
 }
 
+.purchased-table {
+  flex: 1;
+  min-height: 0;
+  height: auto !important;
+}
+
+.purchased-bottom-pagination {
+  display: flex;
+  flex: 0 0 40px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 6px 4px 0 12px;
+  box-sizing: border-box;
+}
+
 .page-size-selector {
   display: flex;
   align-items: center;
@@ -3664,12 +3633,12 @@ onBeforeUnmount(() => {
   margin-right: 4px;
 }
 
-:deep(.height-aligned-select .n-base-selection) {
+:deep(.height-aligned-select.app-select) {
   min-height: 30px;
   height: 30px;
 }
 
-:deep(.height-aligned-select .n-base-selection-label) {
+:deep(.height-aligned-select.app-select__label) {
   height: 30px;
 }
 
@@ -4597,1243 +4566,5 @@ onBeforeUnmount(() => {
 
 .dark-mode .empty-state-desc {
   color: #94a3b8;
-}
-
-/* Hand-drawn paper theme -------------------------------------------------- */
-.nav-icon {
-  display: none;
-}
-
-.theme-handdrawn.app-layout {
-  --hd-paper: #fffdf6;
-  --hd-paper-blue: #f4fbff;
-  --hd-ink: #173b6a;
-  --hd-muted: #6481a6;
-  --hd-blue: #168ff0;
-  --hd-blue-dark: #0d76cf;
-  --hd-line: #b8e1f8;
-  --hd-green: #4ed18c;
-  --hd-yellow: #f7c94f;
-  --hd-red: #ff5b5b;
-  --hd-control-height: 32px;
-  --hd-yellow-accent-image: url('../assets/sketch-title-accent.svg');
-  position: relative;
-  isolation: isolate;
-  background-color: var(--hd-paper);
-  background-image: url('../assets/handdrawn-paper-texture-v2.webp');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  color: var(--hd-ink);
-  font-family: "Microsoft YaHei", "Segoe UI", "PingFang SC", "DengXian", sans-serif;
-}
-
-.theme-handdrawn .app-sidebar,
-.theme-handdrawn .app-main {
-  background-color: rgba(255, 253, 246, 0.12);
-  background-image: linear-gradient(rgba(255, 253, 246, 0.12), rgba(255, 253, 246, 0.12));
-}
-
-.theme-handdrawn .app-sidebar {
-  position: relative;
-  width: 234px;
-  min-width: 234px;
-  min-height: 0;
-  border-right: 1.5px solid var(--hd-line);
-  box-shadow: 2px 0 0 rgba(22, 143, 240, 0.035);
-  padding: 16px 18px 12px 12px;
-}
-
-.theme-handdrawn .sidebar-nav {
-  min-height: 0;
-  box-sizing: border-box;
-  padding-right: 1px;
-  padding-bottom: 105px;
-  padding-left: 1px;
-  overflow-x: hidden;
-}
-
-.theme-handdrawn .height-aligned,
-.theme-handdrawn :deep(.height-aligned-btn) {
-  height: var(--hd-control-height) !important;
-  box-sizing: border-box !important;
-}
-
-.theme-handdrawn .height-aligned {
-  line-height: calc(var(--hd-control-height) - 2px) !important;
-}
-
-.theme-handdrawn :deep(.height-aligned-select .n-base-selection),
-.theme-handdrawn :deep(.height-aligned-select .n-base-selection-label) {
-  min-height: var(--hd-control-height) !important;
-  height: var(--hd-control-height) !important;
-}
-
-.theme-handdrawn .sidebar-brand,
-.theme-handdrawn .sidebar-footer {
-  flex-shrink: 0;
-}
-
-.theme-handdrawn .sidebar-brand {
-  position: relative;
-  border-bottom: 1.5px solid rgba(148, 211, 244, 0.55);
-  padding-bottom: 14px;
-}
-
-.theme-handdrawn .sidebar-brand::after {
-  content: '';
-  position: absolute;
-  top: 3px;
-  right: -2px;
-  width: 27px;
-  height: 25px;
-  background: url('../assets/sketch-title-accent.svg') center / contain no-repeat;
-  transform: rotate(-9deg);
-  pointer-events: none;
-}
-
-.theme-handdrawn .brand-icon-box {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  box-shadow: 0 3px 0 rgba(13, 118, 207, 0.18), 0 0 0 1px rgba(22, 143, 240, 0.12);
-}
-
-.theme-handdrawn .brand-name,
-.theme-handdrawn .view-title,
-.theme-handdrawn .headline-title,
-.theme-handdrawn .task-name,
-.theme-handdrawn .profile-name,
-.theme-handdrawn .field-title,
-.theme-handdrawn .action-banner-title,
-.theme-handdrawn .feature-title,
-.theme-handdrawn .about-app-title,
-.theme-handdrawn .empty-title,
-.theme-handdrawn .search-none-title {
-  color: var(--hd-ink);
-}
-
-.theme-handdrawn .brand-name,
-.theme-handdrawn .view-title,
-.theme-handdrawn .about-app-title {
-  font-family: "Microsoft YaHei", "Segoe UI", "PingFang SC", "DengXian", sans-serif;
-}
-
-.theme-handdrawn .brand-name {
-  font-size: 17px;
-}
-
-.theme-handdrawn .brand-sub {
-  font-size: 12px;
-}
-
-.theme-handdrawn .brand-sub,
-.theme-handdrawn .view-desc,
-.theme-handdrawn .user-email,
-.theme-handdrawn .quick-tool-label,
-.theme-handdrawn .filter-label,
-.theme-handdrawn .size-label,
-.theme-handdrawn .page-indicator,
-.theme-handdrawn .task-meta-bundle,
-.theme-handdrawn .task-bytes-info,
-.theme-handdrawn .time-text,
-.theme-handdrawn .field-desc,
-.theme-handdrawn .about-intro,
-.theme-handdrawn .feature-desc,
-.theme-handdrawn .about-footer-notice,
-.theme-handdrawn .status-summary-text {
-  color: var(--hd-muted);
-}
-
-.theme-handdrawn .brand-tag,
-.theme-handdrawn .count-pill {
-  color: var(--hd-blue-dark);
-  background: rgba(22, 143, 240, 0.10);
-  border: 1px solid rgba(22, 143, 240, 0.16);
-  border-radius: 7px;
-}
-
-.theme-handdrawn .brand-icon-box {
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  overflow: visible;
-}
-
-.theme-handdrawn .nav-section-title {
-  color: #7593b4;
-  font-size: 12px;
-  text-transform: none;
-  letter-spacing: 0.2px;
-  font-family: "Microsoft YaHei", "Segoe UI", "PingFang SC", "DengXian", sans-serif;
-}
-
-.theme-handdrawn .nav-item {
-  position: relative;
-  gap: 9px;
-  padding: 8px 10px;
-  border: 1px solid transparent;
-  border-radius: 10px;
-  color: #31547e;
-  font-family: "Microsoft YaHei", "Segoe UI", "PingFang SC", "DengXian", sans-serif;
-  font-size: 14.5px;
-  font-weight: 600;
-}
-
-.theme-handdrawn .nav-item:hover {
-  color: var(--hd-ink);
-  background: rgba(193, 232, 253, 0.35);
-  border-color: rgba(142, 211, 246, 0.6);
-}
-
-.theme-handdrawn .nav-item.active {
-  color: #ffffff;
-  border-color: rgba(11, 116, 204, 0.35);
-  background-color: var(--hd-blue);
-  background-image: url('../assets/sketch-blue-fill.svg');
-  background-size: 120px 40px;
-  background-position: 0 0;
-  background-repeat: repeat;
-  box-shadow: none;
-}
-
-.theme-handdrawn .nav-item.active:hover {
-  color: #ffffff;
-  border-color: rgba(8, 104, 190, 0.40);
-  background-color: #1288e2;
-  box-shadow: none;
-}
-
-.theme-handdrawn .nav-item.active::after {
-  content: '';
-  position: absolute;
-  z-index: 2;
-  top: -12px;
-  right: 0;
-  width: 34px;
-  height: 46px;
-  background: var(--hd-yellow-accent-image) center / contain no-repeat;
-  pointer-events: none;
-}
-
-.theme-handdrawn .nav-icon {
-  display: inline-flex;
-  width: 20px;
-  height: 20px;
-  flex: 0 0 20px;
-  align-items: center;
-  justify-content: center;
-  color: #5b83af;
-}
-
-.theme-handdrawn .nav-item.active .nav-icon {
-  color: #ffffff;
-}
-
-.theme-handdrawn .nav-icon-image {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.theme-handdrawn .nav-badge {
-  background: var(--hd-red);
-  box-shadow: 0 1px 0 rgba(190, 54, 54, 0.25);
-}
-
-.theme-handdrawn .sidebar-footer {
-  position: fixed;
-  left: 12px;
-  width: 204px;
-  bottom: 8px;
-  border-top: 1.5px solid rgba(148, 211, 244, 0.55);
-}
-
-.theme-handdrawn .sidebar-account-card {
-  box-sizing: border-box;
-  border: 1px solid transparent;
-  border-image: url('../assets/sketch-frame-soft.svg') 24 / 8px stretch;
-  border-radius: 0;
-  background-color: rgba(231, 247, 255, 0.72);
-  background-image: none;
-  box-shadow: inset 0 0 12px rgba(115, 198, 240, 0.08);
-}
-
-.theme-handdrawn .sidebar-account-card:hover {
-  background: rgba(215, 241, 255, 0.92);
-}
-
-.theme-handdrawn .user-avatar.avatar-logged,
-.theme-handdrawn .large-avatar.avatar-active {
-  background-color: transparent;
-  background-image: url('../assets/sketch-avatar-badge.svg');
-  background-size: 100% 100%;
-  background-position: center;
-  background-repeat: no-repeat;
-  color: #ffffff;
-  box-shadow: 0 2px 0 rgba(13, 118, 207, 0.20);
-}
-
-.theme-handdrawn .user-name {
-  color: var(--hd-ink);
-  font-family: "Microsoft YaHei", "Segoe UI", "PingFang SC", "DengXian", sans-serif;
-}
-
-.theme-handdrawn .icon-action-btn {
-  box-sizing: border-box;
-  border: 1px solid transparent;
-  border-image: url('../assets/sketch-frame-blue.svg') 24 / 7px stretch;
-  border-radius: 0;
-  background-color: rgba(255, 255, 255, 0.68);
-  background-image: none;
-  color: #5d84ad;
-  font-family: "Microsoft YaHei", "Segoe UI", "PingFang SC", "DengXian", sans-serif;
-  box-shadow: none;
-}
-
-.theme-handdrawn .icon-action-btn:hover,
-.theme-handdrawn .icon-action-btn.active {
-  color: var(--hd-blue-dark);
-  background-color: rgba(239, 250, 255, 0.82);
-  background-image: none;
-  box-shadow: none;
-}
-
-.theme-handdrawn .app-main {
-  position: relative;
-  min-width: 0;
-  min-height: 0;
-  color: var(--hd-ink);
-}
-
-.theme-handdrawn .view-content-wrapper {
-  position: relative;
-  min-width: 0;
-  min-height: 0;
-  padding: 20px 18px 8px 14px;
-}
-
-.theme-handdrawn .field-control {
-  width: 372px;
-  min-width: 372px;
-}
-
-.theme-handdrawn.active-tab-settings .view-header {
-  padding-right: 16px;
-}
-
-.theme-handdrawn.active-tab-settings .field-control {
-  transform: translateX(-4px);
-}
-
-.theme-handdrawn.active-tab-settings .settings-group:nth-child(3) {
-  padding-bottom: 9px;
-}
-
-.theme-handdrawn.active-tab-settings .settings-group:nth-child(4) {
-  margin-top: -4px;
-  padding-bottom: 8px;
-}
-
-.theme-handdrawn.active-tab-settings .settings-group:nth-child(3) .settings-field-row:nth-child(2) .field-control {
-  transform: translate(-4px, -6px);
-}
-
-.theme-handdrawn.active-tab-settings .settings-group:nth-child(3) .settings-field-row:nth-child(3) .field-control {
-  transform: translate(-4px, -13px);
-}
-
-.theme-handdrawn.active-tab-settings .settings-group:nth-child(4) .settings-field-row:nth-child(2) .field-control {
-  transform: translate(-4px, -4px);
-}
-
-.theme-handdrawn.active-tab-settings .settings-group:nth-child(4) .settings-field-row:nth-child(3) .field-control {
-  transform: translate(-4px, -6px);
-}
-
-.theme-handdrawn .view-panel {
-  min-width: 0;
-  min-height: 0;
-}
-
-.theme-handdrawn .view-header {
-  position: relative;
-  z-index: 1;
-  margin-bottom: 14px;
-}
-
-.theme-handdrawn .view-header > * {
-  position: relative;
-  z-index: 1;
-}
-
-.theme-handdrawn .view-header > :first-child {
-  transform: translate(11px, 5px);
-}
-
-.theme-handdrawn.active-tab-search .view-header::after,
-.theme-handdrawn.active-tab-installer .view-header::after,
-.theme-handdrawn.active-tab-account .view-header::after,
-.theme-handdrawn.active-tab-about .view-header::after,
-.theme-handdrawn.active-tab-versions .view-header::after,
-.theme-handdrawn.active-tab-purchased .view-header::after {
-  content: '';
-  position: fixed;
-  z-index: 0;
-  top: 0;
-  right: 10px;
-  width: 225px;
-  height: 105px;
-  background-size: 100% 100%;
-  background-position: center;
-  background-repeat: no-repeat;
-  pointer-events: none;
-}
-
-.theme-handdrawn.active-tab-search .view-header::after,
-.theme-handdrawn.active-tab-installer .view-header::after,
-.theme-handdrawn.active-tab-account .view-header::after,
-.theme-handdrawn.active-tab-about .view-header::after {
-  background-image: url('../assets/handdrawn-header-art.webp');
-}
-
-.theme-handdrawn.active-tab-versions .view-header::after {
-  right: 55px;
-  background-image: url('../assets/handdrawn-versions-header-decoration.webp');
-  background-size: 100% 100%;
-  background-position: left top;
-}
-
-.theme-handdrawn.active-tab-purchased .view-header::after {
-  right: 3px;
-  width: 130px;
-  background-image: url('../assets/handdrawn-purchased-header-decoration.webp');
-  background-size: 100% 100%;
-  background-position: center top;
-}
-
-.theme-handdrawn .view-title {
-  font-size: 24px;
-  font-weight: 700;
-  line-height: 1.25;
-  letter-spacing: 0;
-  text-shadow: 0.35px 0 var(--hd-ink);
-}
-
-.theme-handdrawn.active-tab-versions .view-header {
-  margin-bottom: 4px;
-}
-
-.theme-handdrawn.active-tab-versions .view-panel > .clean-card.mb-4 {
-  padding: 23px 16px 9px 24px;
-}
-
-.theme-handdrawn.active-tab-versions .bundle-input-row,
-.theme-handdrawn.active-tab-versions .filter-search-row,
-.theme-handdrawn.active-tab-versions .clean-input-prefix-box,
-.theme-handdrawn.active-tab-versions .filter-input,
-.theme-handdrawn.active-tab-versions .bundle-input-row :deep(.n-button) {
-  height: var(--hd-control-height) !important;
-}
-
-.theme-handdrawn.active-tab-versions .bundle-input-row :deep(.n-button) {
-  min-width: 0 !important;
-  padding-right: 10px !important;
-  padding-left: 10px !important;
-  font-size: 13px !important;
-}
-
-.theme-handdrawn.active-tab-versions .bundle-input-row :deep(.n-button:nth-of-type(1)) {
-  width: 105px;
-}
-
-.theme-handdrawn.active-tab-versions .bundle-input-row :deep(.n-button:nth-of-type(2)) {
-  width: 128px;
-}
-
-.theme-handdrawn.active-tab-versions .bundle-input-row :deep(.n-button:nth-of-type(3)) {
-  width: 105px;
-}
-
-.theme-handdrawn .view-title::after {
-  content: '';
-  display: inline-block;
-  width: 24px;
-  height: 20px;
-  margin-left: 7px;
-  background: url('../assets/sketch-title-accent.svg') center / contain no-repeat;
-  transform: translateY(-2px);
-}
-
-.theme-handdrawn .header-right-badges {
-  margin-right: 3px;
-}
-
-.theme-handdrawn .count-pill {
-  padding: 4px 8px;
-  font-size: 14px;
-}
-
-.theme-handdrawn .purchased-header-actions {
-  margin-right: 18px;
-  transform: translateY(8px);
-}
-
-.theme-handdrawn .purchased-header-actions > :deep(.n-button) {
-  width: 86px;
-  min-width: 86px;
-}
-
-.theme-handdrawn.active-tab-purchased .purchased-search-toolbar {
-  height: 60px;
-  margin-bottom: 5px !important;
-}
-
-.theme-handdrawn.active-tab-purchased .purchased-search-input-box,
-.theme-handdrawn.active-tab-purchased .purchased-page-controls,
-.theme-handdrawn.active-tab-purchased .purchased-page-controls :deep(.n-button),
-.theme-handdrawn.active-tab-purchased .purchased-page-controls :deep(.n-base-selection) {
-  height: var(--hd-control-height) !important;
-}
-
-.theme-handdrawn.active-tab-purchased .table-flex-card {
-  box-sizing: border-box;
-  flex: 0 0 520px;
-  height: 520px;
-  padding: 10px;
-}
-
-.theme-handdrawn.active-tab-purchased :deep(.n-data-table-td) {
-  height: 42px;
-}
-
-.theme-handdrawn .view-desc {
-  font-size: 13px;
-  font-family: "Microsoft YaHei", "Segoe UI", "PingFang SC", "DengXian", sans-serif;
-}
-
-.theme-handdrawn .clean-card,
-.theme-handdrawn .modern-task-card,
-.theme-handdrawn .empty-state-card,
-.theme-handdrawn .installer-action-banner {
-  position: relative;
-  isolation: isolate;
-  background-color: rgba(255, 255, 255, 0.42);
-  background-image: linear-gradient(rgba(255, 255, 255, 0.36), rgba(255, 255, 255, 0.30)), url('../assets/handdrawn-paper-texture-v2.webp');
-  background-size: cover, cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  border: 1.5px solid transparent;
-  border-radius: 14px;
-  box-shadow: 0 2px 0 rgba(120, 194, 232, 0.12), inset 0 0 18px rgba(179, 226, 249, 0.08);
-}
-
-.theme-handdrawn .clean-card::before,
-.theme-handdrawn .modern-task-card::before,
-.theme-handdrawn .empty-state-card::before,
-.theme-handdrawn .installer-action-banner::before {
-  content: '';
-  position: absolute;
-  z-index: 0;
-  inset: 0;
-  border-radius: inherit;
-  box-sizing: border-box;
-  border: 1px solid transparent;
-  border-image: url('../assets/sketch-frame-blue.svg') 24 / 9px stretch;
-  background: none;
-  opacity: 0.58;
-  pointer-events: none;
-}
-
-.theme-handdrawn .search-bar-card::before {
-  opacity: 0.48;
-}
-
-.theme-handdrawn .table-flex-card::before {
-  /* The outer and inner table outlines share deterministic SVG nine-slice
-     frames so their corners stay stable at every table height. */
-  z-index: 2;
-  border-image-source: url('../assets/sketch-frame-soft.svg');
-  opacity: 0.50;
-}
-
-.theme-handdrawn .clean-card > *,
-.theme-handdrawn .modern-task-card > *,
-.theme-handdrawn .empty-state-card > *,
-.theme-handdrawn .installer-action-banner > * {
-  position: relative;
-  z-index: 1;
-}
-
-.theme-handdrawn .clean-card.table-flex-card {
-  padding: 7px;
-}
-
-.theme-handdrawn.active-tab-download .task-grid {
-  gap: 5px;
-  padding-top: 0;
-}
-
-.theme-handdrawn.active-tab-download .modern-task-card {
-  box-sizing: border-box;
-  height: 125px;
-  margin-right: -3px;
-  margin-left: 5px;
-  padding: 17px 19px 18px;
-}
-
-.theme-handdrawn.active-tab-download .view-header {
-  margin-bottom: 10px;
-}
-
-.theme-handdrawn.active-tab-download .modern-task-card:nth-child(2) {
-  transform: translateY(1px);
-}
-
-.theme-handdrawn.active-tab-download .modern-task-card:nth-child(4) {
-  height: 124px;
-  transform: translateY(-6px);
-}
-
-.theme-handdrawn.active-tab-installer .view-panel {
-  box-sizing: border-box;
-  padding-bottom: 23px;
-}
-
-.theme-handdrawn.active-tab-installer .installer-grid {
-  grid-template-columns: 0.965fr 1.035fr;
-  margin-top: 3px;
-}
-
-.theme-handdrawn.active-tab-installer .installer-action-banner {
-  margin-top: 9px !important;
-  padding-top: 18px;
-  padding-bottom: 18px;
-}
-
-.theme-handdrawn.active-tab-account .two-columns-layout {
-  grid-template-columns: 1.025fr 0.975fr;
-  margin-top: 6px;
-}
-
-.theme-handdrawn.active-tab-account .two-columns-layout > .clean-card {
-  min-height: 306px;
-}
-
-.theme-handdrawn.active-tab-account .large-avatar {
-  width: 58px;
-  height: 58px;
-}
-
-.theme-handdrawn .clean-input,
-.theme-handdrawn .clean-input-prefix-box,
-.theme-handdrawn .purchased-search-input-box {
-  box-sizing: border-box;
-  border: 1px solid transparent;
-  border-image: url('../assets/sketch-frame-blue.svg') 24 / 7px stretch;
-  border-radius: 0;
-  background-color: transparent;
-  background-image: none;
-  color: var(--hd-ink);
-  box-shadow: none;
-}
-
-.theme-handdrawn .clean-input-prefix-box .clean-input {
-  background: transparent;
-  background-image: none;
-}
-
-.theme-handdrawn .clean-input::placeholder,
-.theme-handdrawn .purchased-search-input::placeholder {
-  color: #7f9cba;
-}
-
-.theme-handdrawn .clean-input:focus,
-.theme-handdrawn .clean-input-prefix-box:focus-within,
-.theme-handdrawn .purchased-search-input-box:focus-within {
-  border-color: transparent;
-  background-color: transparent;
-  background-image: none;
-  box-shadow: none;
-}
-
-.theme-handdrawn .clean-input-prefix-box .clean-input:focus {
-  background: transparent;
-  background-image: none;
-  box-shadow: none;
-}
-
-.theme-handdrawn .prefix-label {
-  color: var(--hd-muted);
-  border-right-color: var(--hd-line);
-}
-
-.theme-handdrawn .purchased-search-input {
-  color: var(--hd-ink);
-}
-
-.theme-handdrawn .search-clear-btn:hover {
-  color: var(--hd-blue-dark);
-  background: rgba(175, 226, 251, 0.35);
-}
-
-.theme-handdrawn .tag-version-highlight {
-  color: #168052;
-  background: rgba(78, 209, 140, 0.16);
-  border: 1px solid rgba(78, 209, 140, 0.24);
-  border-radius: 6px;
-}
-
-.theme-handdrawn .task-pill-ver,
-.theme-handdrawn .headline-badge,
-.theme-handdrawn .engine-badge-box {
-  color: #168052;
-  background: rgba(78, 209, 140, 0.16);
-  border: 1px solid rgba(78, 209, 140, 0.24);
-}
-
-.theme-handdrawn .task-pill-build,
-.theme-handdrawn .pill-gray {
-  color: var(--hd-muted);
-  background: rgba(210, 236, 249, 0.55);
-  border: 1px solid rgba(169, 221, 251, 0.65);
-}
-
-.theme-handdrawn :deep(.n-progress-graph-line-rail) {
-  background-color: rgba(225, 239, 247, 0.74) !important;
-  background-image: url('../assets/sketch-progress-rail.svg') !important;
-  background-size: 100% 100%;
-  background-position: center;
-  background-repeat: no-repeat;
-  border-radius: 5px;
-}
-
-.theme-handdrawn :deep(.task-progress-downloading .n-progress-graph-line-fill) {
-  background-color: var(--hd-blue) !important;
-  background-image: url('../assets/sketch-progress-blue.svg') !important;
-  background-size: 100% 100%;
-  background-position: center;
-  background-repeat: no-repeat;
-  border-radius: 5px;
-}
-
-.theme-handdrawn :deep(.task-progress-completed .n-progress-graph-line-fill) {
-  background-color: var(--hd-green) !important;
-  background-image: url('../assets/sketch-progress-green.svg') !important;
-  background-size: 100% 100%;
-  background-position: center;
-  background-repeat: no-repeat;
-  border-radius: 5px;
-}
-
-.theme-handdrawn .task-speed,
-.theme-handdrawn .pct-text,
-.theme-handdrawn .settings-group-title,
-.theme-handdrawn .about-section-label {
-  color: var(--hd-blue-dark);
-}
-
-.theme-handdrawn .purchased-search-badge.has-filter {
-  color: var(--hd-blue-dark);
-}
-
-.theme-handdrawn .purchased-loading-bar-indeterminate {
-  background: #dceff9;
-  border: 1px solid #b5dff6;
-}
-
-.theme-handdrawn .purchased-loading-bar-indeterminate::after {
-  background: var(--hd-blue);
-}
-
-.theme-handdrawn .clean-drop-zone {
-  box-sizing: border-box;
-  border: 1px solid transparent;
-  border-image: url('../assets/sketch-frame-green.svg') 24 / 9px stretch;
-  border-radius: 0;
-  background-color: rgba(239, 253, 246, 0.62);
-  background-image: url('../assets/handdrawn-paper-texture-v2.webp');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  box-shadow: inset 0 0 14px rgba(78, 209, 140, 0.07);
-}
-
-.theme-handdrawn .clean-drop-zone:hover,
-.theme-handdrawn .clean-drop-zone.drop-active {
-  border: 1px solid transparent;
-  border-image: url('../assets/sketch-frame-green.svg') 24 / 9px stretch;
-  background-color: rgba(226, 247, 255, 0.78);
-  background-image: url('../assets/handdrawn-paper-texture-v2.webp');
-}
-
-.theme-handdrawn .device-spec-box,
-.theme-handdrawn .about-section-box,
-.theme-handdrawn .about-feature-item {
-  box-sizing: border-box;
-  border: 1px solid transparent;
-  border-image: url('../assets/sketch-frame-soft.svg') 24 / 8px stretch;
-  border-radius: 0;
-  background-color: rgba(234, 248, 255, 0.46);
-  background-image: none;
-}
-
-.theme-handdrawn .about-section-box {
-  padding-top: 14px;
-  padding-bottom: 14px;
-}
-
-.theme-handdrawn .about-feature-item {
-  padding-top: 16px;
-  padding-bottom: 16px;
-}
-
-.theme-handdrawn .sub-alert-box {
-  background-color: rgba(234, 248, 255, 0.46);
-  background-image: none;
-  color: #21689c;
-  border: 0;
-  border-radius: 0;
-}
-
-.theme-handdrawn .settings-stack,
-.theme-handdrawn .about-card-stack {
-  scrollbar-color: #acdff8 transparent;
-}
-
-.theme-handdrawn.active-tab-about .about-card-stack {
-  gap: 13px;
-  padding-right: 20px;
-  padding-left: 20px;
-}
-
-.theme-handdrawn.active-tab-about .about-hero {
-  gap: 30px;
-  padding-right: 32px;
-  padding-left: 32px;
-}
-
-.theme-handdrawn.active-tab-about .about-large-icon {
-  width: 76px;
-  height: 76px;
-}
-
-.theme-handdrawn .settings-group,
-.theme-handdrawn .about-hero,
-.theme-handdrawn .about-footer-notice {
-  border-bottom-color: rgba(169, 221, 251, 0.65);
-  border-top-color: rgba(169, 221, 251, 0.65);
-}
-
-.theme-handdrawn .bottom-status-bar {
-  background: rgba(255, 253, 246, 0.58);
-  border-top: 1.5px solid var(--hd-line);
-  color: var(--hd-muted);
-}
-
-.theme-handdrawn .status-pulse,
-.theme-handdrawn .indicator-completed {
-  background-color: var(--hd-green);
-  box-shadow: 0 0 5px rgba(78, 209, 140, 0.45);
-}
-
-.theme-handdrawn .status-btn {
-  color: var(--hd-muted);
-}
-
-.theme-handdrawn .status-btn:hover {
-  color: var(--hd-blue-dark);
-  background: rgba(190, 232, 251, 0.42);
-}
-
-.theme-handdrawn :deep(.setting-fixed-btn) {
-  width: 76px !important;
-  min-width: 76px !important;
-}
-
-/* The reference search control carries three small yellow pencil strokes at
-   its right edge. The same deterministic SVG accent is shared by all primary
-   actions that use this motif. */
-.theme-handdrawn .search-bar-card :deep(.n-button--primary-type) {
-  position: relative;
-  width: 64px;
-  min-width: 64px;
-  overflow: visible !important;
-}
-
-.theme-handdrawn .search-bar-card :deep(.n-button--primary-type)::after {
-  content: '';
-  position: absolute;
-  z-index: 3;
-  top: -8px;
-  right: -14px;
-  width: 22px;
-  height: 35px;
-  background: var(--hd-yellow-accent-image) center / contain no-repeat;
-  pointer-events: none;
-}
-
-.theme-handdrawn :deep(.copy-address-btn) {
-  position: relative;
-  overflow: visible !important;
-}
-
-.theme-handdrawn :deep(.copy-address-btn)::after {
-  content: '';
-  position: absolute;
-  z-index: 3;
-  top: -6px;
-  right: -12px;
-  width: 18px;
-  height: 28px;
-  background: var(--hd-yellow-accent-image) center / contain no-repeat;
-  pointer-events: none;
-}
-
-.theme-handdrawn :deep(.settings-save-btn.height-aligned-btn) {
-  position: relative;
-  width: 144px;
-  min-width: 144px;
-  height: 40px !important;
-  font-size: 14px !important;
-  transform: translateY(-2px);
-  overflow: visible !important;
-}
-
-.theme-handdrawn :deep(.settings-save-btn)::after {
-  content: '';
-  position: absolute;
-  z-index: 3;
-  top: -7px;
-  right: -13px;
-  width: 19px;
-  height: 30px;
-  background: var(--hd-yellow-accent-image) center / contain no-repeat;
-  pointer-events: none;
-}
-
-.theme-handdrawn :deep(.n-base-selection) {
-  border-radius: 0 !important;
-  box-sizing: border-box;
-  border: 1px solid transparent !important;
-  border-image: url('../assets/sketch-frame-blue.svg') 24 / 7px stretch !important;
-  background-color: transparent !important;
-  background-image: none !important;
-  box-shadow: none !important;
-}
-
-.theme-handdrawn :deep(.n-base-selection:hover),
-.theme-handdrawn :deep(.n-base-selection--active) {
-  border-color: transparent !important;
-  background-color: transparent !important;
-  background-image: none !important;
-}
-
-.theme-handdrawn :deep(.n-base-selection-label),
-.theme-handdrawn :deep(.n-base-selection-input__content) {
-  color: var(--hd-ink) !important;
-}
-
-.theme-handdrawn :deep(.n-base-selection-label),
-.theme-handdrawn :deep(.n-base-selection-input) {
-  background: transparent !important;
-}
-
-.theme-handdrawn :deep(.n-switch) {
-  --n-rail-width: 45px !important;
-  --n-rail-height: 25px !important;
-  --n-width: 45px !important;
-  --n-height: 25px !important;
-  --n-button-width: 21px !important;
-  --n-button-width-pressed: 21px !important;
-  --n-button-height: 21px !important;
-  --n-offset: 2px !important;
-  width: 45px !important;
-  min-width: 45px !important;
-  height: 25px !important;
-}
-
-.theme-handdrawn :deep(.n-switch__rail) {
-  background: rgba(195, 226, 242, 0.72) !important;
-  border: 1px solid rgba(137, 201, 237, 0.82);
-  border-radius: 12px !important;
-  box-shadow: inset 0 1px 2px rgba(70, 150, 203, 0.10) !important;
-}
-
-.theme-handdrawn :deep(.n-switch--active .n-switch__rail) {
-  border: 0;
-  background-color: transparent !important;
-  background-image: url('../assets/sketch-switch-on.svg') !important;
-  background-size: 100% 100% !important;
-  background-position: center !important;
-  background-repeat: no-repeat !important;
-  box-shadow: none !important;
-}
-
-.theme-handdrawn :deep(.n-switch--active .n-switch__button) {
-  opacity: 0 !important;
-  box-shadow: none !important;
-}
-
-.theme-handdrawn :deep(.n-switch:not(.n-switch--active) .n-switch__button) {
-  background: #fffdfb !important;
-  border: 1px solid rgba(137, 201, 237, 0.62);
-  box-shadow: 0 1px 2px rgba(70, 150, 203, 0.16) !important;
-}
-
-.theme-handdrawn :deep(.n-data-table) {
-  background: transparent !important;
-  color: var(--hd-ink) !important;
-}
-
-.theme-handdrawn :deep(.n-data-table-wrapper) {
-  position: relative;
-  border: 1px solid transparent;
-  border-radius: 12px;
-  overflow: hidden;
-  background: transparent !important;
-}
-
-.theme-handdrawn :deep(.n-data-table-wrapper::before) {
-  content: '';
-  position: absolute;
-  z-index: 2;
-  inset: 0;
-  border-radius: inherit;
-  box-sizing: border-box;
-  border: 1px solid transparent;
-  border-image: url('../assets/sketch-frame-blue.svg') 24 / 8px stretch;
-  background: none;
-  opacity: 0.82;
-  pointer-events: none;
-}
-
-.theme-handdrawn :deep(.n-data-table-wrapper > *) {
-  position: relative;
-  z-index: 1;
-}
-
-.theme-handdrawn :deep(.n-data-table .n-data-table-th) {
-  color: var(--hd-ink) !important;
-  background-color: rgba(234, 248, 255, 0.34) !important;
-  background-image: linear-gradient(rgba(234, 248, 255, 0.24), rgba(234, 248, 255, 0.18)), url('../assets/handdrawn-paper-texture-v2.webp') !important;
-  background-size: cover, 520px auto !important;
-  background-position: center !important;
-  border-color: rgba(169, 221, 251, 0.56) !important;
-  font-weight: 600;
-}
-
-.theme-handdrawn :deep(.n-data-table .n-data-table-td) {
-  color: #244d7a !important;
-  background: rgba(255, 255, 255, 0.28) !important;
-  border-color: rgba(184, 225, 248, 0.58) !important;
-}
-
-.theme-handdrawn.active-tab-search :deep(.n-data-table-th:first-child),
-.theme-handdrawn.active-tab-search :deep(.n-data-table-td:first-child),
-.theme-handdrawn.active-tab-purchased :deep(.n-data-table-th:first-child),
-.theme-handdrawn.active-tab-purchased :deep(.n-data-table-td:first-child) {
-  padding-left: 16px !important;
-}
-
-.theme-handdrawn.active-tab-versions :deep(.n-data-table-th:first-child),
-.theme-handdrawn.active-tab-versions :deep(.n-data-table-td:first-child) {
-  padding-left: 24px !important;
-}
-
-.theme-handdrawn :deep(.n-data-table .n-data-table-tr:hover .n-data-table-td) {
-  background: rgba(225, 247, 255, 0.72) !important;
-}
-
-.theme-handdrawn :deep(.n-pagination .n-button) {
-  min-width: 30px;
-  background-image: none !important;
-  border: 1px solid rgba(169, 221, 251, 0.72) !important;
-  background-color: rgba(255, 255, 255, 0.44) !important;
-  font-family: "Microsoft YaHei", "Segoe UI", "PingFang SC", "DengXian", sans-serif;
-}
-
-.theme-handdrawn .handdrawn-sidebar-floating-leaf {
-  position: absolute;
-  z-index: 0;
-  top: 286px;
-  right: 20px;
-  width: 40px;
-  height: 58px;
-  pointer-events: none;
-}
-
-.theme-handdrawn .handdrawn-sidebar-floating-leaf img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.theme-handdrawn .handdrawn-sidebar-art {
-  position: fixed;
-  z-index: 11;
-  left: 12px;
-  width: 204px;
-  bottom: 91px;
-  height: 158px;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.theme-handdrawn .handdrawn-sidebar-art img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center;
-}
-
-.theme-handdrawn .sidebar-brand,
-.theme-handdrawn .sidebar-nav {
-  position: relative;
-  z-index: 1;
-}
-
-.theme-handdrawn .sidebar-footer {
-  position: fixed;
-  z-index: 12;
-}
-
-.theme-handdrawn .handdrawn-sidebar-art .doodle-dash,
-.theme-handdrawn .handdrawn-sidebar-art .doodle-plane,
-.theme-handdrawn .handdrawn-sidebar-art .doodle-leaf,
-.theme-handdrawn .handdrawn-sidebar-art .doodle-flower,
-.theme-handdrawn .handdrawn-sidebar-art .doodle-star {
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 2;
-}
-
-.theme-handdrawn .handdrawn-sidebar-art .doodle-dash {
-  stroke: #73c5f6;
-  stroke-dasharray: 7 8;
-}
-
-.theme-handdrawn .handdrawn-sidebar-art .doodle-plane {
-  stroke: #67b9f2;
-}
-
-.theme-handdrawn .handdrawn-sidebar-art .doodle-leaf {
-  stroke: #64cda4;
-  fill: rgba(100, 205, 164, 0.10);
-}
-
-.theme-handdrawn .handdrawn-sidebar-art .doodle-flower {
-  stroke: #f5c854;
-}
-
-.theme-handdrawn .handdrawn-sidebar-art .doodle-star {
-  stroke: #f5c854;
-}
-
-/* The shipped window is intentionally compact on high-DPI Windows displays.
-   Preserve the reference proportions at full size, but keep the complete
-   hand-drawn sidebar visible in the compact viewport as well. */
-@media (max-height: 900px) {
-  .theme-handdrawn .app-sidebar {
-    padding: 16px 18px 10px 12px;
-  }
-
-  .theme-handdrawn .sidebar-brand {
-    padding: 6px 13px 14px;
-  }
-
-  .theme-handdrawn .brand-icon-box {
-    width: 46px;
-    height: 46px;
-    margin-right: 10px;
-  }
-
-  .theme-handdrawn .brand-name {
-    font-size: 17px;
-  }
-
-  .theme-handdrawn .brand-sub {
-    font-size: 12px;
-  }
-
-  .theme-handdrawn .sidebar-nav {
-    position: relative;
-    left: 4px;
-    padding-top: 8px;
-    padding-bottom: 118px;
-  }
-
-  .theme-handdrawn .nav-section-title {
-    padding: 6px 10px 4px;
-    font-size: 12px;
-  }
-
-  .theme-handdrawn .nav-section-title.mt-4 {
-    margin-top: 12px;
-  }
-
-  .theme-handdrawn .nav-item {
-    padding: 8px 10px;
-    margin-bottom: 2px;
-    font-size: 14.5px;
-  }
-
-  .theme-handdrawn .nav-icon {
-    width: 20px;
-    height: 20px;
-    flex-basis: 20px;
-  }
-
-  .theme-handdrawn .nav-icon-image {
-    width: 20px;
-    height: 20px;
-  }
-
-  .theme-handdrawn .sidebar-footer {
-    left: 15px;
-    width: 201px;
-    padding-top: 8px;
-    gap: 6px;
-    bottom: 23px;
-  }
-
-  .theme-handdrawn .sidebar-account-card {
-    padding: 7px 8px;
-  }
-
-  .theme-handdrawn .user-avatar {
-    width: 39px;
-    height: 37px;
-    font-size: 14px;
-    margin-left: 2px;
-    margin-right: 8px;
-    transform: translateY(-2px);
-  }
-
-  .theme-handdrawn .user-name {
-    font-size: 13px;
-  }
-
-  .theme-handdrawn .user-email {
-    font-size: 10px;
-  }
-
-  .theme-handdrawn .quick-tool-label {
-    font-size: 13px;
-  }
-
-  .theme-handdrawn .handdrawn-sidebar-art {
-    bottom: 115px;
-    height: 130px;
-  }
-
-  .theme-handdrawn .handdrawn-sidebar-floating-leaf {
-    top: 305px;
-    right: 9px;
-    width: 47px;
-    height: 61px;
-  }
 }
 </style>

@@ -1,8 +1,7 @@
 import { createApp } from 'vue'
 import App from './App.vue'
+import 'virtual:uno.css'
 import './style.css'
-import naive from 'naive-ui'
+import './ui/themes/index.css'
 
-const app = createApp(App)
-app.use(naive)
-app.mount('#app')
+createApp(App).mount('#app')
