@@ -823,7 +823,6 @@ func (a *App) Search(term string, limit int, platform string) (SearchResult, err
 }
 
 func (a *App) ListVersions(bundleId string, appId int64) (VersionsResult, error) {
-	ctx := a.startCommandContext()
 	args := []string{"list-versions", "--format", "json"}
 	if bundleId != "" {
 		args = append(args, "-b", bundleId)
@@ -833,8 +832,21 @@ func (a *App) ListVersions(bundleId string, appId int64) (VersionsResult, error)
 		return VersionsResult{}, fmt.Errorf("必须提供 Bundle ID 或 App ID")
 	}
 
-	out, err := a.runIpaTool(ctx, args...)
-	if err != nil {
+	var out string
+	var err error
+	maxAttempts := 3
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		ctx := a.startCommandContext()
+		out, err = a.runIpaTool(ctx, args...)
+		if err == nil {
+			break
+		}
+		errStr := err.Error()
+		if (strings.Contains(errStr, "HTTP 500") || strings.Contains(errStr, "empty or non-plist body")) && attempt < maxAttempts-1 {
+			a.emitLog(fmt.Sprintf("[网络重试] 查询版本列表遇到 Apple 偶发 500 响应，正在自动重试 (%d/%d)...", attempt+1, maxAttempts))
+			time.Sleep(time.Duration(400*(attempt+1)) * time.Millisecond)
+			continue
+		}
 		return VersionsResult{}, err
 	}
 
