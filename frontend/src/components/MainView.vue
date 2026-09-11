@@ -201,7 +201,14 @@
                       </div>
                     </div>
                     <div class="theme-info-box">
-                      <div class="theme-item-name">{{ item.name }}</div>
+                      <div class="theme-item-name">
+                        <span>{{ item.name }}</span>
+                        <span v-if="item.recommended" class="theme-thumb-badge" title="精选推荐">
+                          <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true">
+                            <path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"></path>
+                          </svg>
+                        </span>
+                      </div>
                       <div class="theme-item-desc">{{ item.description }}</div>
                     </div>
                     <div v-if="effectiveTheme === item.key" class="theme-check-icon">

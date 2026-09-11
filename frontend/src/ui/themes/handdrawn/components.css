@@ -1402,3 +1402,7 @@ body.theme-handdrawn {
 .theme-popover-menu.theme-handdrawn .theme-check-icon {
   color: #168ff0;
 }
+
+.theme-popover-menu.theme-handdrawn .theme-thumb-badge {
+  color: #ea8a00;
+}

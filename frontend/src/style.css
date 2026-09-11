@@ -151,9 +151,26 @@ html, body, #app {
 }
 
 .theme-item-name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   font-size: 13px;
   font-weight: 600;
   line-height: 1.25;
+}
+
+.theme-thumb-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #f59e0b;
+  flex-shrink: 0;
+  transform: translateY(-0.5px);
+  transition: transform 0.2s ease;
+}
+
+.theme-select-item:hover .theme-thumb-badge {
+  transform: translateY(-0.5px) scale(1.15) rotate(-6deg);
 }
 
 .theme-item-desc {

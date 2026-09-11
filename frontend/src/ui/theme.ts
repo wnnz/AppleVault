@@ -7,6 +7,7 @@ export interface ThemeOption {
   key: AppTheme
   name: string
   description: string
+  recommended?: boolean
   preview: { bg: string; card: string; border: string; accent: string; text: string }
 }
 
@@ -20,7 +21,7 @@ export const themeOptions: ThemeOption[] = [
     preview: { bg: '#0f172a', card: '#1e293b', border: '#334155', accent: '#0284c7', text: '#f1f5f9' }
   },
   {
-    key: 'handdrawn', name: '手绘纸张', description: '纸张纹理与手绘素材主题',
+    key: 'handdrawn', name: '纸间手绘', description: '温润纸感与手绘插画主题', recommended: true,
     preview: { bg: '#fffdf6', card: '#f4fbff', border: '#b8e1f8', accent: '#168ff0', text: '#173b6a' }
   }
 ]
