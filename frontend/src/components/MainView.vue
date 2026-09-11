@@ -4645,7 +4645,10 @@ onBeforeUnmount(() => {
 
 .theme-handdrawn .sidebar-nav {
   min-height: 0;
+  box-sizing: border-box;
+  padding-right: 1px;
   padding-bottom: 105px;
+  padding-left: 1px;
   overflow-x: hidden;
 }
 
