@@ -512,14 +512,12 @@
 
         <!-- VIEW 4: 已购应用 (purchased) -->
         <div v-show="activeTab === 'purchased'" class="view-panel">
-          <div class="view-header">
-            <div>
+          <div class="view-header purchased-view-header">
+            <div class="purchased-header-copy">
               <div class="title-with-badge">
                 <h2 class="view-title">已购应用</h2>
               </div>
               <p class="view-desc">浏览与检索当前 Apple ID 名下已获得正版许可的历史应用库</p>
-            </div>
-            <div class="purchased-header-actions">
               <div v-if="isPurchasedLoading" class="purchased-loading-progress" role="status" aria-live="polite">
                 <AppProgress
                   v-if="purchasedLoadTotal > 0"
@@ -533,23 +531,9 @@
                 </span>
                 <span v-else class="purchased-loading-count loading-total-text">读取总数…</span>
               </div>
-              <AppButton
-                type="primary"
-                size="small"
-                class="small-aligned-btn"
-                :loading="isPurchasedLoading"
-                @click="loadPurchases"
-              >
-                刷新列表
-              </AppButton>
             </div>
-          </div>
-
-          <!-- 搜索与筛选工具栏 -->
-          <AppCard class="clean-card mb-3 purchased-search-toolbar">
-            <div class="purchased-search-left">
-              <!-- 搜索输入框 -->
-              <div class="purchased-search-input-box">
+            <div class="purchased-header-actions">
+              <div class="purchased-search-input-box purchased-header-search">
                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" class="search-icon">
                   <circle cx="11" cy="11" r="8"></circle>
                   <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -557,7 +541,7 @@
                 <AppInput
                   v-model="purchasedSearchKeyword"
                   class="purchased-search-input"
-                  placeholder="搜索已购应用名称、Bundle ID 或 App ID..."
+                  placeholder="搜索名称、Bundle ID 或 App ID..."
                   @keydown.esc="purchasedSearchKeyword = ''"
                 />
                 <button
@@ -572,19 +556,17 @@
                   </svg>
                 </button>
               </div>
-
-              <!-- 搜索匹配统计标签 -->
-              <div class="purchased-search-badge" :class="{ 'has-filter': !!purchasedSearchKeyword }">
-                <span v-if="purchasedSearchKeyword">
-                  找到 <b>{{ purchasedMatchTotal }}</b> 款匹配应用 (共 {{ purchasedApps.length }} 款)
-                </span>
-                <span v-else>
-                  共 <b>{{ purchasedTotal }}</b> 款已购应用
-                </span>
-              </div>
+              <AppButton
+                type="primary"
+                size="small"
+                class="small-aligned-btn"
+                :loading="isPurchasedLoading"
+                @click="loadPurchases"
+              >
+                刷新列表
+              </AppButton>
             </div>
-
-          </AppCard>
+          </div>
 
           <!-- 表格主体 -->
           <AppCard class="clean-card table-flex-card">
@@ -615,7 +597,15 @@
                 </div>
               </template>
             </AppTable>
-            <div v-if="purchasedPageCount > 1" class="purchased-bottom-pagination" aria-label="已购应用分页">
+            <div class="purchased-bottom-pagination" aria-label="已购应用分页">
+              <div class="purchased-search-badge purchased-footer-count" :class="{ 'has-filter': !!purchasedSearchKeyword }">
+                <span v-if="purchasedSearchKeyword">
+                  找到 <b>{{ purchasedMatchTotal }}</b> 款匹配应用（共 {{ purchasedApps.length }} 款）
+                </span>
+                <span v-else>
+                  共 <b>{{ purchasedTotal }}</b> 款已购应用
+                </span>
+              </div>
               <div class="page-size-selector">
                 <span class="size-label">每页</span>
                 <AppSelect
@@ -3666,7 +3656,37 @@ onBeforeUnmount(() => {
 .purchased-header-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
+  width: 370px;
+  min-width: 280px;
+}
+
+.purchased-view-header.view-header > .purchased-header-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.purchased-view-header {
+  position: relative;
+  display: block;
+  min-height: 62px;
+}
+
+.purchased-header-copy {
+  min-width: 0;
+}
+
+.purchased-header-search {
+  flex: 1 1 270px;
+  width: auto;
+  min-width: 180px;
+}
+
+.purchased-footer-count {
+  margin-right: auto;
+  padding-left: 4px;
 }
 
 .purchased-loading-progress {
@@ -3674,6 +3694,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   width: 170px;
+  margin-top: 7px;
 }
 
 .purchased-loading-bar {

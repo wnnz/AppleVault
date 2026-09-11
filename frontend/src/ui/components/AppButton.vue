@@ -115,6 +115,24 @@ function onClick(event: MouseEvent) {
 }
 
 .theme-handdrawn .app-button:hover { color: var(--hd-blue-dark) !important; box-shadow: none !important; }
+.theme-handdrawn .app-button__spinner {
+  width: 14px;
+  height: 4px;
+  flex: 0 0 14px;
+  border: 0;
+  border-radius: 0;
+  background:
+    radial-gradient(circle at 2px 2px, currentColor 0 2px, transparent 2.2px),
+    radial-gradient(circle at 7px 2px, currentColor 0 2px, transparent 2.2px),
+    radial-gradient(circle at 12px 2px, currentColor 0 2px, transparent 2.2px);
+  animation: handdrawn-button-loading 1s ease-in-out infinite;
+}
+
+@keyframes handdrawn-button-loading {
+  0%, 100% { opacity: .45; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-1px); }
+}
+
 .theme-handdrawn .app-button--secondary:not(.app-button--tertiary):not(.app-button--quaternary) {
   border: 1px solid transparent !important;
   border-image: url('../themes/handdrawn/assets/sketch-frame-blue.svg') 24 / 7px stretch !important;

@@ -464,8 +464,8 @@
 }
 
 .theme-handdrawn.active-tab-purchased .view-header::after {
-  right: 124px;
-  width: 130px;
+  right: 410px;
+  width: 92px;
   background-image: url('./assets/handdrawn-purchased-header-decoration.webp');
   background-size: 100% 100%;
   background-position: center top;
@@ -502,8 +502,14 @@
   font-size: 13px !important;
 }
 
+.theme-handdrawn.active-tab-versions .bundle-input-row .app-button--loading {
+  gap: 4px;
+  padding-right: 8px !important;
+  padding-left: 8px !important;
+}
+
 .theme-handdrawn.active-tab-versions .bundle-input-row .app-button:nth-of-type(1) {
-  width: 105px;
+  width: 114px;
 }
 
 .theme-handdrawn.active-tab-versions .bundle-input-row .app-button:nth-of-type(2) {
@@ -534,18 +540,13 @@
 }
 
 .theme-handdrawn .purchased-header-actions {
-  margin-right: 18px;
-  transform: translateY(8px);
+  margin-right: 0;
+  transform: none;
 }
 
 .theme-handdrawn .purchased-header-actions > .app-button {
   width: 86px;
   min-width: 86px;
-}
-
-.theme-handdrawn.active-tab-purchased .purchased-search-toolbar {
-  height: 60px;
-  margin-bottom: 5px !important;
 }
 
 .theme-handdrawn.active-tab-purchased .purchased-search-input-box,
@@ -557,8 +558,9 @@
 
 .theme-handdrawn.active-tab-purchased .table-flex-card {
   box-sizing: border-box;
-  flex: 0 0 520px;
-  height: 520px;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
   padding: 10px;
 }
 
