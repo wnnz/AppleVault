@@ -464,8 +464,8 @@
 }
 
 .theme-handdrawn.active-tab-purchased .view-header::after {
-  right: 410px;
-  width: 92px;
+  right: 55px;
+  width: 120px;
   background-image: url('./assets/handdrawn-purchased-header-decoration.webp');
   background-size: 100% 100%;
   background-position: center top;
@@ -539,13 +539,7 @@
   font-size: 14px;
 }
 
-.theme-handdrawn .purchased-header-actions {
-  margin-right: 0;
-  transform: none;
-}
-
-.theme-handdrawn .purchased-header-actions > .app-button {
-  width: 86px;
+.theme-handdrawn .purchased-search-toolbar .app-button {
   min-width: 86px;
 }
 

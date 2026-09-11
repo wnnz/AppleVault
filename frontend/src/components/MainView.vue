@@ -519,61 +519,70 @@
 
         <!-- VIEW 4: 已购应用 (purchased) -->
         <div v-show="activeTab === 'purchased'" class="view-panel">
-          <div class="view-header purchased-view-header">
-            <div class="purchased-header-copy">
+          <div class="view-header">
+            <div>
               <div class="title-with-badge">
                 <h2 class="view-title">已购应用</h2>
               </div>
               <p class="view-desc">浏览与检索当前 Apple ID 名下已获得正版许可的历史应用库</p>
-              <div v-if="isPurchasedLoading" class="purchased-loading-progress" role="status" aria-live="polite">
-                <AppProgress
-                  v-if="purchasedLoadTotal > 0"
-                  class="purchased-loading-bar"
-                  :percentage="purchasedLoadProgress"
-                  :height="6"
-                />
-                <div v-else class="purchased-loading-bar purchased-loading-bar-indeterminate" aria-hidden="true"></div>
-                <span v-if="purchasedLoadTotal > 0" class="purchased-loading-count">
-                  {{ purchasedLoadLoaded }}/{{ purchasedLoadTotal }}
-                </span>
-                <span v-else class="purchased-loading-count loading-total-text">读取总数…</span>
-              </div>
             </div>
-            <div class="purchased-header-actions">
-              <div class="purchased-search-input-box purchased-header-search">
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" class="search-icon">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
-                <AppInput
-                  v-model="purchasedSearchKeyword"
-                  class="purchased-search-input"
-                  placeholder="搜索名称、Bundle ID 或 App ID..."
-                  @keydown.esc="purchasedSearchKeyword = ''"
-                />
-                <button
-                  v-if="purchasedSearchKeyword"
-                  class="search-clear-btn"
-                  @click="purchasedSearchKeyword = ''"
-                  title="清空搜索"
-                >
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
-                </button>
-              </div>
-              <AppButton
-                type="primary"
-                size="small"
-                class="small-aligned-btn"
-                :loading="isPurchasedLoading"
-                @click="loadPurchases"
-              >
-                刷新列表
-              </AppButton>
+            <div v-if="isPurchasedLoading" class="purchased-loading-progress" role="status" aria-live="polite">
+              <AppProgress
+                v-if="purchasedLoadTotal > 0"
+                class="purchased-loading-bar"
+                :percentage="purchasedLoadProgress"
+                :height="6"
+              />
+              <div v-else class="purchased-loading-bar purchased-loading-bar-indeterminate" aria-hidden="true"></div>
+              <span v-if="purchasedLoadTotal > 0" class="purchased-loading-count">
+                {{ purchasedLoadLoaded }}/{{ purchasedLoadTotal }}
+              </span>
+              <span v-else class="purchased-loading-count loading-total-text">读取总数…</span>
             </div>
           </div>
+
+          <!-- 搜索与操作工具栏卡片 (放在页面标题下方，类似应用搜索的布局) -->
+          <AppCard class="clean-card mb-4 search-bar-card purchased-search-toolbar">
+            <div class="search-input-group">
+              <div class="search-input-wrapper purchased-search-wrapper">
+                <div class="purchased-search-input-box">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" class="search-icon">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  <AppInput
+                    v-model="purchasedSearchKeyword"
+                    class="clean-input purchased-search-input"
+                    placeholder="搜索已购应用名称、Bundle ID 或 App ID..."
+                    @keydown.esc="purchasedSearchKeyword = ''"
+                  />
+                  <button
+                    v-if="purchasedSearchKeyword"
+                    class="search-clear-btn"
+                    @click="purchasedSearchKeyword = ''"
+                    title="清空搜索"
+                  >
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div class="filter-controls">
+                <AppButton
+                  type="primary"
+                  size="small"
+                  class="height-aligned-btn"
+                  :loading="isPurchasedLoading"
+                  @click="loadPurchases"
+                >
+                  刷新列表
+                </AppButton>
+              </div>
+            </div>
+          </AppCard>
 
           <!-- 表格主体 -->
           <AppCard class="clean-card table-flex-card">
@@ -3676,35 +3685,14 @@ onBeforeUnmount(() => {
   color: #94a3b8;
 }
 
-.purchased-header-actions {
+.purchased-search-wrapper {
+  flex: 1;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  width: 370px;
-  min-width: 280px;
 }
 
-.purchased-view-header.view-header > .purchased-header-actions {
-  position: absolute;
-  top: 0;
-  right: 0;
-}
-
-.purchased-view-header {
-  position: relative;
-  display: block;
-  min-height: 62px;
-}
-
-.purchased-header-copy {
-  min-width: 0;
-}
-
-.purchased-header-search {
-  flex: 1 1 270px;
-  width: auto;
-  min-width: 180px;
+.purchased-search-wrapper .purchased-search-input-box {
+  width: 100%;
 }
 
 .purchased-footer-count {
