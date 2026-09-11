@@ -4771,8 +4771,9 @@ onBeforeUnmount(() => {
   border-color: rgba(11, 116, 204, 0.35);
   background-color: var(--hd-blue);
   background-image: url('../assets/sketch-blue-fill.svg');
-  background-size: cover;
-  background-position: center;
+  background-size: 120px 40px;
+  background-position: 0 0;
+  background-repeat: repeat;
   box-shadow: none;
 }
 
@@ -5506,8 +5507,9 @@ onBeforeUnmount(() => {
   color: #ffffff !important;
   background-color: var(--hd-blue) !important;
   background-image: url('../assets/sketch-blue-fill.svg') !important;
-  background-size: cover !important;
-  background-position: center !important;
+  background-size: 120px 40px !important;
+  background-position: 0 0 !important;
+  background-repeat: repeat !important;
   box-shadow: none !important;
 }
 
