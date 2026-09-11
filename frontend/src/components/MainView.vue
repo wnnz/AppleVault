@@ -271,15 +271,15 @@
                   />
                 </div>
 
-                <n-button
-                  type="primary"
+                <AppButton
+                  variant="primary"
                   size="small"
                   :loading="isSearching"
                   @click="handleSearch"
                   class="height-aligned-btn"
                 >
                   搜索
-                </n-button>
+                </AppButton>
               </div>
             </div>
           </div>
@@ -332,7 +332,7 @@
                   />
                 </div>
 
-                <n-button
+                <AppButton
                   type="primary"
                   size="small"
                   class="height-aligned-btn"
@@ -341,9 +341,9 @@
                   @click="handleListVersions"
                 >
                   获取历史版本
-                </n-button>
+                </AppButton>
 
-                <n-button
+                <AppButton
                   :type="isBatchQuerying ? 'error' : 'default'"
                   :secondary="!isBatchQuerying"
                   size="small"
@@ -353,9 +353,9 @@
                   @click="handleBatchQueryClick"
                 >
                   {{ isBatchQuerying ? '停止查询' : '批量解析前 30 项' }}
-                </n-button>
+                </AppButton>
 
-                <n-button
+                <AppButton
                   :type="isTargetQuerying ? 'error' : 'default'"
                   :secondary="!isTargetQuerying"
                   size="small"
@@ -365,7 +365,7 @@
                   @click="handleTargetQueryClick"
                 >
                   {{ isTargetQuerying ? '停止查询' : '查找指定版本' }}
-                </n-button>
+                </AppButton>
               </div>
 
               <div class="filter-search-row">
@@ -411,23 +411,23 @@
               <p class="view-desc">正在下载与已完成的 IPA 任务管理，自动归档至对应账号目录</p>
             </div>
             <div class="btn-group-row">
-              <n-button
-                secondary
+              <AppButton
+                variant="secondary"
                 size="small"
                 class="small-aligned-btn"
                 :disabled="completedTaskCount === 0"
                 @click="handleClearCompleted"
               >
                 清空已完成
-              </n-button>
-              <n-button
-                secondary
+              </AppButton>
+              <AppButton
+                variant="secondary"
                 size="small"
                 class="small-aligned-btn"
                 @click="handleOpenDefaultDownloadDir"
               >
                 打开存储目录
-              </n-button>
+              </AppButton>
             </div>
           </div>
 
@@ -446,7 +446,7 @@
                     <span v-if="task.versionId" class="task-pill task-pill-build">Build {{ task.versionId }}</span>
                   </div>
                   <div class="task-actions-group">
-                    <n-button
+                    <AppButton
                       v-if="task.status === 'downloading'"
                       size="tiny"
                       type="error"
@@ -454,26 +454,26 @@
                       @click="handleCancelTask(task.id)"
                     >
                       取消
-                    </n-button>
-                    <n-button
+                    </AppButton>
+                    <AppButton
                       v-if="task.status === 'completed'"
                       size="tiny"
                       type="primary"
                       @click="handleInstallFromTask(task.outputPath)"
                     >
                       安装到设备
-                    </n-button>
-                    <n-button
+                    </AppButton>
+                    <AppButton
                       v-if="task.status === 'error' || task.status === 'canceled'"
                       size="tiny"
                       secondary
                       @click="handleRetryTask(task)"
                     >
                       重试
-                    </n-button>
-                    <n-button size="tiny" quaternary @click="handleDeleteTask(task.id)">
+                    </AppButton>
+                    <AppButton size="tiny" quaternary @click="handleDeleteTask(task.id)">
                       删除
-                    </n-button>
+                    </AppButton>
                   </div>
                 </div>
 
@@ -543,7 +543,7 @@
                 </span>
                 <span v-else class="purchased-loading-count loading-total-text">读取总数…</span>
               </div>
-              <n-button
+              <AppButton
                 type="primary"
                 size="small"
                 class="small-aligned-btn"
@@ -551,7 +551,7 @@
                 @click="loadPurchases"
               >
                 刷新列表
-              </n-button>
+              </AppButton>
             </div>
           </div>
 
@@ -611,7 +611,7 @@
                   @update:value="onPurchasedPageSizeChange"
                 />
               </div>
-              <n-button
+              <AppButton
                 secondary
                 size="small"
                 class="small-aligned-btn"
@@ -619,9 +619,9 @@
                 @click="prevPurchasedPage"
               >
                 上一页
-              </n-button>
+              </AppButton>
               <span class="page-indicator">第 {{ purchasedPage }} 页</span>
-              <n-button
+              <AppButton
                 secondary
                 size="small"
                 class="small-aligned-btn"
@@ -629,7 +629,7 @@
                 @click="nextPurchasedPage"
               >
                 下一页
-              </n-button>
+              </AppButton>
             </div>
           </div>
 
@@ -650,9 +650,9 @@
                     <div class="search-none-icon">🔍</div>
                     <div class="search-none-title">未找到与「{{ purchasedSearchKeyword }}」匹配的已购应用</div>
                     <div class="search-none-desc">请尝试输入不同关键词，或点击下方按钮清空搜索</div>
-                    <n-button size="tiny" secondary class="mt-2" @click="purchasedSearchKeyword = ''">
+                    <AppButton size="tiny" secondary class="mt-2" @click="purchasedSearchKeyword = ''">
                       清空搜索
-                    </n-button>
+                    </AppButton>
                   </div>
                   <div v-else class="search-none-state">
                     <div class="search-none-title">暂无已购应用记录</div>
@@ -703,7 +703,7 @@
                   class="clean-input flex-1 mr-2 height-aligned"
                   placeholder="尚未选择文件"
                 />
-                <n-button secondary size="small" class="height-aligned-btn" @click="handleSelectIPA">浏览文件</n-button>
+                <AppButton secondary size="small" class="height-aligned-btn" @click="handleSelectIPA">浏览文件</AppButton>
               </div>
             </div>
 
@@ -711,7 +711,7 @@
             <div class="clean-card flex-col">
               <div class="card-headline">
                 <span class="headline-title">2. 选择苹果设备</span>
-                <n-button
+                <AppButton
                   secondary
                   size="small"
                   class="small-aligned-btn"
@@ -720,7 +720,7 @@
                   @click="loadConnectedDevices"
                 >
                   刷新检测
-                </n-button>
+                </AppButton>
               </div>
 
               <n-select
@@ -779,7 +779,7 @@
               </div>
             </div>
 
-            <n-button
+            <AppButton
               type="primary"
               size="large"
               :disabled="!selectedIPAPath || !selectedDeviceUDID || isLoadingDevices"
@@ -788,7 +788,7 @@
               class="install-submit-btn"
             >
               {{ isInstallingIPA ? '正在安装中...' : '开始安装到设备' }}
-            </n-button>
+            </AppButton>
           </div>
         </div>
 
@@ -828,7 +828,7 @@
               </div>
 
               <div class="account-card-actions mt-4">
-                <n-button
+                <AppButton
                   type="error"
                   secondary
                   :disabled="!isLoggedIn"
@@ -837,8 +837,8 @@
                   class="height-aligned-btn"
                 >
                   退出登录
-                </n-button>
-                <n-button
+                </AppButton>
+                <AppButton
                   secondary
                   @click="handleClearKeychain"
                   :loading="isClearing"
@@ -846,15 +846,15 @@
                   class="height-aligned-btn"
                 >
                   清理钥匙串缓存
-                </n-button>
-                <n-button
+                </AppButton>
+                <AppButton
                   secondary
                   @click="() => refreshAccount(false)"
                   :loading="isAccountLoading"
                   class="height-aligned-btn"
                 >
                   刷新状态
-                </n-button>
+                </AppButton>
               </div>
             </div>
 
@@ -889,7 +889,7 @@
               </div>
 
               <div class="mt-4">
-                <n-button
+                <AppButton
                   type="primary"
                   block
                   size="small"
@@ -898,7 +898,7 @@
                   @click="handleLogin"
                 >
                   登录
-                </n-button>
+                </AppButton>
               </div>
             </div>
           </div>
@@ -913,14 +913,14 @@
               </div>
               <p class="view-desc">全局参数、网络代理、下载路径与基础运行引擎配置</p>
             </div>
-            <n-button
+            <AppButton
               type="primary"
               size="small"
               class="height-aligned-btn settings-save-btn"
               @click="handleSaveSettings"
             >
               保存并应用设置
-            </n-button>
+            </AppButton>
           </div>
 
           <div class="clean-card settings-stack">
@@ -986,8 +986,8 @@
                       class="clean-input flex-1 height-aligned"
                       placeholder="http://127.0.0.1:10808"
                     />
-                    <n-button
-                      secondary
+                    <AppButton
+                      variant="secondary"
                       size="small"
                       class="height-aligned-btn setting-fixed-btn"
                       :disabled="!settings.enableProxy"
@@ -995,7 +995,7 @@
                       @click="handleTestProxy"
                     >
                       测试
-                    </n-button>
+                    </AppButton>
                   </div>
                 </div>
               </div>
@@ -1017,14 +1017,14 @@
                       disabled
                       class="clean-input flex-1 height-aligned"
                     />
-                    <n-button
-                      secondary
+                    <AppButton
+                      variant="secondary"
                       size="small"
                       class="height-aligned-btn setting-fixed-btn"
                       @click="handleOpenDefaultDownloadDir"
                     >
                       打开
-                    </n-button>
+                    </AppButton>
                   </div>
                 </div>
               </div>
@@ -1086,22 +1086,22 @@
                   readonly
                   class="clean-input flex-1 height-aligned"
                 />
-                <n-button
+                <AppButton
                   type="primary"
                   size="small"
                   class="height-aligned-btn"
                   @click="openGitHub"
                 >
                   访问 GitHub
-                </n-button>
-                <n-button
+                </AppButton>
+                <AppButton
                   secondary
                   size="small"
                   class="height-aligned-btn copy-address-btn"
                   @click="copyGitHubUrl"
                 >
                   复制地址
-                </n-button>
+                </AppButton>
               </div>
             </div>
 
@@ -1142,7 +1142,7 @@
         </div>
 
         <div class="status-bar-tools">
-          <n-button
+          <AppButton
             v-if="isAnyOperationRunning"
             size="tiny"
             type="error"
@@ -1151,7 +1151,7 @@
             class="mr-2"
           >
             终止操作
-          </n-button>
+          </AppButton>
 
           <button class="status-btn" @click="toggleLogs">
             {{ showLogs ? '收起日志' : '实时日志' }}
@@ -1203,8 +1203,8 @@
           style="letter-spacing: 6px; height: 44px; font-size: 20px;"
         />
         <div class="dialog-action-buttons mt-4">
-          <n-button secondary @click="cancel2FA" class="height-aligned-btn">取消</n-button>
-          <n-button
+          <AppButton secondary @click="cancel2FA" class="height-aligned-btn">取消</AppButton>
+          <AppButton
             type="primary"
             :disabled="twoFACode.length !== 6"
             :loading="isLoggingIn"
@@ -1212,7 +1212,7 @@
             class="height-aligned-btn"
           >
             提交验证
-          </n-button>
+          </AppButton>
         </div>
       </div>
     </n-modal>
@@ -1237,15 +1237,15 @@
           @keydown.enter="confirmStartTargetQuery"
         />
         <div class="dialog-action-buttons mt-4">
-          <n-button secondary @click="showTargetVersionModal = false" class="height-aligned-btn">取消</n-button>
-          <n-button
+          <AppButton secondary @click="showTargetVersionModal = false" class="height-aligned-btn">取消</AppButton>
+          <AppButton
             type="primary"
             :disabled="!targetVersionInput.trim()"
             @click="confirmStartTargetQuery"
             class="height-aligned-btn"
           >
             开始查询
-          </n-button>
+          </AppButton>
         </div>
       </div>
     </n-modal>
@@ -1257,7 +1257,6 @@ import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, h, defineCo
 import {
   useMessage,
   useDialog,
-  NButton,
   NSelect,
   NSwitch,
   NModal,
@@ -1265,6 +1264,7 @@ import {
   NProgress,
   NSpace
 } from 'naive-ui'
+import AppButton from './AppButton.vue'
 import {
   AddDownloadTask,
   GetDownloadTasks,
@@ -1465,9 +1465,9 @@ const searchColumns = [
     fixed: 'right' as const,
     render(row: main.AppItem) {
       return h(NSpace, { size: 6, wrap: false }, () => [
-        h(NButton, { size: 'tiny', secondary: true, onClick: () => selectAppForVersions(row) }, () => '历史版本'),
-        h(NButton, { size: 'tiny', type: 'primary', onClick: () => downloadFromSearch(row) }, () => '下载'),
-        h(NButton, { size: 'tiny', secondary: true, onClick: () => handlePurchaseApp(row.bundleID) }, () => '获取许可')
+        h(AppButton, { size: 'tiny', secondary: true, onClick: () => selectAppForVersions(row) }, () => '历史版本'),
+        h(AppButton, { size: 'tiny', type: 'primary', onClick: () => downloadFromSearch(row) }, () => '下载'),
+        h(AppButton, { size: 'tiny', secondary: true, onClick: () => handlePurchaseApp(row.bundleID) }, () => '获取许可')
       ])
     }
   }
@@ -1616,14 +1616,14 @@ const versionColumns = [
     fixed: 'right' as const,
     render(row: VersionItem) {
       return h(NSpace, { size: 6, wrap: false }, () => [
-        h(NButton, {
+        h(AppButton, {
           size: 'tiny',
           secondary: true,
           disabled: isListingVersions.value || isBatchQuerying.value || isTargetQuerying.value,
           loading: row.isQuerying,
           onClick: () => querySingleVersionMetadata(row)
         }, () => '查详情'),
-        h(NButton, {
+        h(AppButton, {
           size: 'tiny',
           type: 'primary',
           onClick: () => downloadFromVersions(row)
@@ -1725,8 +1725,8 @@ const purchasedColumns = [
     fixed: 'right' as const,
     render(row: main.AppItem) {
       return h(NSpace, { size: 6, wrap: false }, () => [
-        h(NButton, { size: 'tiny', secondary: true, onClick: () => selectAppForVersions(row) }, () => '历史版本'),
-        h(NButton, { size: 'tiny', type: 'primary', onClick: () => downloadFromPurchased(row) }, () => '下载')
+        h(AppButton, { size: 'tiny', secondary: true, onClick: () => selectAppForVersions(row) }, () => '历史版本'),
+        h(AppButton, { size: 'tiny', type: 'primary', onClick: () => downloadFromPurchased(row) }, () => '下载')
       ])
     }
   }
@@ -5448,108 +5448,9 @@ onBeforeUnmount(() => {
   background: rgba(190, 232, 251, 0.42);
 }
 
-/* Naive UI controls: keep them paper-like instead of default flat controls. */
-.theme-handdrawn :deep(.n-button) {
-  border-radius: 9px !important;
-  border-color: transparent !important;
-  background-color: transparent !important;
-  color: #31547e !important;
-  font-family: "Microsoft YaHei", "Segoe UI", "PingFang SC", "DengXian", sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.15px;
-  box-shadow: none !important;
-}
-
-.theme-handdrawn :deep(.n-button:hover) {
-  color: var(--hd-blue-dark) !important;
-  background-color: transparent !important;
-  box-shadow: none !important;
-}
-
-/* Labeled secondary controls use the reusable pale-blue SVG nine-slice.
-   Keep tertiary/quaternary and pagination controls lightweight. */
-.theme-handdrawn :deep(.n-button--secondary),
-.theme-handdrawn :deep(.n-button--default-type:not(.n-button--tertiary):not(.n-button--quaternary)) {
-  box-sizing: border-box;
-  border: 1px solid transparent !important;
-  border-image: url('../assets/sketch-frame-blue.svg') 24 / 7px stretch !important;
-  border-radius: 0 !important;
-  background-color: rgba(255, 255, 255, 0.72) !important;
-  background-image: none !important;
-}
-
-.theme-handdrawn :deep(.n-button--secondary:hover),
-.theme-handdrawn :deep(.n-button--default-type:not(.n-button--tertiary):not(.n-button--quaternary):hover),
-.theme-handdrawn :deep(.n-button--secondary.n-button--disabled),
-.theme-handdrawn :deep(.n-button--default-type.n-button--disabled) {
-  background-color: rgba(239, 250, 255, 0.84) !important;
-  background-image: none !important;
-}
-
-/* The settings reference uses quiet grey utility buttons rather than the
-   blue-edged pale button used by the About page's copy action. */
 .theme-handdrawn :deep(.setting-fixed-btn) {
   width: 76px !important;
   min-width: 76px !important;
-  border: 0 !important;
-  border-image: none !important;
-  border-radius: 10px !important;
-  color: #31547e !important;
-  background-color: transparent !important;
-  background-image: url('../assets/sketch-frame-gray.svg') !important;
-  background-size: 100% 100% !important;
-  background-position: center !important;
-  background-repeat: no-repeat !important;
-  box-shadow: none !important;
-}
-
-.theme-handdrawn :deep(.setting-fixed-btn:hover),
-.theme-handdrawn :deep(.setting-fixed-btn.n-button--disabled) {
-  border: 0 !important;
-  border-image: none !important;
-  color: #31547e !important;
-  background-color: transparent !important;
-  background-image: url('../assets/sketch-frame-gray.svg') !important;
-  background-size: 100% 100% !important;
-  background-position: center !important;
-  background-repeat: no-repeat !important;
-  box-shadow: none !important;
-}
-
-/* Naive UI adds two :not() selectors to its default secondary-button rule.
-   Match that specificity so the quiet grey utility frame wins consistently. */
-.theme-handdrawn :deep(.n-button--default-type.setting-fixed-btn.setting-fixed-btn),
-.theme-handdrawn :deep(.n-button--default-type.setting-fixed-btn.setting-fixed-btn:hover),
-.theme-handdrawn :deep(.n-button--default-type.setting-fixed-btn.setting-fixed-btn.n-button--disabled) {
-  border: 0 !important;
-  border-image: none !important;
-  border-radius: 10px !important;
-  color: #31547e !important;
-  background-color: transparent !important;
-  background-image: url('../assets/sketch-frame-gray.svg') !important;
-  background-size: 100% 100% !important;
-  background-position: center !important;
-  background-repeat: no-repeat !important;
-  box-shadow: none !important;
-}
-
-.theme-handdrawn :deep(.n-button--primary-type) {
-  border-color: #0b7bd6 !important;
-  color: #ffffff !important;
-  background-color: var(--hd-blue) !important;
-  background-image: url('../assets/sketch-blue-fill.svg') !important;
-  background-size: 120px 40px !important;
-  background-position: 0 0 !important;
-  background-repeat: repeat !important;
-  box-shadow: none !important;
-}
-
-.theme-handdrawn :deep(.n-button--primary-type:hover) {
-  color: #ffffff !important;
-  border-color: #096fc5 !important;
-  background-color: #1288e2 !important;
-  box-shadow: none !important;
 }
 
 /* The reference search control carries three small yellow pencil strokes at
@@ -5611,10 +5512,6 @@ onBeforeUnmount(() => {
   height: 30px;
   background: var(--hd-yellow-accent-image) center / contain no-repeat;
   pointer-events: none;
-}
-
-.theme-handdrawn :deep(.n-button--error-type.n-button--secondary) {
-  color: #d94f5c !important;
 }
 
 .theme-handdrawn :deep(.n-base-selection) {
