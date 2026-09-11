@@ -265,8 +265,14 @@
 }
 
 .theme-handdrawn .nav-badge {
+  position: relative;
+  z-index: 3;
   background: var(--hd-red);
   box-shadow: 0 1px 0 rgba(190, 54, 54, 0.25);
+}
+
+.theme-handdrawn .nav-item.active .nav-badge {
+  margin-right: 18px;
 }
 
 .theme-handdrawn .sidebar-footer {

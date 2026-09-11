@@ -2858,6 +2858,8 @@ onBeforeUnmount(() => {
 }
 
 .nav-badge {
+  position: relative;
+  z-index: 2;
   background: #ff3b30;
   color: white;
   font-size: 10px;
@@ -2866,6 +2868,7 @@ onBeforeUnmount(() => {
   padding: 1px 6px;
   min-width: 14px;
   text-align: center;
+  transition: margin 0.2s ease;
 }
 
 .account-dot {
