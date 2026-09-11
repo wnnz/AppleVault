@@ -1181,10 +1181,24 @@ func (a *App) runDownloadTask(task *DownloadTask) {
 
 	if cmdErr != nil {
 		allOutput := stderr + "\n" + stdout
-		re := regexp.MustCompile(`error="([^"]+)"`)
 		errMsg := cmdErr.Error()
-		if matches := re.FindStringSubmatch(allOutput); len(matches) > 1 {
-			errMsg = matches[1]
+		for _, line := range strings.Split(allOutput, "\n") {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "{") && strings.HasSuffix(line, "}") {
+				var errMap map[string]interface{}
+				if json.Unmarshal([]byte(line), &errMap) == nil {
+					if e, ok := errMap["error"].(string); ok && e != "" {
+						errMsg = e
+						break
+					}
+				}
+			}
+		}
+		if errMsg == cmdErr.Error() {
+			re := regexp.MustCompile(`error="([^"]+)"`)
+			if matches := re.FindStringSubmatch(allOutput); len(matches) > 1 {
+				errMsg = matches[1]
+			}
 		}
 		a.failTask(task, errMsg)
 		return
