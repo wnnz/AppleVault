@@ -4615,6 +4615,7 @@ onBeforeUnmount(() => {
   --hd-green: #4ed18c;
   --hd-yellow: #f7c94f;
   --hd-red: #ff5b5b;
+  --hd-control-height: 32px;
   --hd-yellow-accent-image: url('../assets/sketch-title-accent.svg');
   position: relative;
   isolation: isolate;
@@ -4650,6 +4651,22 @@ onBeforeUnmount(() => {
   padding-bottom: 105px;
   padding-left: 1px;
   overflow-x: hidden;
+}
+
+.theme-handdrawn .height-aligned,
+.theme-handdrawn :deep(.height-aligned-btn) {
+  height: var(--hd-control-height) !important;
+  box-sizing: border-box !important;
+}
+
+.theme-handdrawn .height-aligned {
+  line-height: calc(var(--hd-control-height) - 2px) !important;
+}
+
+.theme-handdrawn :deep(.height-aligned-select .n-base-selection),
+.theme-handdrawn :deep(.height-aligned-select .n-base-selection-label) {
+  min-height: var(--hd-control-height) !important;
+  height: var(--hd-control-height) !important;
 }
 
 .theme-handdrawn .sidebar-brand,
@@ -5018,7 +5035,7 @@ onBeforeUnmount(() => {
 .theme-handdrawn.active-tab-versions .clean-input-prefix-box,
 .theme-handdrawn.active-tab-versions .filter-input,
 .theme-handdrawn.active-tab-versions .bundle-input-row :deep(.n-button) {
-  height: 35px !important;
+  height: var(--hd-control-height) !important;
 }
 
 .theme-handdrawn.active-tab-versions .bundle-input-row :deep(.n-button) {
@@ -5030,8 +5047,6 @@ onBeforeUnmount(() => {
 
 .theme-handdrawn.active-tab-versions .bundle-input-row :deep(.n-button:nth-of-type(1)) {
   width: 105px;
-  height: 31px !important;
-  align-self: center;
 }
 
 .theme-handdrawn.active-tab-versions .bundle-input-row :deep(.n-button:nth-of-type(2)) {
@@ -5080,7 +5095,7 @@ onBeforeUnmount(() => {
 .theme-handdrawn.active-tab-purchased .purchased-page-controls,
 .theme-handdrawn.active-tab-purchased .purchased-page-controls :deep(.n-button),
 .theme-handdrawn.active-tab-purchased .purchased-page-controls :deep(.n-base-selection) {
-  height: 36px !important;
+  height: var(--hd-control-height) !important;
 }
 
 .theme-handdrawn.active-tab-purchased .table-flex-card {
