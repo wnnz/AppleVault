@@ -4646,6 +4646,7 @@ onBeforeUnmount(() => {
 .theme-handdrawn .sidebar-nav {
   min-height: 0;
   padding-bottom: 105px;
+  overflow-x: hidden;
 }
 
 .theme-handdrawn .sidebar-brand,
@@ -4789,7 +4790,7 @@ onBeforeUnmount(() => {
   position: absolute;
   z-index: 2;
   top: -12px;
-  right: -2px;
+  right: 0;
   width: 34px;
   height: 46px;
   background: var(--hd-yellow-accent-image) center / contain no-repeat;
