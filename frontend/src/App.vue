@@ -38,7 +38,10 @@ import MainView from './components/MainView.vue'
 import { AppTheme, THEME_STORAGE_KEY } from './types/theme'
 
 const storedTheme = localStorage.getItem(THEME_STORAGE_KEY)
-const initialTheme: AppTheme = storedTheme === 'minimal-dark' ? 'minimal-dark' : 'minimal-light'
+const initialTheme: AppTheme =
+  storedTheme === 'minimal-dark' || storedTheme === 'handdrawn'
+    ? storedTheme
+    : 'minimal-light'
 
 const currentTheme = ref<AppTheme>(initialTheme)
 
@@ -47,10 +50,19 @@ if (storedTheme !== initialTheme) {
 }
 
 const isDark = computed(() => currentTheme.value === 'minimal-dark')
+const isHanddrawn = computed(() => currentTheme.value === 'handdrawn')
+
+function applyThemeClass(theme: AppTheme) {
+  document.body.classList.remove('theme-minimal-light', 'theme-minimal-dark', 'theme-handdrawn')
+  document.body.classList.add(`theme-${theme}`)
+}
+
+applyThemeClass(initialTheme)
 
 function setTheme(theme: AppTheme) {
   currentTheme.value = theme
   localStorage.setItem(THEME_STORAGE_KEY, theme)
+  applyThemeClass(theme)
 }
 
 function toggleTheme() {
@@ -63,28 +75,30 @@ watch(currentTheme, (newTheme) => {
 
 const themeOverrides = computed<GlobalThemeOverrides>(() => ({
   common: {
-    primaryColor: '#0071e3',
-    primaryColorHover: '#0077ed',
-    primaryColorPressed: '#005bb5',
-    primaryColorSuppl: '#0071e3',
-    borderRadius: '8px',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif'
+    primaryColor: isHanddrawn.value ? '#168ff0' : '#0071e3',
+    primaryColorHover: isHanddrawn.value ? '#0f82de' : '#0077ed',
+    primaryColorPressed: isHanddrawn.value ? '#0b70c4' : '#005bb5',
+    primaryColorSuppl: isHanddrawn.value ? '#168ff0' : '#0071e3',
+    borderRadius: isHanddrawn.value ? '10px' : '8px',
+    fontFamily: isHanddrawn.value
+      ? '"Comic Sans MS", "Kaiti SC", "STKaiti", "KaiTi", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif'
+      : '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif'
   },
   Card: {
-    borderRadius: '12px',
+    borderRadius: isHanddrawn.value ? '14px' : '12px',
     paddingSmall: '14px'
   },
   Button: {
-    borderRadiusMedium: '8px',
-    borderRadiusSmall: '6px',
-    borderRadiusTiny: '5px',
+    borderRadiusMedium: isHanddrawn.value ? '10px' : '8px',
+    borderRadiusSmall: isHanddrawn.value ? '8px' : '6px',
+    borderRadiusTiny: isHanddrawn.value ? '7px' : '5px',
     fontWeight: '500'
   },
   Input: {
-    borderRadius: '8px'
+    borderRadius: isHanddrawn.value ? '10px' : '8px'
   },
   DataTable: {
-    borderRadius: '8px'
+    borderRadius: isHanddrawn.value ? '12px' : '8px'
   }
 }))
 </script>
