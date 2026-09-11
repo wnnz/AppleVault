@@ -38,9 +38,7 @@
           :class="{ active: activeTab === 'search' }"
           @click="activeTab = 'search'"
         >
-          <span class="nav-icon" aria-hidden="true">
-            <img class="nav-icon-image" :src="activeTab === 'search' ? handdrawnIconSearchActive : handdrawnIconSearch" alt="" />
-          </span>
+          <span class="nav-icon" aria-hidden="true"><SketchNavIcon name="search" /></span>
           <span class="nav-label">应用搜索</span>
         </button>
 
@@ -49,9 +47,7 @@
           :class="{ active: activeTab === 'versions' }"
           @click="activeTab = 'versions'"
         >
-          <span class="nav-icon" aria-hidden="true">
-            <img class="nav-icon-image" :src="activeTab === 'versions' ? handdrawnIconHistoryActive : handdrawnIconHistory" alt="" />
-          </span>
+          <span class="nav-icon" aria-hidden="true"><SketchNavIcon name="history" /></span>
           <span class="nav-label">历史版本</span>
         </button>
 
@@ -60,9 +56,7 @@
           :class="{ active: activeTab === 'download' }"
           @click="activeTab = 'download'"
         >
-          <span class="nav-icon" aria-hidden="true">
-            <img class="nav-icon-image" :src="activeTab === 'download' ? handdrawnIconDownloadActive : handdrawnIconDownload" alt="" />
-          </span>
+          <span class="nav-icon" aria-hidden="true"><SketchNavIcon name="download" /></span>
           <span class="nav-label">下载中心</span>
           <span v-if="activeTaskCount > 0" class="nav-badge">{{ activeTaskCount }}</span>
         </button>
@@ -72,9 +66,7 @@
           :class="{ active: activeTab === 'purchased' }"
           @click="activeTab = 'purchased'"
         >
-          <span class="nav-icon" aria-hidden="true">
-            <img class="nav-icon-image" :src="activeTab === 'purchased' ? handdrawnIconPurchasedActive : handdrawnIconPurchased" alt="" />
-          </span>
+          <span class="nav-icon" aria-hidden="true"><SketchNavIcon name="purchased" /></span>
           <span class="nav-label">已购应用</span>
         </button>
 
@@ -83,9 +75,7 @@
           :class="{ active: activeTab === 'installer' }"
           @click="activeTab = 'installer'"
         >
-          <span class="nav-icon" aria-hidden="true">
-            <img class="nav-icon-image" :src="activeTab === 'installer' ? handdrawnIconDeviceActive : handdrawnIconDevice" alt="" />
-          </span>
+          <span class="nav-icon" aria-hidden="true"><SketchNavIcon name="device" /></span>
           <span class="nav-label">设备直装</span>
         </button>
 
@@ -97,9 +87,7 @@
           :class="{ active: activeTab === 'account' }"
           @click="activeTab = 'account'"
         >
-          <span class="nav-icon" aria-hidden="true">
-            <img class="nav-icon-image" :src="activeTab === 'account' ? handdrawnIconAccountActive : handdrawnIconAccount" alt="" />
-          </span>
+          <span class="nav-icon" aria-hidden="true"><SketchNavIcon name="account" /></span>
           <span class="nav-label">账号中心</span>
           <span class="account-dot" :class="isLoggedIn ? 'dot-online' : 'dot-offline'"></span>
         </button>
@@ -109,9 +97,7 @@
           :class="{ active: activeTab === 'settings' }"
           @click="activeTab = 'settings'"
         >
-          <span class="nav-icon" aria-hidden="true">
-            <img class="nav-icon-image" :src="activeTab === 'settings' ? handdrawnIconSettingsActive : handdrawnIconSettings" alt="" />
-          </span>
+          <span class="nav-icon" aria-hidden="true"><SketchNavIcon name="settings" /></span>
           <span class="nav-label">系统设置</span>
         </button>
 
@@ -120,9 +106,7 @@
           :class="{ active: activeTab === 'about' }"
           @click="activeTab = 'about'"
         >
-          <span class="nav-icon" aria-hidden="true">
-            <img class="nav-icon-image" :src="activeTab === 'about' ? handdrawnIconAboutActive : handdrawnIconAbout" alt="" />
-          </span>
+          <span class="nav-icon" aria-hidden="true"><SketchNavIcon name="about" /></span>
           <span class="nav-label">关于软件</span>
         </button>
       </nav>
@@ -1269,7 +1253,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, h } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, h, defineComponent } from 'vue'
 import {
   useMessage,
   useDialog,
@@ -1311,24 +1295,40 @@ import { main } from '../../wailsjs/go/models'
 import { AppTheme, ThemeOption } from '../types/theme'
 import standardLogo from '../assets/applevault-logo.webp'
 import handdrawnLogo from '../assets/applevault-handdrawn-logo.webp'
-import handdrawnSidebarArt from '../assets/handdrawn-sidebar-art.webp'
-import handdrawnSidebarFloatingLeaf from '../assets/handdrawn-sidebar-floating-leaf.webp'
-import handdrawnIconSearch from '../assets/handdrawn-icon-search.webp'
-import handdrawnIconSearchActive from '../assets/handdrawn-icon-search-active.webp'
-import handdrawnIconHistory from '../assets/handdrawn-icon-history.webp'
-import handdrawnIconHistoryActive from '../assets/handdrawn-icon-history-active.webp'
-import handdrawnIconDownload from '../assets/handdrawn-icon-download.webp'
-import handdrawnIconDownloadActive from '../assets/handdrawn-icon-download-active.webp'
-import handdrawnIconPurchased from '../assets/handdrawn-icon-purchased.webp'
-import handdrawnIconPurchasedActive from '../assets/handdrawn-icon-purchased-active.webp'
-import handdrawnIconDevice from '../assets/handdrawn-icon-device.webp'
-import handdrawnIconDeviceActive from '../assets/handdrawn-icon-device-active.webp'
-import handdrawnIconAccount from '../assets/handdrawn-icon-account.webp'
-import handdrawnIconAccountActive from '../assets/handdrawn-icon-account-active.webp'
-import handdrawnIconSettings from '../assets/handdrawn-icon-settings.webp'
-import handdrawnIconSettingsActive from '../assets/handdrawn-icon-settings-active.webp'
-import handdrawnIconAbout from '../assets/handdrawn-icon-about.webp'
-import handdrawnIconAboutActive from '../assets/handdrawn-icon-about-active.webp'
+import handdrawnSidebarArt from '../assets/sketch-sidebar-art.svg'
+import handdrawnSidebarFloatingLeaf from '../assets/sketch-floating-leaf.svg'
+
+const sketchNavPaths: Record<string, string[]> = {
+  search: ['M10.8 4.2a6.6 6.6 0 1 0 0 13.2 6.6 6.6 0 0 0 0-13.2Z', 'm15.8 15.8 4 4'],
+  history: ['M12 4.1a7.9 7.9 0 1 1-5.8 2.5', 'M4.2 4.6v4h4', 'M12 7.7v4.8l3.2 2'],
+  download: ['M12 3.5v11', 'm7.8 11.2 4.2 4.1 4.2-4.1', 'M4.5 18v2h15v-2'],
+  purchased: ['M5.5 8h13l-.5 12H6L5.5 8Z', 'M8.2 8V6.5a3.8 3.8 0 0 1 7.6 0V8'],
+  device: ['M7.2 3.2h9.6c1 0 1.7.8 1.7 1.8v14c0 1-.7 1.8-1.7 1.8H7.2c-1 0-1.7-.8-1.7-1.8V5c0-1 .7-1.8 1.7-1.8Z', 'M10 6h4', 'M11 18h2'],
+  account: ['M12 4.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z', 'M5.2 20c.7-4 3.2-6.1 6.8-6.1s6.1 2.1 6.8 6.1'],
+  settings: ['M12 8.4a3.6 3.6 0 1 0 0 7.2 3.6 3.6 0 0 0 0-7.2Z', 'M9.8 3.5 9.2 5a7.6 7.6 0 0 0-1.8 1l-1.5-.6-1.6 2.8 1.2 1a7.8 7.8 0 0 0-.1 2.1l-1.4.9.8 3.1 1.7-.1a7.5 7.5 0 0 0 1.5 1.4l-.2 1.7 3.1.9.9-1.4a7.3 7.3 0 0 0 2-.2l1.1 1.3 2.8-1.6-.6-1.5a7.6 7.6 0 0 0 1-1.8l1.6-.5-.1-3.2-1.6-.4a7.7 7.7 0 0 0-1.1-1.8l.5-1.6-2.8-1.5-1 1.3a7.7 7.7 0 0 0-2-.1l-.9-1.4Z'],
+  about: ['M12 3.8a8.2 8.2 0 1 0 0 16.4 8.2 8.2 0 0 0 0-16.4Z', 'M12 10.5v5.8', 'M12 7.3h.01'],
+}
+
+const SketchNavIcon = defineComponent({
+  name: 'SketchNavIcon',
+  props: { name: { type: String, required: true } },
+  setup(props) {
+    return () => {
+      const paths = sketchNavPaths[props.name] || sketchNavPaths.about
+      const makePaths = (opacity: number, transform?: string) =>
+        h('g', { opacity, transform }, paths.map((d) => h('path', { d })))
+      return h('svg', {
+        class: 'nav-icon-image sketch-nav-icon',
+        viewBox: '0 0 24 24',
+        fill: 'none',
+        stroke: 'currentColor',
+        'stroke-width': '1.75',
+        'stroke-linecap': 'round',
+        'stroke-linejoin': 'round',
+      }, [makePaths(1), makePaths(0.28, 'translate(.35 .25)')])
+    }
+  },
+})
 
 const props = withDefaults(
   defineProps<{
@@ -4616,7 +4616,7 @@ onBeforeUnmount(() => {
   --hd-green: #4ed18c;
   --hd-yellow: #f7c94f;
   --hd-red: #ff5b5b;
-  --hd-yellow-accent-image: url('../assets/handdrawn-button-yellow-accent.webp');
+  --hd-yellow-accent-image: url('../assets/sketch-title-accent.svg');
   position: relative;
   isolation: isolate;
   background-color: var(--hd-paper);
@@ -4667,7 +4667,7 @@ onBeforeUnmount(() => {
   right: -2px;
   width: 27px;
   height: 25px;
-  background: url('../assets/handdrawn-title-accent.webp') center / contain no-repeat;
+  background: url('../assets/sketch-title-accent.svg') center / contain no-repeat;
   transform: rotate(-9deg);
   pointer-events: none;
 }
@@ -4763,7 +4763,7 @@ onBeforeUnmount(() => {
   color: #ffffff;
   border-color: rgba(11, 116, 204, 0.35);
   background-color: var(--hd-blue);
-  background-image: url('../assets/handdrawn-blue-button-texture.webp');
+  background-image: url('../assets/sketch-blue-fill.svg');
   background-size: cover;
   background-position: center;
   box-shadow: 0 3px 0 rgba(13, 118, 207, 0.34), inset 0 0 0 1px rgba(255, 255, 255, 0.12);
@@ -4816,13 +4816,12 @@ onBeforeUnmount(() => {
 }
 
 .theme-handdrawn .sidebar-account-card {
-  border: 0;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-image: url('../assets/sketch-frame-soft.svg') 24 / 8px stretch;
   border-radius: 0;
-  background-color: transparent;
-  background-image: url('../assets/handdrawn-info-box.webp');
-  background-size: 100% 100%;
-  background-position: center;
-  background-repeat: no-repeat;
+  background-color: rgba(231, 247, 255, 0.72);
+  background-image: none;
   box-shadow: inset 0 0 12px rgba(115, 198, 240, 0.08);
 }
 
@@ -4833,7 +4832,7 @@ onBeforeUnmount(() => {
 .theme-handdrawn .user-avatar.avatar-logged,
 .theme-handdrawn .large-avatar.avatar-active {
   background-color: transparent;
-  background-image: url('../assets/handdrawn-avatar-badge.webp');
+  background-image: url('../assets/sketch-avatar-badge.svg');
   background-size: 100% 100%;
   background-position: center;
   background-repeat: no-repeat;
@@ -4847,13 +4846,12 @@ onBeforeUnmount(() => {
 }
 
 .theme-handdrawn .icon-action-btn {
-  border: 0;
-  border-radius: 9px;
-  background-color: transparent;
-  background-image: url('../assets/handdrawn-light-button.webp');
-  background-size: 100% 100%;
-  background-position: center;
-  background-repeat: no-repeat;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-image: url('../assets/sketch-frame-blue.svg') 24 / 7px stretch;
+  border-radius: 0;
+  background-color: rgba(255, 255, 255, 0.68);
+  background-image: none;
   color: #5d84ad;
   font-family: "Microsoft YaHei", "Segoe UI", "PingFang SC", "DengXian", sans-serif;
   box-shadow: none;
@@ -4862,8 +4860,8 @@ onBeforeUnmount(() => {
 .theme-handdrawn .icon-action-btn:hover,
 .theme-handdrawn .icon-action-btn.active {
   color: var(--hd-blue-dark);
-  background-color: transparent;
-  background-image: url('../assets/handdrawn-light-button.webp');
+  background-color: rgba(239, 250, 255, 0.82);
+  background-image: none;
   box-shadow: none;
 }
 
@@ -5034,7 +5032,7 @@ onBeforeUnmount(() => {
   width: 24px;
   height: 20px;
   margin-left: 7px;
-  background: url('../assets/handdrawn-title-accent.webp') center / contain no-repeat;
+  background: url('../assets/sketch-title-accent.svg') center / contain no-repeat;
   transform: translateY(-2px);
 }
 
@@ -5055,6 +5053,29 @@ onBeforeUnmount(() => {
 .theme-handdrawn .purchased-header-actions > :deep(.n-button) {
   width: 86px;
   min-width: 86px;
+}
+
+.theme-handdrawn.active-tab-purchased .purchased-search-toolbar {
+  height: 60px;
+  margin-bottom: 5px !important;
+}
+
+.theme-handdrawn.active-tab-purchased .purchased-search-input-box,
+.theme-handdrawn.active-tab-purchased .purchased-page-controls,
+.theme-handdrawn.active-tab-purchased .purchased-page-controls :deep(.n-button),
+.theme-handdrawn.active-tab-purchased .purchased-page-controls :deep(.n-base-selection) {
+  height: 36px !important;
+}
+
+.theme-handdrawn.active-tab-purchased .table-flex-card {
+  box-sizing: border-box;
+  flex: 0 0 520px;
+  height: 520px;
+  padding: 10px;
+}
+
+.theme-handdrawn.active-tab-purchased :deep(.n-data-table-td) {
+  height: 42px;
 }
 
 .theme-handdrawn .view-desc {
@@ -5087,13 +5108,10 @@ onBeforeUnmount(() => {
   z-index: 0;
   inset: 0;
   border-radius: inherit;
-  background: url('../assets/handdrawn-card-border.webp') center / 100% 100% no-repeat;
-  padding: 2px;
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-image: url('../assets/sketch-frame-blue.svg') 24 / 9px stretch;
+  background: none;
   opacity: 0.58;
   pointer-events: none;
 }
@@ -5103,12 +5121,10 @@ onBeforeUnmount(() => {
 }
 
 .theme-handdrawn .table-flex-card::before {
-  /* CPA-extracted double pencil frame; keep it as a real raster layer.
-     The table viewport below uses the separate inner frame. */
+  /* The outer and inner table outlines share deterministic SVG nine-slice
+     frames so their corners stay stable at every table height. */
   z-index: 2;
-  background-image: url('../assets/handdrawn-table-outer-frame-v5.webp');
-  -webkit-mask: none;
-  mask: none;
+  border-image-source: url('../assets/sketch-frame-soft.svg');
   opacity: 0.50;
 }
 
@@ -5183,13 +5199,12 @@ onBeforeUnmount(() => {
 .theme-handdrawn .clean-input,
 .theme-handdrawn .clean-input-prefix-box,
 .theme-handdrawn .purchased-search-input-box {
-  border: 0;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-image: url('../assets/sketch-frame-blue.svg') 24 / 7px stretch;
   border-radius: 0;
   background-color: transparent;
-  background-image: url('../assets/handdrawn-input-frame.webp');
-  background-size: 100% 100%;
-  background-position: center;
-  background-repeat: no-repeat;
+  background-image: none;
   color: var(--hd-ink);
   box-shadow: none;
 }
@@ -5209,7 +5224,7 @@ onBeforeUnmount(() => {
 .theme-handdrawn .purchased-search-input-box:focus-within {
   border-color: transparent;
   background-color: transparent;
-  background-image: url('../assets/handdrawn-input-frame.webp');
+  background-image: none;
   box-shadow: none;
 }
 
@@ -5257,7 +5272,7 @@ onBeforeUnmount(() => {
 
 .theme-handdrawn :deep(.n-progress-graph-line-rail) {
   background-color: rgba(225, 239, 247, 0.74) !important;
-  background-image: url('../assets/handdrawn-progress-rail.webp') !important;
+  background-image: url('../assets/sketch-progress-rail.svg') !important;
   background-size: 100% 100%;
   background-position: center;
   background-repeat: no-repeat;
@@ -5266,7 +5281,7 @@ onBeforeUnmount(() => {
 
 .theme-handdrawn :deep(.task-progress-downloading .n-progress-graph-line-fill) {
   background-color: var(--hd-blue) !important;
-  background-image: url('../assets/handdrawn-blue-progress-texture.webp') !important;
+  background-image: url('../assets/sketch-progress-blue.svg') !important;
   background-size: 100% 100%;
   background-position: center;
   background-repeat: no-repeat;
@@ -5275,7 +5290,7 @@ onBeforeUnmount(() => {
 
 .theme-handdrawn :deep(.task-progress-completed .n-progress-graph-line-fill) {
   background-color: var(--hd-green) !important;
-  background-image: url('../assets/handdrawn-green-progress-texture.webp') !important;
+  background-image: url('../assets/sketch-progress-green.svg') !important;
   background-size: 100% 100%;
   background-position: center;
   background-repeat: no-repeat;
@@ -5303,33 +5318,35 @@ onBeforeUnmount(() => {
 }
 
 .theme-handdrawn .clean-drop-zone {
-  border: 0;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-image: url('../assets/sketch-frame-green.svg') 24 / 9px stretch;
   border-radius: 0;
   background-color: rgba(239, 253, 246, 0.62);
-  background-image: url('../assets/handdrawn-drop-zone-frame.webp'), url('../assets/handdrawn-paper-texture-v2.webp');
-  background-size: 100% 100%, cover;
-  background-position: center, center;
+  background-image: url('../assets/handdrawn-paper-texture-v2.webp');
+  background-size: cover;
+  background-position: center;
   background-repeat: no-repeat;
   box-shadow: inset 0 0 14px rgba(78, 209, 140, 0.07);
 }
 
 .theme-handdrawn .clean-drop-zone:hover,
 .theme-handdrawn .clean-drop-zone.drop-active {
-  border: 0;
+  border: 1px solid transparent;
+  border-image: url('../assets/sketch-frame-green.svg') 24 / 9px stretch;
   background-color: rgba(226, 247, 255, 0.78);
-  background-image: url('../assets/handdrawn-drop-zone-frame.webp'), url('../assets/handdrawn-paper-texture-v2.webp');
+  background-image: url('../assets/handdrawn-paper-texture-v2.webp');
 }
 
 .theme-handdrawn .device-spec-box,
 .theme-handdrawn .about-section-box,
 .theme-handdrawn .about-feature-item {
-  border: 0;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-image: url('../assets/sketch-frame-soft.svg') 24 / 8px stretch;
   border-radius: 0;
-  background-color: transparent;
-  background-image: url('../assets/handdrawn-info-box.webp');
-  background-size: 100% 100%;
-  background-position: center;
-  background-repeat: no-repeat;
+  background-color: rgba(234, 248, 255, 0.46);
+  background-image: none;
 }
 
 .theme-handdrawn .about-section-box {
@@ -5343,11 +5360,8 @@ onBeforeUnmount(() => {
 }
 
 .theme-handdrawn .sub-alert-box {
-  background-color: transparent;
-  background-image: url('../assets/handdrawn-info-box.webp');
-  background-size: 100% 100%;
-  background-position: center;
-  background-repeat: no-repeat;
+  background-color: rgba(234, 248, 255, 0.46);
+  background-image: none;
   color: #21689c;
   border: 0;
   border-radius: 0;
@@ -5356,6 +5370,23 @@ onBeforeUnmount(() => {
 .theme-handdrawn .settings-stack,
 .theme-handdrawn .about-card-stack {
   scrollbar-color: #acdff8 transparent;
+}
+
+.theme-handdrawn.active-tab-about .about-card-stack {
+  gap: 13px;
+  padding-right: 20px;
+  padding-left: 20px;
+}
+
+.theme-handdrawn.active-tab-about .about-hero {
+  gap: 30px;
+  padding-right: 32px;
+  padding-left: 32px;
+}
+
+.theme-handdrawn.active-tab-about .about-large-icon {
+  width: 76px;
+  height: 76px;
 }
 
 .theme-handdrawn .settings-group,
@@ -5405,24 +5436,24 @@ onBeforeUnmount(() => {
   box-shadow: none !important;
 }
 
-/* The reference uses the extracted pale crayon button for labeled secondary
-   controls. Keep tertiary/quaternary and pagination controls lightweight. */
+/* Labeled secondary controls use the reusable pale-blue SVG nine-slice.
+   Keep tertiary/quaternary and pagination controls lightweight. */
 .theme-handdrawn :deep(.n-button--secondary),
 .theme-handdrawn :deep(.n-button--default-type:not(.n-button--tertiary):not(.n-button--quaternary)) {
-  border: 0 !important;
-  background-color: transparent !important;
-  background-image: url('../assets/handdrawn-light-button.webp') !important;
-  background-size: 100% 100% !important;
-  background-position: center !important;
-  background-repeat: no-repeat !important;
+  box-sizing: border-box;
+  border: 1px solid transparent !important;
+  border-image: url('../assets/sketch-frame-blue.svg') 24 / 7px stretch !important;
+  border-radius: 0 !important;
+  background-color: rgba(255, 255, 255, 0.72) !important;
+  background-image: none !important;
 }
 
 .theme-handdrawn :deep(.n-button--secondary:hover),
 .theme-handdrawn :deep(.n-button--default-type:not(.n-button--tertiary):not(.n-button--quaternary):hover),
 .theme-handdrawn :deep(.n-button--secondary.n-button--disabled),
 .theme-handdrawn :deep(.n-button--default-type.n-button--disabled) {
-  background-color: transparent !important;
-  background-image: url('../assets/handdrawn-light-button.webp') !important;
+  background-color: rgba(239, 250, 255, 0.84) !important;
+  background-image: none !important;
 }
 
 /* The settings reference uses quiet grey utility buttons rather than the
@@ -5430,34 +5461,42 @@ onBeforeUnmount(() => {
 .theme-handdrawn :deep(.setting-fixed-btn) {
   width: 76px !important;
   min-width: 76px !important;
-  border: 0 !important;
+  border: 1px solid transparent !important;
+  border-image: url('../assets/sketch-frame-gray.svg') 24 / 7px stretch !important;
   border-radius: 0 !important;
   color: #31547e !important;
-  background-color: transparent !important;
-  background-image: url('../assets/handdrawn-settings-utility-button.webp') !important;
-  background-size: 100% 100% !important;
-  background-position: center !important;
-  background-repeat: no-repeat !important;
+  background-color: rgba(248, 251, 253, 0.82) !important;
+  background-image: none !important;
   box-shadow: none !important;
 }
 
 .theme-handdrawn :deep(.setting-fixed-btn:hover),
 .theme-handdrawn :deep(.setting-fixed-btn.n-button--disabled) {
-  border: 0 !important;
+  border: 1px solid transparent !important;
+  border-image: url('../assets/sketch-frame-gray.svg') 24 / 7px stretch !important;
   color: #31547e !important;
-  background-color: transparent !important;
-  background-image: url('../assets/handdrawn-settings-utility-button.webp') !important;
-  background-size: 100% 100% !important;
-  background-position: center !important;
-  background-repeat: no-repeat !important;
+  background-color: rgba(241, 247, 251, 0.9) !important;
+  background-image: none !important;
   box-shadow: none !important;
+}
+
+/* Naive UI adds two :not() selectors to its default secondary-button rule.
+   Match that specificity so the quiet grey utility frame wins consistently. */
+.theme-handdrawn :deep(.n-button--default-type.setting-fixed-btn.setting-fixed-btn),
+.theme-handdrawn :deep(.n-button--default-type.setting-fixed-btn.setting-fixed-btn:hover),
+.theme-handdrawn :deep(.n-button--default-type.setting-fixed-btn.setting-fixed-btn.n-button--disabled) {
+  border: 1px solid transparent !important;
+  border-image: url('../assets/sketch-frame-gray.svg') 24 / 7px stretch !important;
+  color: #31547e !important;
+  background-color: rgba(242, 246, 249, 0.92) !important;
+  background-image: none !important;
 }
 
 .theme-handdrawn :deep(.n-button--primary-type) {
   border-color: #0b7bd6 !important;
   color: #ffffff !important;
   background-color: var(--hd-blue) !important;
-  background-image: url('../assets/handdrawn-blue-button-texture.webp') !important;
+  background-image: url('../assets/sketch-blue-fill.svg') !important;
   background-size: cover !important;
   background-position: center !important;
   box-shadow: 0 3px 0 rgba(13, 118, 207, 0.32) !important;
@@ -5468,9 +5507,9 @@ onBeforeUnmount(() => {
   background-color: #0f82de !important;
 }
 
-/* The reference search control carries three small yellow crayon strokes at
-   its right edge. Keep the accent as a raster layer so the texture is not
-   approximated by a CSS border or gradient. */
+/* The reference search control carries three small yellow pencil strokes at
+   its right edge. The same deterministic SVG accent is shared by all primary
+   actions that use this motif. */
 .theme-handdrawn .search-bar-card :deep(.n-button--primary-type) {
   position: relative;
   width: 64px;
@@ -5535,12 +5574,11 @@ onBeforeUnmount(() => {
 
 .theme-handdrawn :deep(.n-base-selection) {
   border-radius: 0 !important;
-  border: 0 !important;
+  box-sizing: border-box;
+  border: 1px solid transparent !important;
+  border-image: url('../assets/sketch-frame-blue.svg') 24 / 7px stretch !important;
   background-color: transparent !important;
-  background-image: url('../assets/handdrawn-input-frame.webp') !important;
-  background-size: 100% 100% !important;
-  background-position: center !important;
-  background-repeat: no-repeat !important;
+  background-image: none !important;
   box-shadow: none !important;
 }
 
@@ -5548,7 +5586,7 @@ onBeforeUnmount(() => {
 .theme-handdrawn :deep(.n-base-selection--active) {
   border-color: transparent !important;
   background-color: transparent !important;
-  background-image: url('../assets/handdrawn-input-frame.webp') !important;
+  background-image: none !important;
 }
 
 .theme-handdrawn :deep(.n-base-selection-label),
@@ -5585,7 +5623,7 @@ onBeforeUnmount(() => {
 .theme-handdrawn :deep(.n-switch--active .n-switch__rail) {
   border: 0;
   background-color: transparent !important;
-  background-image: url('../assets/handdrawn-proxy-switch.webp') !important;
+  background-image: url('../assets/sketch-switch-on.svg') !important;
   background-size: 100% 100% !important;
   background-position: center !important;
   background-repeat: no-repeat !important;
@@ -5622,13 +5660,10 @@ onBeforeUnmount(() => {
   z-index: 2;
   inset: 0;
   border-radius: inherit;
-  background: url('../assets/handdrawn-table-frame.webp') center / 100% 100% no-repeat;
-  padding: 2px;
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-image: url('../assets/sketch-frame-blue.svg') 24 / 8px stretch;
+  background: none;
   opacity: 0.82;
   pointer-events: none;
 }
