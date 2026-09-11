@@ -4994,15 +4994,10 @@ onBeforeUnmount(() => {
 
 .theme-handdrawn .view-title {
   font-size: 24px;
+  font-weight: 700;
+  line-height: 1.25;
   letter-spacing: 0;
   text-shadow: 0.35px 0 var(--hd-ink);
-}
-
-.theme-handdrawn.active-tab-search .view-title,
-.theme-handdrawn.active-tab-versions .view-title,
-.theme-handdrawn.active-tab-purchased .view-title,
-.theme-handdrawn.active-tab-account .view-title {
-  font-size: 25px;
 }
 
 .theme-handdrawn.active-tab-versions .view-header {
