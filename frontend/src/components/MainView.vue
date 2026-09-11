@@ -5492,22 +5492,28 @@ onBeforeUnmount(() => {
 .theme-handdrawn :deep(.setting-fixed-btn) {
   width: 76px !important;
   min-width: 76px !important;
-  border: 1px solid transparent !important;
-  border-image: url('../assets/sketch-frame-gray.svg') 24 / 7px stretch !important;
-  border-radius: 0 !important;
+  border: 0 !important;
+  border-image: none !important;
+  border-radius: 10px !important;
   color: #31547e !important;
-  background-color: rgba(248, 251, 253, 0.82) !important;
-  background-image: none !important;
+  background-color: transparent !important;
+  background-image: url('../assets/sketch-frame-gray.svg') !important;
+  background-size: 100% 100% !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
   box-shadow: none !important;
 }
 
 .theme-handdrawn :deep(.setting-fixed-btn:hover),
 .theme-handdrawn :deep(.setting-fixed-btn.n-button--disabled) {
-  border: 1px solid transparent !important;
-  border-image: url('../assets/sketch-frame-gray.svg') 24 / 7px stretch !important;
+  border: 0 !important;
+  border-image: none !important;
   color: #31547e !important;
-  background-color: rgba(241, 247, 251, 0.9) !important;
-  background-image: none !important;
+  background-color: transparent !important;
+  background-image: url('../assets/sketch-frame-gray.svg') !important;
+  background-size: 100% 100% !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
   box-shadow: none !important;
 }
 
@@ -5516,11 +5522,16 @@ onBeforeUnmount(() => {
 .theme-handdrawn :deep(.n-button--default-type.setting-fixed-btn.setting-fixed-btn),
 .theme-handdrawn :deep(.n-button--default-type.setting-fixed-btn.setting-fixed-btn:hover),
 .theme-handdrawn :deep(.n-button--default-type.setting-fixed-btn.setting-fixed-btn.n-button--disabled) {
-  border: 1px solid transparent !important;
-  border-image: url('../assets/sketch-frame-gray.svg') 24 / 7px stretch !important;
+  border: 0 !important;
+  border-image: none !important;
+  border-radius: 10px !important;
   color: #31547e !important;
-  background-color: rgba(242, 246, 249, 0.92) !important;
-  background-image: none !important;
+  background-color: transparent !important;
+  background-image: url('../assets/sketch-frame-gray.svg') !important;
+  background-size: 100% 100% !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  box-shadow: none !important;
 }
 
 .theme-handdrawn :deep(.n-button--primary-type) {
