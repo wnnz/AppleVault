@@ -1124,6 +1124,18 @@
   background-color: rgba(225, 247, 255, 0.72) !important;
 }
 
+.theme-handdrawn .app-table .app-button--tiny {
+  height: 26px !important;
+  line-height: 24px !important;
+  padding-right: 8px !important;
+  padding-left: 8px !important;
+  font-size: 12px !important;
+}
+
+.theme-handdrawn .app-table .app-button--secondary:not(.app-button--tertiary):not(.app-button--quaternary) {
+  border-image-width: 5px !important;
+}
+
 .theme-handdrawn .app-table__pagination .app-table__page {
   min-width: 30px;
   background-image: none !important;

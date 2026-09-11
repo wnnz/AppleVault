@@ -871,6 +871,12 @@ func (a *App) GetVersionMetadata(bundleId, versionId string, appId int64) (Versi
 	}
 
 	res.DisplayFileSize = formatBytes(res.FileSize)
+	if strings.Contains(res.ReleaseDate, "T") {
+		res.ReleaseDate = strings.Split(res.ReleaseDate, "T")[0]
+	}
+	if strings.HasPrefix(res.ReleaseDate, "0001") || res.ReleaseDate == "" {
+		res.ReleaseDate = "-"
+	}
 	return res, nil
 }
 

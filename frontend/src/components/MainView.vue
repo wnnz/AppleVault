@@ -1497,6 +1497,7 @@ async function querySingleVersionMetadata(row: VersionItem) {
     row.displayVersion = res.displayVersion
     row.fileSize = res.displayFileSize
     row.releaseDate = res.releaseDate ? res.releaseDate.replace(/T.*/, '') : '-'
+    versionItems.value = [...versionItems.value]
     statusText.value = `构建 ID ${row.versionId} 对应版本: ${res.displayVersion} (${res.displayFileSize})`
   } catch (err: any) {
     message.error(`查询详情失败: ${err}`)
@@ -1549,8 +1550,22 @@ const versionColumns = [
       return h('span', { class: 'tag-version-highlight' }, row.displayVersion)
     }
   },
-  { title: '文件体积', key: 'fileSize', width: 110 },
-  { title: '发布日期', key: 'releaseDate', width: 120 },
+  {
+    title: '文件体积',
+    key: 'fileSize',
+    width: 110,
+    render(row: VersionItem) {
+      return h('span', row.fileSize && row.fileSize !== '-' ? row.fileSize : '-')
+    }
+  },
+  {
+    title: '发布日期',
+    key: 'releaseDate',
+    width: 120,
+    render(row: VersionItem) {
+      return h('span', row.releaseDate && row.releaseDate !== '-' ? row.releaseDate : '-')
+    }
+  },
   {
     title: '操作',
     key: 'actions',
@@ -2031,6 +2046,7 @@ async function fetchItemMetadata(index: number): Promise<string> {
     item.displayVersion = res.displayVersion
     item.fileSize = res.displayFileSize
     item.releaseDate = res.releaseDate ? res.releaseDate.replace(/T.*/, '') : '-'
+    versionItems.value = [...versionItems.value]
     return item.displayVersion
   } catch (err) {
     console.warn(`查询构建 ID ${item.versionId} 失败:`, err)

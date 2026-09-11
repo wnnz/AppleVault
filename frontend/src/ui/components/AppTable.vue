@@ -128,4 +128,6 @@ function columnStyle(column?: AppTableColumn<Row>) {
 .app-table__pagination { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-height: 42px; padding: 4px 10px; color: var(--ui-muted); font-size: 12px; }
 .app-table__page { width: 30px; height: 30px; border: 1px solid var(--ui-border); border-radius: 7px; background: var(--ui-control-bg); color: var(--ui-text); cursor: pointer; }
 .app-table__page:disabled { opacity: .4; cursor: not-allowed; }
+.app-table .app-button--tiny { height: 26px; line-height: 24px; padding: 0 8px; }
+.app-button-group { display: inline-flex; align-items: center; gap: 6px; }
 </style>
