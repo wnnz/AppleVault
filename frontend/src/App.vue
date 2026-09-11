@@ -76,8 +76,8 @@ watch(currentTheme, (newTheme) => {
 const themeOverrides = computed<GlobalThemeOverrides>(() => ({
   common: {
     primaryColor: isHanddrawn.value ? '#168ff0' : '#0071e3',
-    primaryColorHover: isHanddrawn.value ? '#0f82de' : '#0077ed',
-    primaryColorPressed: isHanddrawn.value ? '#0b70c4' : '#005bb5',
+    primaryColorHover: isHanddrawn.value ? '#1288e2' : '#0077ed',
+    primaryColorPressed: isHanddrawn.value ? '#0d7ed7' : '#005bb5',
     primaryColorSuppl: isHanddrawn.value ? '#168ff0' : '#0071e3',
     borderRadius: isHanddrawn.value ? '10px' : '8px',
     fontFamily: isHanddrawn.value

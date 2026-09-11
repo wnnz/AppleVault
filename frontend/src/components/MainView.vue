@@ -15,7 +15,7 @@
         <div class="brand-icon-box">
           <img
             class="brand-logo-image"
-            :src="effectiveTheme === 'handdrawn' ? handdrawnLogo : standardLogo"
+            :src="standardLogo"
             alt="AppleVault"
           />
         </div>
@@ -1294,7 +1294,6 @@ import { EventsOn, OnFileDrop, OnFileDropOff, BrowserOpenURL } from '../../wails
 import { main } from '../../wailsjs/go/models'
 import { AppTheme, ThemeOption } from '../types/theme'
 import standardLogo from '../assets/applevault-logo.webp'
-import handdrawnLogo from '../assets/applevault-handdrawn-logo.webp'
 import handdrawnSidebarArt from '../assets/sketch-sidebar-art.svg'
 import handdrawnSidebarFloatingLeaf from '../assets/sketch-floating-leaf.svg'
 
@@ -4733,6 +4732,14 @@ onBeforeUnmount(() => {
   border-radius: 7px;
 }
 
+.theme-handdrawn .brand-icon-box {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
 .theme-handdrawn .nav-section-title {
   color: #7593b4;
   font-size: 12px;
@@ -4766,7 +4773,14 @@ onBeforeUnmount(() => {
   background-image: url('../assets/sketch-blue-fill.svg');
   background-size: cover;
   background-position: center;
-  box-shadow: 0 3px 0 rgba(13, 118, 207, 0.34), inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  box-shadow: none;
+}
+
+.theme-handdrawn .nav-item.active:hover {
+  color: #ffffff;
+  border-color: rgba(8, 104, 190, 0.40);
+  background-color: #1288e2;
+  box-shadow: none;
 }
 
 .theme-handdrawn .nav-item.active::after {
@@ -5499,12 +5513,14 @@ onBeforeUnmount(() => {
   background-image: url('../assets/sketch-blue-fill.svg') !important;
   background-size: cover !important;
   background-position: center !important;
-  box-shadow: 0 3px 0 rgba(13, 118, 207, 0.32) !important;
+  box-shadow: none !important;
 }
 
 .theme-handdrawn :deep(.n-button--primary-type:hover) {
   color: #ffffff !important;
-  background-color: #0f82de !important;
+  border-color: #096fc5 !important;
+  background-color: #1288e2 !important;
+  box-shadow: none !important;
 }
 
 /* The reference search control carries three small yellow pencil strokes at
