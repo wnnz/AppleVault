@@ -542,9 +542,9 @@
           </div>
 
           <!-- 搜索与操作工具栏卡片 (放在页面标题下方，类似应用搜索的布局) -->
-          <AppCard class="clean-card mb-4 search-bar-card purchased-search-toolbar">
+          <AppCard class="clean-card mb-4 search-bar-card">
             <div class="search-input-group">
-              <div class="search-input-wrapper purchased-search-wrapper">
+              <div class="search-input-wrapper">
                 <div class="purchased-search-input-box">
                   <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" class="search-icon">
                     <circle cx="11" cy="11" r="8"></circle>
@@ -3170,12 +3170,14 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 12px;
+  width: 100%;
 }
 
 .search-input-wrapper {
   flex: 1;
   display: flex;
   align-items: center;
+  min-width: 0;
 }
 
 .search-input {
@@ -3187,6 +3189,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .filter-item {
@@ -3508,23 +3512,6 @@ onBeforeUnmount(() => {
 }
 
 /* Purchased View Controls & Search Toolbar */
-.purchased-search-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 10px 14px;
-  flex-wrap: wrap;
-}
-
-.purchased-search-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1;
-  min-width: 280px;
-}
-
 .purchased-search-input-box {
   display: flex;
   align-items: center;
@@ -3533,8 +3520,8 @@ onBeforeUnmount(() => {
   border-radius: 8px;
   padding: 0 10px;
   height: 30px;
-  width: 330px;
-  max-width: 100%;
+  width: 100%;
+  flex: 1;
   transition: all 0.2s ease;
   box-sizing: border-box;
 }
@@ -3684,16 +3671,6 @@ onBeforeUnmount(() => {
 
 .dark-mode .page-indicator {
   color: #94a3b8;
-}
-
-.purchased-search-wrapper {
-  flex: 1;
-  display: flex;
-  align-items: center;
-}
-
-.purchased-search-wrapper .purchased-search-input-box {
-  width: 100%;
 }
 
 .purchased-footer-count {

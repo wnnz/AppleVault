@@ -542,7 +542,11 @@
   font-size: 14px;
 }
 
-.theme-handdrawn .purchased-search-toolbar .app-button {
+.theme-handdrawn.active-tab-purchased .filter-controls {
+  margin-left: auto;
+}
+
+.theme-handdrawn.active-tab-purchased .filter-controls .app-button {
   min-width: 86px;
 }
 
