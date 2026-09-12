@@ -138,7 +138,13 @@ const emit = defineEmits<{
 const effectiveTheme = computed<AppTheme>(() => props.currentTheme || (props.isDark ? 'minimal-dark' : 'minimal-light'))
 const isDarkTheme = computed(() => effectiveTheme.value.endsWith('-dark') || props.isDark)
 
-const activeTab = ref('search')
+// 解析启动初始页：优先使用 URL 参数；若未显式指定，根据本地登录凭证状态决定（未登录默认打开账号登录页面）
+const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+const initialTabParam = urlParams?.get('tab') || null
+const isDemoMode = urlParams?.get('demo') === '1'
+const storedLoggedIn = typeof window !== 'undefined' ? localStorage.getItem('apple_vault_logged_in') === 'true' : false
+
+const activeTab = ref(initialTabParam || (isDemoMode || storedLoggedIn ? 'search' : 'account'))
 const isAnyOperationRunning = ref(false)
 const statusText = ref('就绪')
 
@@ -332,7 +338,7 @@ onMounted(() => {
     applyDemoMockData(tabParam)
   } else {
     void settingsViewRef.value?.loadSettings()
-    void accountViewRef.value?.refreshAccount(true)
+    void accountViewRef.value?.refreshAccount(!tabParam)
     void downloadViewRef.value?.loadDownloadTasks()
   }
 

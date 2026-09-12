@@ -27,5 +27,15 @@ function onOpenChange(open: boolean) { if (!open) cancel() }
 </script>
 
 <style>
-.app-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+.app-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+.app-dialog-actions .app-button {
+  min-width: 90px;
+  height: 34px;
+  box-sizing: border-box;
+}
 </style>

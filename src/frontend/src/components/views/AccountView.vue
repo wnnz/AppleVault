@@ -171,7 +171,7 @@ watch(show2FAModal, async visible => {
 
 /**
  * 刷新当前账号登录状态
- * @param autoNavigate 是否在已登录时自动跳转到搜索页
+ * @param autoNavigate 是否根据登录状态自动跳转视图（已登录跳转到搜索页，未登录跳转到账号页）
  */
 async function refreshAccount(autoNavigate = false) {
   isAccountLoading.value = true
@@ -181,17 +181,26 @@ async function refreshAccount(autoNavigate = false) {
     account.value = res
     emit('accountChanged', res)
     if (res.success && res.email) {
+      localStorage.setItem('apple_vault_logged_in', 'true')
       emit('busyChange', false, `已登录: ${res.name} (${res.email})`)
       if (autoNavigate) {
         emit('navigate', 'search')
       }
     } else {
+      localStorage.setItem('apple_vault_logged_in', 'false')
       emit('busyChange', false, '未检测到已登录的 Apple ID')
+      if (autoNavigate) {
+        emit('navigate', 'account')
+      }
     }
   } catch {
+    localStorage.setItem('apple_vault_logged_in', 'false')
     account.value = { name: '', email: '', success: false }
     emit('accountChanged', account.value)
     emit('busyChange', false, '未登录')
+    if (autoNavigate) {
+      emit('navigate', 'account')
+    }
   } finally {
     isAccountLoading.value = false
   }
@@ -219,6 +228,7 @@ async function handleLogin() {
     }
 
     if (res.success) {
+      localStorage.setItem('apple_vault_logged_in', 'true')
       account.value = res.account
       emit('accountChanged', res.account)
       emit('loginSuccess', res.account)
@@ -227,6 +237,7 @@ async function handleLogin() {
       emit('busyChange', false, `登录成功: ${res.account.name}`)
       emit('navigate', 'search')
     } else {
+      localStorage.setItem('apple_vault_logged_in', 'false')
       message.error(`登录失败: ${res.errorMessage}`)
       emit('busyChange', false, `登录失败: ${res.errorMessage}`)
     }
@@ -255,6 +266,7 @@ async function confirm2FA() {
   try {
     const res = await Login(loginForm.value.email, loginForm.value.password, twoFACode.value)
     if (res.success) {
+      localStorage.setItem('apple_vault_logged_in', 'true')
       show2FAModal.value = false
       account.value = res.account
       emit('accountChanged', res.account)
@@ -265,6 +277,7 @@ async function confirm2FA() {
       emit('busyChange', false, `登录成功: ${res.account.name}`)
       emit('navigate', 'search')
     } else {
+      localStorage.setItem('apple_vault_logged_in', 'false')
       message.error(`验证失败: ${res.errorMessage}`)
       emit('busyChange', false, `验证失败: ${res.errorMessage}`)
     }
@@ -300,10 +313,12 @@ async function handleRevoke() {
       try {
         const ok = await Revoke()
         if (ok) {
+          localStorage.setItem('apple_vault_logged_in', 'false')
           account.value = { name: '', email: '', success: false }
           emit('accountChanged', account.value)
           message.success('已成功注销登录凭据')
           emit('busyChange', false, '已退出登录')
+          emit('navigate', 'account')
         }
       } catch (err: any) {
         message.error(`注销失败: ${err}`)

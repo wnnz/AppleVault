@@ -158,14 +158,29 @@ function onClick(event: MouseEvent) {
   z-index: 0;
   inset: 2px 0;
   border-radius: 4px;
-  background-color: var(--hd-blue);
+  background-color: var(--hd-blue, #168ff0);
   background-image: url('../themes/handdrawn/assets/handdrawn-blue-button-texture.webp');
   background-size: 240px 80px !important;
   background-position: 0 0 !important;
   background-repeat: repeat !important;
 }
-.theme-handdrawn .app-button--primary:hover { color: #fff !important; border-color: transparent !important; background-color: transparent !important; }
-.theme-handdrawn .app-button--primary:hover::before { background-color: #1288e2; }
+.theme-handdrawn .app-button--primary:hover:not(:disabled):not(.app-button--disabled) {
+  color: #fff !important;
+  border-color: transparent !important;
+  background-color: transparent !important;
+}
+.theme-handdrawn .app-button--primary:hover:not(:disabled):not(.app-button--disabled)::before {
+  background-color: var(--hd-blue-dark, #1288e2);
+}
+.theme-handdrawn .app-button--primary:disabled,
+.theme-handdrawn .app-button--primary.app-button--disabled {
+  opacity: .55 !important;
+  cursor: not-allowed !important;
+}
+.theme-handdrawn .app-button--primary:disabled::before,
+.theme-handdrawn .app-button--primary.app-button--disabled::before {
+  background-color: var(--hd-blue, #168ff0);
+}
 .theme-handdrawn .app-button--secondary.app-button--type-error { color: #d94f5c !important; }
 .theme-handdrawn .app-button--tiny { padding-right: 6px; padding-left: 6px; font-size: 12px; }
 </style>

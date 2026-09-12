@@ -17,4 +17,16 @@
   --ui-danger: #ff5b5b;
   --ui-switch-off: #c7e8f8;
   --ui-progress-track: #dff3fc;
+
+  /* 手绘主题全局调色板变量（确保 Teleport / 模态框等全局组件亦可正常继承） */
+  --hd-paper: #fffdf6;
+  --hd-paper-blue: #f4fbff;
+  --hd-ink: #173b6a;
+  --hd-muted: #6481a6;
+  --hd-blue: #168ff0;
+  --hd-blue-dark: #0d76cf;
+  --hd-line: #b8e1f8;
+  --hd-green: #4ed18c;
+  --hd-yellow: #f7c94f;
+  --hd-red: #ff5b5b;
 }

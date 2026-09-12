@@ -22,7 +22,8 @@
   display: none;
 }
 
-.theme-handdrawn.app-layout {
+.theme-handdrawn,
+[data-theme='handdrawn'] {
   --hd-paper: #fffdf6;
   --hd-paper-blue: #f4fbff;
   --hd-ink: #173b6a;
@@ -34,6 +35,9 @@
   --hd-yellow: #f7c94f;
   --hd-red: #ff5b5b;
   --hd-yellow-accent-image: url('./assets/sketch-title-accent.svg');
+}
+
+.theme-handdrawn.app-layout {
   position: relative;
   isolation: isolate;
   background-color: #f8fbfc;
