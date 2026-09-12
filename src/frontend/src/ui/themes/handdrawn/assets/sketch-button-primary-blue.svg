@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96" fill="none">
+  <!-- 手绘主按钮底色与主外墨线：轮廓与 sketch-frame-blue.svg 严格一致，天然具备 9px 呼吸外留白 -->
+  <path d="M20 10C34 9 55 11 72 10C81 10 85 14 86 23C87 39 84 57 86 72C86 81 82 85 73 86C55 87 39 84 24 86C15 86 11 82 10 73C9 58 11 39 10 24C9 16 12 11 20 10Z" fill="#168ff0" stroke="#0d76cf" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- 内嵌高光与笔触虚线，增强手绘纸面蜡笔质感 -->
+  <path d="M22 13C37 14 55 12 71 13C79 13 83 17 83 25C82 40 84 56 83 71C83 79 78 83 71 83C54 82 39 84 25 83C17 83 13 78 13 71C14 55 12 40 13 25C13 17 15 13 22 13Z" stroke="#6cd2ff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="26 2 13 1" fill="none"/>
+  <path d="M18 10L36 11M62 87L79 85M9 30L11 48M87 50L84 69" stroke="#9ee4ff" stroke-width="1.1" stroke-linecap="round"/>
+</svg>

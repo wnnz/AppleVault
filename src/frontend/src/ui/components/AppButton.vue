@@ -143,43 +143,25 @@ function onClick(event: MouseEvent) {
 .theme-handdrawn .app-button--secondary.app-button--disabled:not(.app-button--tertiary):not(.app-button--quaternary) {
   background-color: rgba(239, 250, 255, 0.84) !important;
 }
+/* 手绘主题主按钮（深色按钮）：采用与 sketch-frame-blue 相同外廓与 9px 呼吸留白的实心九宫格 SVG，
+   从根本上保证与浅色按钮、输入框、下拉框拥有完全一致的手绘外缘起伏与视觉高度对齐，无需人工 inset 缩进 */
 .theme-handdrawn .app-button--primary {
-  position: relative;
-  isolation: isolate;
-  border-width: 1px !important;
-  border-color: transparent !important;
-  color: #fff !important;
+  border: 1px solid transparent !important;
+  border-image: url('../themes/handdrawn/assets/sketch-button-primary-blue.svg') 24 fill / 6px stretch !important;
+  border-radius: 0 !important;
   background-color: transparent !important;
   background-image: none !important;
-}
-.theme-handdrawn .app-button--primary::before {
-  content: '';
-  position: absolute;
-  z-index: 0;
-  inset: 2px 0;
-  border-radius: 4px;
-  background-color: var(--hd-blue, #168ff0);
-  background-image: url('../themes/handdrawn/assets/handdrawn-blue-button-texture.webp');
-  background-size: 240px 80px !important;
-  background-position: 0 0 !important;
-  background-repeat: repeat !important;
+  color: #ffffff !important;
 }
 .theme-handdrawn .app-button--primary:hover:not(:disabled):not(.app-button--disabled) {
-  color: #fff !important;
-  border-color: transparent !important;
+  border-image: url('../themes/handdrawn/assets/sketch-button-primary-blue-hover.svg') 24 fill / 6px stretch !important;
   background-color: transparent !important;
-}
-.theme-handdrawn .app-button--primary:hover:not(:disabled):not(.app-button--disabled)::before {
-  background-color: var(--hd-blue-dark, #1288e2);
+  color: #ffffff !important;
 }
 .theme-handdrawn .app-button--primary:disabled,
 .theme-handdrawn .app-button--primary.app-button--disabled {
   opacity: .55 !important;
   cursor: not-allowed !important;
-}
-.theme-handdrawn .app-button--primary:disabled::before,
-.theme-handdrawn .app-button--primary.app-button--disabled::before {
-  background-color: var(--hd-blue, #168ff0);
 }
 .theme-handdrawn .app-button--secondary.app-button--type-error { color: #d94f5c !important; }
 .theme-handdrawn .app-button--tiny { padding-right: 6px; padding-left: 6px; font-size: 12px; }
