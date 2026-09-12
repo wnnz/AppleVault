@@ -79,6 +79,25 @@ func (a *App) ListDevices() ([]DeviceInfo, error) {
 	return devices, nil
 }
 
+// PairDeviceForWiFi establishes the trusted host pairing required before the
+// Apple Mobile Device service can expose a device over the local network.
+func (a *App) PairDeviceForWiFi(udid string) (bool, error) {
+	udid = strings.TrimSpace(udid)
+	if udid == "" {
+		return false, fmt.Errorf("请先选择通过 USB 连接的苹果设备")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	a.emitLog(fmt.Sprintf("正在为设备 %s 建立 Wi-Fi 连接所需的信任配对...", udid))
+	_, err := a.runIOSTool(ctx, "pair", "--udid="+udid)
+	if err != nil && !isAlreadyPairedError(err) {
+		return false, friendlyDeviceToolError(err)
+	}
+	a.emitLog("设备配对完成。请在 Apple Devices 或 iTunes 中开启“连接 Wi-Fi 时显示此设备”。")
+	return true, nil
+}
+
 // InstallIPA 将指定 IPA 安装到目标设备。IPA 必须具有可供该设备使用的有效签名。
 func (a *App) InstallIPA(ipaPath, udid string) (InstallResult, error) {
 	absolutePath, err := validateIPAPath(ipaPath)
@@ -337,7 +356,7 @@ func parseDeviceList(output string) ([]DeviceInfo, error) {
 			Name:           name,
 			ProductType:    rawProductType,
 			ProductVersion: findJSONString(value, "productVersion", "osVersion", "version"),
-			ConnectionType: findJSONString(value, "connectionType", "connection"),
+			ConnectionType: normalizeDeviceConnectionType(findJSONString(value, "connectionType", "connection")),
 		})
 	}
 
@@ -345,6 +364,25 @@ func parseDeviceList(output string) ([]DeviceInfo, error) {
 		return strings.ToLower(devices[i].Name) < strings.ToLower(devices[j].Name)
 	})
 	return devices, nil
+}
+
+func normalizeDeviceConnectionType(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "network", "wifi", "wi-fi", "wireless":
+		return "Wi-Fi"
+	case "usb":
+		return "USB"
+	default:
+		return strings.TrimSpace(value)
+	}
+}
+
+func isAlreadyPairedError(err error) bool {
+	if err == nil {
+		return false
+	}
+	message := strings.ToLower(err.Error())
+	return strings.Contains(message, "already paired") || strings.Contains(message, "already exists")
 }
 
 // findJSONString 按候选字段优先级递归查找 JSON 字符串，兼容 go-ios 不同版本的嵌套结构。
@@ -416,7 +454,7 @@ func friendlyDeviceToolError(err error) error {
 		strings.Contains(lowerMessage, "not trusted"):
 		return fmt.Errorf("设备尚未信任此电脑或配对失效。请解锁手机屏幕，若弹出「要信任此电脑吗？」请点击「信任」并输入锁屏密码后重试；若未弹出提示，可尝试重新拔插数据线")
 	case strings.Contains(lowerMessage, "no device"), strings.Contains(lowerMessage, "device not found"):
-		return fmt.Errorf("未找到目标设备，请确认设备已用数据线连接、点亮屏幕解锁（切勿息屏休眠）并信任此电脑")
+		return fmt.Errorf("未找到目标设备，请确认 USB 已连接，或设备与电脑处于同一 Wi-Fi 且已开启无线连接；同时保持设备解锁并信任此电脑")
 	case strings.Contains(lowerMessage, "password protected"), strings.Contains(lowerMessage, "locked"):
 		return fmt.Errorf("设备处于锁屏或息屏休眠状态，请点亮并解锁设备屏幕后重试")
 	case strings.Contains(lowerMessage, "pair"), strings.Contains(lowerMessage, "trust"):

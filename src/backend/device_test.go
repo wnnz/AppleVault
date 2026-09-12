@@ -136,3 +136,23 @@ func TestFriendlyDeviceToolErrorInvalidHostID(t *testing.T) {
 		t.Fatalf("friendlyDeviceToolError() = %v, want friendly message with trust instructions", err)
 	}
 }
+
+func TestParseDeviceListNormalizesWiFiConnection(t *testing.T) {
+	output := `{"deviceList":[{"udid":"wifi-device","name":"iPhone","productType":"iPhone17,1","connectionType":"Network"}]}`
+	devices, err := parseDeviceList(output)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(devices) != 1 || devices[0].ConnectionType != "Wi-Fi" {
+		t.Fatalf("unexpected Wi-Fi device: %#v", devices)
+	}
+}
+
+func TestAlreadyPairedError(t *testing.T) {
+	if !isAlreadyPairedError(fmt.Errorf("device is already paired")) {
+		t.Fatal("expected already-paired error to be accepted")
+	}
+	if isAlreadyPairedError(fmt.Errorf("pairing denied")) {
+		t.Fatal("pairing failure must not be accepted")
+	}
+}

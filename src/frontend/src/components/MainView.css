@@ -1174,6 +1174,12 @@
   gap: 16px;
 }
 
+.device-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
 .account-list {
   display: flex;
   flex-direction: column;

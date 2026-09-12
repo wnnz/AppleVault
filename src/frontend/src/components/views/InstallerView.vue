@@ -3,7 +3,7 @@
     <div class="view-header">
       <div>
         <div class="title-with-badge"><h2 class="view-title">设备直装</h2></div>
-        <p class="view-desc">通过 USB 数据线将正版签署的 IPA 应用包一键安装至 iOS 设备</p>
+        <p class="view-desc">通过 USB 或 Wi-Fi 将正版签署的 IPA 应用包一键安装至 iOS 设备</p>
       </div>
     </div>
 
@@ -28,15 +28,26 @@
       <AppCard class="clean-card flex-col">
         <div class="card-headline">
           <span class="headline-title">2. 选择苹果设备</span>
-          <AppButton
-            secondary
-            size="small"
-            :loading="isLoadingDevices"
-            :disabled="isInstallingIPA"
-            @click="loadConnectedDevices"
-          >
-            刷新检测
-          </AppButton>
+          <div class="device-card-actions">
+            <AppButton
+              secondary
+              size="small"
+              :loading="isPairingWiFi"
+              :disabled="!selectedDevice || selectedDevice.connectionType === 'Wi-Fi' || isInstallingIPA"
+              @click="handlePairWiFi"
+            >
+              Wi-Fi 配对
+            </AppButton>
+            <AppButton
+              secondary
+              size="small"
+              :loading="isLoadingDevices"
+              :disabled="isInstallingIPA || isPairingWiFi"
+              @click="loadConnectedDevices"
+            >
+              刷新检测
+            </AppButton>
+          </div>
         </div>
         <AppSelect
           v-model="selectedDeviceUDID"
@@ -47,7 +58,7 @@
           size="small"
         />
         <div class="sub-alert-box mt-3">
-          <span>请保持设备屏幕<b>常亮解锁</b>；若设备息屏休眠，USB 通信将中断并丢失连接。</span>
+          <span>请保持设备屏幕<b>常亮解锁</b>；Wi-Fi 连接要求设备与电脑处于同一局域网。</span>
         </div>
         <div v-if="selectedDevice" class="device-spec-box mt-3">
           <div class="spec-row"><span class="spec-k">设备名称</span><span class="spec-v font-bold">{{ selectedDevice.name }}</span></div>
@@ -58,7 +69,7 @@
         </div>
         <div v-else-if="!isLoadingDevices && devices.length === 0" class="no-device-box mt-3">
           <div class="no-device-text">未检测到已连接的苹果设备</div>
-          <div class="no-device-sub">请直连电脑 USB 接口、点亮屏幕、输入密码并信任此电脑</div>
+          <div class="no-device-sub">首次连接请使用 USB 完成信任；已配对设备可在同一 Wi-Fi 下直接刷新</div>
         </div>
       </AppCard>
     </div>
@@ -88,24 +99,26 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { backend as main } from '../../../wailsjs/go/models'
-import { SelectIPA, ListDevices, InstallIPA } from '../../../wailsjs/go/backend/App'
+import { SelectIPA, ListDevices, InstallIPA, PairDeviceForWiFi } from '../../../wailsjs/go/backend/App'
 import AppButton from '../../ui/components/AppButton.vue'
 import AppCard from '../../ui/components/AppCard.vue'
 import AppInput from '../../ui/components/AppInput.vue'
 import AppSelect from '../../ui/components/AppSelect.vue'
-import { useAppMessage } from '../../ui/feedback'
+import { useAppDialog, useAppMessage } from '../../ui/feedback'
 
 const emit = defineEmits<{
   (e: 'busyChange', busy: boolean, text?: string): void
 }>()
 
 const message = useAppMessage()
+const dialog = useAppDialog()
 
 const selectedIPAPath = ref('')
 const devices = ref<main.DeviceInfo[]>([])
 const selectedDeviceUDID = ref<string | null>(null)
 const isLoadingDevices = ref(false)
 const isInstallingIPA = ref(false)
+const isPairingWiFi = ref(false)
 
 const selectedIPAFileName = computed(() =>
   selectedIPAPath.value.split(/[\\/]/).pop() || selectedIPAPath.value
@@ -184,6 +197,36 @@ async function loadConnectedDevices() {
     message.error(`设备检测失败: ${err}`)
   } finally {
     isLoadingDevices.value = false
+  }
+}
+
+function handlePairWiFi() {
+  if (!selectedDevice.value) {
+    message.warning('请先选择通过 USB 连接的设备')
+    return
+  }
+  dialog.info({
+    title: '配置 Wi-Fi 连接',
+    content: '请保持设备通过 USB 连接、解锁并信任此电脑。配对完成后，还需在 Apple Devices 或 iTunes 中开启“连接 Wi-Fi 时显示此设备”。',
+    positiveText: '开始配对',
+    negativeText: '取消',
+    onPositiveClick: pairSelectedDeviceForWiFi
+  })
+}
+
+async function pairSelectedDeviceForWiFi() {
+  if (!selectedDeviceUDID.value) return
+  isPairingWiFi.value = true
+  emit('busyChange', true, '正在建立 Wi-Fi 设备配对...')
+  try {
+    await PairDeviceForWiFi(selectedDeviceUDID.value)
+    message.success('配对完成，请在 Apple Devices/iTunes 开启 Wi-Fi 显示后拔线刷新')
+    emit('busyChange', false, 'Wi-Fi 配对完成')
+  } catch (err: any) {
+    message.error(`Wi-Fi 配对失败: ${err}`)
+    emit('busyChange', false, 'Wi-Fi 配对失败')
+  } finally {
+    isPairingWiFi.value = false
   }
 }
 

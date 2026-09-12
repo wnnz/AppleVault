@@ -71,7 +71,7 @@
 
 ### 运行环境要求
 - **系统要求**：Windows 10 / Windows 11 (64位)
-- **设备驱动**：已安装 Apple 设备 USB 通信驱动（可通过电脑安装官方 iTunes 或 Apple Devices 获得）
+- **设备驱动**：已安装 Apple 设备通信驱动（可通过电脑安装官方 iTunes 或 Apple Devices 获得）；Wi-Fi 连接首次需通过 USB 完成信任，并在 Apple Devices/iTunes 中开启“连接 Wi-Fi 时显示此设备”
 - **网络条件**：若连接 Apple App Store 接口较慢，可在「系统设置」中开启本地网络代理
 
 ### 使用步骤

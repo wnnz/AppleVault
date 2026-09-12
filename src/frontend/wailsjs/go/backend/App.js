@@ -82,6 +82,10 @@ export function Revoke() {
   return window['go']['backend']['App']['Revoke']();
 }
 
+export function PairDeviceForWiFi(arg1) {
+  return window['go']['backend']['App']['PairDeviceForWiFi'](arg1);
+}
+
 export function RemoveAccount(arg1) {
   return window['go']['backend']['App']['RemoveAccount'](arg1);
 }
