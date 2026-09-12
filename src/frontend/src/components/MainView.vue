@@ -1283,9 +1283,9 @@ import {
   SelectIPA,
   ListDevices,
   InstallIPA
-} from '../../wailsjs/go/main/App'
+} from '../../wailsjs/go/backend/App'
 import { EventsOn, OnFileDrop, OnFileDropOff, BrowserOpenURL } from '../../wailsjs/runtime/runtime'
-import { main } from '../../wailsjs/go/models'
+import { backend as main } from '../../wailsjs/go/models'
 import { type AppTheme, themeOptions } from '../ui/theme'
 import standardLogo from '../assets/applevault-logo.webp'
 import handdrawnSidebarArt from '../ui/themes/handdrawn/assets/sketch-sidebar-art.svg'

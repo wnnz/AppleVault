@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 
+	"AppleVault/src/backend"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
@@ -13,7 +14,7 @@ import (
 var assets embed.FS
 
 func main() {
-	app := NewApp()
+	app := backend.NewApp()
 
 	err := wails.Run(&options.App{
 		Title:     "果仓助手 (AppleVault) v1.1 - 苹果 App Store 官方正版 / 历史版本 IPA 下载",
@@ -28,7 +29,7 @@ func main() {
 		DragAndDrop: &options.DragAndDrop{
 			EnableFileDrop: true,
 		},
-		OnStartup: app.startup,
+		OnStartup: app.Startup,
 		Bind: []interface{}{
 			app,
 		},

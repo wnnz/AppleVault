@@ -1,4 +1,4 @@
-export namespace main {
+export namespace backend {
 	
 	export class AccountInfo {
 	    name: string;

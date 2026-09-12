@@ -90,8 +90,9 @@
 ```text
 AppleVault/
 ├── src/                     # 应用源码
-│   ├── *.go                 # Go / Wails 后端与入口
-│   └── frontend/            # Vue 前端源码
+│   ├── main.go              # Wails 应用入口
+│   ├── backend/             # Go 后端实现与测试
+│   └── frontend/            # Vue 前端源码及 Wails 绑定
 ├── tools/                   # 开发与发布所需的外部工具
 ├── build/                   # Wails 资源与发布产物
 ├── docs/                    # 项目文档和截图

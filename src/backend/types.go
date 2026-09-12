@@ -1,4 +1,4 @@
-package main
+package backend
 
 type AccountInfo struct {
 	Name    string `json:"name"`

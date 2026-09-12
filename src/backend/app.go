@@ -1,4 +1,4 @@
-package main
+package backend
 
 import (
 	"bufio"
@@ -54,7 +54,7 @@ func NewApp() *App {
 	return app
 }
 
-func (a *App) startup(ctx context.Context) {
+func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 	a.ensureDataMigration()
 	a.loadSettings()
