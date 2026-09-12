@@ -48,8 +48,6 @@ export function Login(arg1:string,arg2:string,arg3:string):Promise<main.LoginRes
 
 export function OpenInExplorer(arg1:string):Promise<void>;
 
-export function PairDeviceForWiFi(arg1:string):Promise<boolean>;
-
 export function Purchase(arg1:string):Promise<main.PurchaseResult>;
 
 export function Revoke():Promise<boolean>;

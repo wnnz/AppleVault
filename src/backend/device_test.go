@@ -147,12 +147,3 @@ func TestParseDeviceListNormalizesWiFiConnection(t *testing.T) {
 		t.Fatalf("unexpected Wi-Fi device: %#v", devices)
 	}
 }
-
-func TestAlreadyPairedError(t *testing.T) {
-	if !isAlreadyPairedError(fmt.Errorf("device is already paired")) {
-		t.Fatal("expected already-paired error to be accepted")
-	}
-	if isAlreadyPairedError(fmt.Errorf("pairing denied")) {
-		t.Fatal("pairing failure must not be accepted")
-	}
-}

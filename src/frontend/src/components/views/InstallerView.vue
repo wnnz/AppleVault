@@ -47,17 +47,8 @@
             <AppButton
               secondary
               size="small"
-              :loading="isPairingWiFi"
-              :disabled="!selectedDevice || selectedDevice.connectionType === 'Wi-Fi' || isInstallingIPA"
-              @click="handlePairWiFi"
-            >
-              Wi-Fi 配对
-            </AppButton>
-            <AppButton
-              secondary
-              size="small"
               :loading="isLoadingDevices"
-              :disabled="isInstallingIPA || isPairingWiFi"
+              :disabled="isInstallingIPA"
               @click="loadConnectedDevices"
             >
               刷新检测
@@ -114,26 +105,24 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { backend as main } from '../../../wailsjs/go/models'
-import { SelectIPA, ListDevices, InstallIPA, InspectIPA, PairDeviceForWiFi } from '../../../wailsjs/go/backend/App'
+import { SelectIPA, ListDevices, InstallIPA, InspectIPA } from '../../../wailsjs/go/backend/App'
 import AppButton from '../../ui/components/AppButton.vue'
 import AppCard from '../../ui/components/AppCard.vue'
 import AppInput from '../../ui/components/AppInput.vue'
 import AppSelect from '../../ui/components/AppSelect.vue'
-import { useAppDialog, useAppMessage } from '../../ui/feedback'
+import { useAppMessage } from '../../ui/feedback'
 
 const emit = defineEmits<{
   (e: 'busyChange', busy: boolean, text?: string): void
 }>()
 
 const message = useAppMessage()
-const dialog = useAppDialog()
 
 const selectedIPAPath = ref('')
 const devices = ref<main.DeviceInfo[]>([])
 const selectedDeviceUDID = ref<string | null>(null)
 const isLoadingDevices = ref(false)
 const isInstallingIPA = ref(false)
-const isPairingWiFi = ref(false)
 const isInspectingIPA = ref(false)
 const ipaInspection = ref<main.IPAInspectionResult | null>(null)
 const ipaInspectionError = ref('')
@@ -243,36 +232,6 @@ async function loadConnectedDevices() {
     message.error(`设备检测失败: ${err}`)
   } finally {
     isLoadingDevices.value = false
-  }
-}
-
-function handlePairWiFi() {
-  if (!selectedDevice.value) {
-    message.warning('请先选择通过 USB 连接的设备')
-    return
-  }
-  dialog.info({
-    title: '配置 Wi-Fi 连接',
-    content: '请保持设备通过 USB 连接、解锁并信任此电脑。配对完成后，还需在 Apple Devices 或 iTunes 中开启“连接 Wi-Fi 时显示此设备”。',
-    positiveText: '开始配对',
-    negativeText: '取消',
-    onPositiveClick: pairSelectedDeviceForWiFi
-  })
-}
-
-async function pairSelectedDeviceForWiFi() {
-  if (!selectedDeviceUDID.value) return
-  isPairingWiFi.value = true
-  emit('busyChange', true, '正在建立 Wi-Fi 设备配对...')
-  try {
-    await PairDeviceForWiFi(selectedDeviceUDID.value)
-    message.success('配对完成，请在 Apple Devices/iTunes 开启 Wi-Fi 显示后拔线刷新')
-    emit('busyChange', false, 'Wi-Fi 配对完成')
-  } catch (err: any) {
-    message.error(`Wi-Fi 配对失败: ${err}`)
-    emit('busyChange', false, 'Wi-Fi 配对失败')
-  } finally {
-    isPairingWiFi.value = false
   }
 }
 
