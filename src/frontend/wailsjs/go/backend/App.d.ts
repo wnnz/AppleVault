@@ -28,6 +28,8 @@ export function GetDownloadTasks():Promise<Array<main.DownloadTask>>;
 
 export function GetSettings():Promise<main.Settings>;
 
+export function GetThemeHintShown():Promise<boolean>;
+
 export function GetVersionMetadata(arg1:string,arg2:string,arg3:number):Promise<main.VersionMetadataResult>;
 
 export function InstallIPA(arg1:string,arg2:string):Promise<main.InstallResult>;
@@ -39,6 +41,8 @@ export function ListDevices():Promise<Array<main.DeviceInfo>>;
 export function ListPurchases(arg1:number,arg2:number):Promise<main.PurchasedResult>;
 
 export function ListVersions(arg1:string,arg2:number):Promise<main.VersionsResult>;
+
+export function MarkThemeHintShown():Promise<void>;
 
 export function Login(arg1:string,arg2:string,arg3:string):Promise<main.LoginResult>;
 

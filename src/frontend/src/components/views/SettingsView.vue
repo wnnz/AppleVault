@@ -152,6 +152,7 @@ const platformOptions = [
 
 const settings = ref<main.Settings>({
   keychainPassphrase: '',
+  themeHintShown: false,
   defaultDownloadDir: 'data/downloads/default',
   defaultPlatform: 'iphone',
   enableProxy: true,

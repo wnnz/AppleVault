@@ -143,7 +143,14 @@
             class="theme-first-use-hint"
             @click="openThemePickerFromHint"
           >
-            点击这里可以切换主题
+            <span class="theme-hint-icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10 2.2c.35 2.25 1.55 3.45 3.8 3.8-2.25.35-3.45 1.55-3.8 3.8C9.65 7.55 8.45 6.35 6.2 6 8.45 5.65 9.65 4.45 10 2.2Z" />
+                <path d="M5.1 10.7c.23 1.5 1.03 2.3 2.53 2.53-1.5.23-2.3 1.03-2.53 2.53-.23-1.5-1.03-2.3-2.53-2.53 1.5-.23 2.3-1.03 2.53-2.53Z" />
+                <path d="M14.8 11.6c.18 1.12.78 1.72 1.9 1.9-1.12.18-1.72.78-1.9 1.9-.18-1.12-.78-1.72-1.9-1.9 1.12-.18 1.72-.78 1.9-1.9Z" />
+              </svg>
+            </span>
+            <span>点击这里可以切换主题</span>
           </button>
           <AppPopover
             v-model="showThemePopover"
@@ -228,6 +235,7 @@
 <script setup lang="ts">
 import { ref, h, defineComponent, onMounted, onBeforeUnmount } from 'vue'
 import { backend as main } from '../../../wailsjs/go/models'
+import { GetThemeHintShown, MarkThemeHintShown } from '../../../wailsjs/go/backend/App'
 import AppPopover from '../../ui/components/AppPopover.vue'
 import AppSwitch from '../../ui/components/AppSwitch.vue'
 import { type AppTheme, themeOptions } from '../../ui/theme'
@@ -288,6 +296,7 @@ const emit = defineEmits<{
 const showThemePopover = ref(false)
 const showThemeHint = ref(false)
 let themeHintTimer: ReturnType<typeof setTimeout> | null = null
+let isUnmounted = false
 const themeList = themeOptions
 
 function dismissThemeHint() {
@@ -308,12 +317,21 @@ function selectTheme(themeKey: AppTheme) {
   showThemePopover.value = false
 }
 
-onMounted(() => {
-  if (props.isDemoMode || localStorage.getItem('apple_vault_theme_hint_seen_v1') === 'true') return
-  localStorage.setItem('apple_vault_theme_hint_seen_v1', 'true')
-  showThemeHint.value = true
-  themeHintTimer = setTimeout(dismissThemeHint, 5000)
+onMounted(async () => {
+  if (props.isDemoMode) return
+  try {
+    if (await GetThemeHintShown()) return
+    if (isUnmounted) return
+    showThemeHint.value = true
+    themeHintTimer = setTimeout(dismissThemeHint, 5000)
+    await MarkThemeHintShown()
+  } catch (err) {
+    console.error('读取或保存主题提示状态失败:', err)
+  }
 })
 
-onBeforeUnmount(dismissThemeHint)
+onBeforeUnmount(() => {
+  isUnmounted = true
+  dismissThemeHint()
+})
 </script>

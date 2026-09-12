@@ -132,6 +132,7 @@ type DownloadTask struct {
 
 type Settings struct {
 	KeychainPassphrase string `json:"keychainPassphrase"`
+	ThemeHintShown     bool   `json:"themeHintShown"`
 	DefaultDownloadDir string `json:"defaultDownloadDir"`
 	DefaultPlatform    string `json:"defaultPlatform"`
 	EnableProxy        bool   `json:"enableProxy"`

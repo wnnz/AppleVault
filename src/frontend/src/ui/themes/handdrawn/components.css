@@ -275,10 +275,53 @@
 }
 
 .theme-handdrawn .theme-first-use-hint {
-  border: 2px solid var(--sketch-ink, #27364a);
-  border-radius: 5px 8px 6px 7px;
-  box-shadow: 3px 3px 0 rgba(35, 120, 200, 0.18);
+  --theme-hint-bg: #fffdf6;
+  --theme-hint-border: #8fd3f4;
+  right: -7px;
+  bottom: calc(100% + 14px);
+  gap: 5px;
+  padding: 9px 13px 9px 10px;
+  border: 1px solid transparent;
+  border-image: url('./assets/sketch-frame-soft.svg') 24 / 8px stretch;
+  border-radius: 0;
+  background-color: rgba(255, 253, 246, 0.97);
+  background-image: url('./assets/handdrawn-paper-texture-v3.webp');
+  background-size: 360px auto;
+  color: var(--hd-ink, #173b6a);
+  box-shadow: 4px 5px 0 rgba(143, 211, 244, 0.16);
   font-family: var(--font-handdrawn, inherit);
+  font-size: 11.5px;
+  font-weight: 650;
+  transform: rotate(-0.7deg);
+  backdrop-filter: none;
+}
+
+.theme-handdrawn .theme-first-use-hint::after {
+  right: 15px;
+  bottom: -5px;
+  width: 9px;
+  height: 9px;
+  border-right: 1.5px solid #8fd3f4;
+  border-bottom: 1.5px solid #8fd3f4;
+  background: #fffdf6;
+  transform: rotate(46deg) skew(-3deg, -3deg);
+}
+
+.theme-handdrawn .theme-first-use-hint:hover {
+  transform: translateY(-1px) rotate(-0.4deg);
+  box-shadow: 5px 6px 0 rgba(143, 211, 244, 0.2);
+}
+
+.theme-handdrawn .theme-hint-icon {
+  width: 18px;
+  height: 18px;
+  flex-basis: 18px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--hd-blue, #168ff0);
+  box-shadow: none;
+  transform: rotate(-7deg);
 }
 
 .theme-handdrawn .account-list-item {

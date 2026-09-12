@@ -54,6 +54,10 @@ export function GetSettings() {
   return window['go']['backend']['App']['GetSettings']();
 }
 
+export function GetThemeHintShown() {
+  return window['go']['backend']['App']['GetThemeHintShown']();
+}
+
 export function GetVersionMetadata(arg1, arg2, arg3) {
   return window['go']['backend']['App']['GetVersionMetadata'](arg1, arg2, arg3);
 }
@@ -92,6 +96,10 @@ export function Purchase(arg1) {
 
 export function Revoke() {
   return window['go']['backend']['App']['Revoke']();
+}
+
+export function MarkThemeHintShown() {
+  return window['go']['backend']['App']['MarkThemeHintShown']();
 }
 
 export function RetryDownloadTask(arg1) {

@@ -17,7 +17,7 @@ func main() {
 	app := backend.NewApp()
 
 	err := wails.Run(&options.App{
-		Title:     "果仓助手 (AppleVault) v" + backend.AppVersion + " - 苹果 App Store 官方正版 / 历史版本 IPA 下载",
+		Title:     "果仓助手 (AppleVault) v" + backend.AppDisplayVersion + " - 苹果 App Store 官方正版 / 历史版本 IPA 下载",
 		Width:     1120,
 		Height:    800,
 		MinWidth:  960,

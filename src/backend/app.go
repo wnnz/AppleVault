@@ -302,9 +302,27 @@ func (a *App) SaveSettings(s Settings) error {
 	// The keychain passphrase is managed explicitly from Account Center. Preserve it
 	// when other settings are saved so a stale frontend form cannot invalidate credentials.
 	s.KeychainPassphrase = a.settings.KeychainPassphrase
+	s.ThemeHintShown = a.settings.ThemeHintShown
 	s.DefaultDownloadDir = a.getDownloadsDir()
 	a.settings = s
 	a.settings.IpaToolPath = "内置 App Store 服务"
+	data, err := json.MarshalIndent(a.settings, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(a.getSettingsFilePath(), data, 0644)
+}
+
+func (a *App) GetThemeHintShown() bool {
+	a.settingsMu.RLock()
+	defer a.settingsMu.RUnlock()
+	return a.settings.ThemeHintShown
+}
+
+func (a *App) MarkThemeHintShown() error {
+	a.settingsMu.Lock()
+	defer a.settingsMu.Unlock()
+	a.settings.ThemeHintShown = true
 	data, err := json.MarshalIndent(a.settings, "", "  ")
 	if err != nil {
 		return err

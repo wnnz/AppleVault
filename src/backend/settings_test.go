@@ -29,11 +29,29 @@ func TestSavedKeychainPassphraseIsPreserved(t *testing.T) {
 	if app.GetSettings().KeychainPassphrase != "123456" {
 		t.Fatal("existing default passphrase must remain available for stored credentials")
 	}
+	if app.GetThemeHintShown() {
+		t.Fatal("legacy settings without a theme hint field should show the hint")
+	}
+	if err = app.MarkThemeHintShown(); err != nil {
+		t.Fatal(err)
+	}
+	if !app.GetThemeHintShown() {
+		t.Fatal("theme hint state was not saved")
+	}
+	reloaded := NewApp()
+	reloaded.dataDirOverride = app.dataDirOverride
+	reloaded.loadSettings()
+	if !reloaded.GetThemeHintShown() || reloaded.GetSettings().KeychainPassphrase != "123456" {
+		t.Fatal("theme hint state and existing passphrase should persist together")
+	}
 	if err = app.SaveSettings(Settings{KeychainPassphrase: "stale-value", DefaultPlatform: "ipad"}); err != nil {
 		t.Fatal(err)
 	}
 	if app.GetSettings().KeychainPassphrase != "123456" {
 		t.Fatal("saving unrelated settings must not overwrite the keychain passphrase")
+	}
+	if !app.GetThemeHintShown() {
+		t.Fatal("saving unrelated settings must not reset the theme hint state")
 	}
 	if err = app.SetKeychainPassphrase("new-secret"); err != nil {
 		t.Fatal(err)

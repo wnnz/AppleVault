@@ -46,13 +46,14 @@ import AppButton from '../../ui/components/AppButton.vue'
 import AppCard from '../../ui/components/AppCard.vue'
 import AppInput from '../../ui/components/AppInput.vue'
 import { useAppMessage } from '../../ui/feedback'
+import { bundledAppVersion, formatAppVersion } from '../../ui/version'
 import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
 import { CheckForUpdates, GetAppVersion } from '../../../wailsjs/go/backend/App'
 import logo from '../../assets/applevault-logo.webp'
 
 const message = useAppMessage()
 const { copy } = useClipboard({ legacy: true })
-const appVersion = ref('1.3.0')
+const appVersion = ref(bundledAppVersion)
 const isCheckingUpdate = ref(false)
 
 function openGitHub() {
@@ -69,10 +70,10 @@ async function checkForUpdates() {
   try {
     const info = await CheckForUpdates()
     if (info.available) {
-      message.info(`发现新版本 v${info.latestVersion}，正在打开发布页面`)
+      message.info(`发现新版本 v${formatAppVersion(info.latestVersion)}，正在打开发布页面`)
       if (info.releaseURL) BrowserOpenURL(info.releaseURL)
     } else {
-      message.success(`当前 v${info.currentVersion} 已是最新版本`)
+      message.success(`当前 v${formatAppVersion(info.currentVersion)} 已是最新版本`)
     }
   } catch (err: any) {
     message.error(`检查更新失败: ${err}`)
@@ -83,7 +84,7 @@ async function checkForUpdates() {
 
 onMounted(async () => {
   try {
-    appVersion.value = await GetAppVersion()
+    appVersion.value = formatAppVersion(await GetAppVersion())
   } catch {
     // Browser preview has no Wails bridge; retain the bundled version.
   }

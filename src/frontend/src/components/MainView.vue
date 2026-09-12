@@ -121,6 +121,7 @@ import { BrowserOpenURL, EventsOn, OnFileDrop, OnFileDropOff } from '../../wails
 import { backend as main } from '../../wailsjs/go/models'
 import type { AppTheme } from '../ui/theme'
 import { useAppDialog } from '../ui/feedback'
+import { bundledAppVersion, formatAppVersion } from '../ui/version'
 
 const props = withDefaults(
   defineProps<{
@@ -150,7 +151,7 @@ const storedLoggedIn = typeof window !== 'undefined' ? localStorage.getItem('app
 const activeTab = ref(initialTabParam || (isDemoMode || storedLoggedIn ? 'search' : 'account'))
 const isAnyOperationRunning = ref(false)
 const statusText = ref('就绪')
-const appVersion = ref('1.3.0')
+const appVersion = ref(bundledAppVersion)
 const dialog = useAppDialog()
 const updateCheckStorageKey = 'apple_vault_update_checked_at_v1'
 const updateCheckInterval = 24 * 60 * 60 * 1000
@@ -170,6 +171,7 @@ const currentAccount = ref<main.AccountInfo>({ id: '', name: '', email: '', regi
 const isLoggedIn = computed(() => currentAccount.value.success && !!currentAccount.value.email)
 const currentSettings = ref<main.Settings>({
   keychainPassphrase: '',
+  themeHintShown: false,
   defaultDownloadDir: 'data/downloads/default',
   defaultPlatform: 'iphone',
   enableProxy: true,
@@ -252,7 +254,7 @@ function handleCancel() {
 
 async function loadAppVersion() {
   try {
-    appVersion.value = await GetAppVersion()
+    appVersion.value = formatAppVersion(await GetAppVersion())
   } catch {
     // Keep the bundled version when the Wails bridge is unavailable (for example, browser preview).
   }
@@ -268,7 +270,7 @@ async function checkForUpdatesOnStartup() {
     const notes = (info.releaseNotes || '').trim()
     const summary = notes.length > 500 ? `${notes.slice(0, 500)}…` : notes
     dialog.info({
-      title: `发现新版本 v${info.latestVersion}`,
+      title: `发现新版本 v${formatAppVersion(info.latestVersion)}`,
       content: summary || info.releaseName || '新版本已发布，可前往 GitHub 查看并下载。',
       positiveText: '立即查看',
       negativeText: '稍后',
@@ -290,7 +292,7 @@ const demoStatusByTab: Record<string, string> = {
   installer: '已就绪，已检测到 iPhone 15 Pro Max',
   account: '已登录 果仓助手用户（applevault.user@icloud.com）',
   settings: '底层引擎就绪，配置已加载',
-  about: '果仓助手 (AppleVault) v1.3.0'
+  about: `果仓助手 (AppleVault) v${bundledAppVersion}`
 }
 
 /**

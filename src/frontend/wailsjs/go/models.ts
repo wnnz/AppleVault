@@ -310,6 +310,7 @@ export namespace backend {
 	}
 	export class Settings {
 	    keychainPassphrase: string;
+	    themeHintShown: boolean;
 	    defaultDownloadDir: string;
 	    defaultPlatform: string;
 	    enableProxy: boolean;
@@ -323,6 +324,7 @@ export namespace backend {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.keychainPassphrase = source["keychainPassphrase"];
+	        this.themeHintShown = source["themeHintShown"];
 	        this.defaultDownloadDir = source["defaultDownloadDir"];
 	        this.defaultPlatform = source["defaultPlatform"];
 	        this.enableProxy = source["enableProxy"];

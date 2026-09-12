@@ -13,12 +13,13 @@ import (
 )
 
 const (
-	AppVersion       = "1.3.0"
-	latestReleaseAPI = "https://api.github.com/repos/wnnz/AppleVault/releases/latest"
-	maxReleaseBody   = 1 << 20
+	AppVersion        = "1.3.0"
+	AppDisplayVersion = "1.3"
+	latestReleaseAPI  = "https://api.github.com/repos/wnnz/AppleVault/releases/latest"
+	maxReleaseBody    = 1 << 20
 )
 
-func (a *App) GetAppVersion() string { return AppVersion }
+func (a *App) GetAppVersion() string { return AppDisplayVersion }
 
 func (a *App) CheckForUpdates() (UpdateInfo, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
