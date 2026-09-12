@@ -37,7 +37,10 @@ export function applyTheme(theme: AppTheme) {
 }
 
 export function useAppTheme() {
-  const currentTheme = ref<AppTheme>(normalizeTheme(localStorage.getItem(THEME_STORAGE_KEY)))
+  const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+  const urlTheme = urlParams?.get('theme')
+  const initialTheme = normalizeTheme(urlTheme || localStorage.getItem(THEME_STORAGE_KEY))
+  const currentTheme = ref<AppTheme>(initialTheme)
   const isDark = computed(() => currentTheme.value === 'minimal-dark')
   applyTheme(currentTheme.value)
   watch(currentTheme, theme => {
