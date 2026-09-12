@@ -12,7 +12,7 @@
         <div class="about-large-icon"><img class="about-logo-image" :src="logo" alt="AppleVault" /></div>
         <div class="about-hero-text">
           <div class="about-app-title">果仓助手 (AppleVault)</div>
-          <div class="about-version-line"><span class="about-version-badge">版本 v1.1.0</span><span class="about-badge-sub">基于 Wails & Go 构建</span></div>
+          <div class="about-version-line"><span class="about-version-badge">版本 v1.2.0</span><span class="about-badge-sub">基于 Wails & Go 构建</span></div>
           <p class="about-intro">现代优雅的 Apple App Store 正版应用与历史版本下载管理工具，支持 iOS 设备一键直装。</p>
         </div>
       </div>
