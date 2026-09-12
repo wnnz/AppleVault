@@ -110,3 +110,17 @@ func TestDownloadTaskAccountIDIsBackwardCompatible(t *testing.T) {
 		t.Fatalf("legacy task should have no account ID, got %q", legacy.AccountID)
 	}
 }
+
+func TestRetryDownloadTaskKeepsOriginalAccount(t *testing.T) {
+	source := &DownloadTask{
+		ID: "old", AccountID: "original-account", AppName: "Example", BundleID: "com.example",
+		AppID: 1, Version: "1.0", VersionID: "100", FileSize: "1 MB", Status: "error",
+	}
+	retry, err := retryDownloadTaskFrom(source, "new", "current-account")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if retry.AccountID != "original-account" || retry.ID != "new" {
+		t.Fatalf("retry lost original account: %#v", retry)
+	}
+}

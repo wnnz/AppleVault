@@ -985,7 +985,8 @@
 .flex-col {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .card-headline {
@@ -1075,6 +1076,74 @@
 
 .dark-mode .device-spec-box {
   background: #0f172a;
+}
+
+.ipa-inspection-state,
+.ipa-inspection-box {
+  border: 1px solid #dbe4ee;
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 11.5px;
+  color: #64748b;
+  background: #f8fafc;
+}
+
+.ipa-inspection-box {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.ipa-inspection-box.is-compatible {
+  border-color: rgba(52, 199, 89, 0.35);
+  background: rgba(52, 199, 89, 0.05);
+}
+
+.ipa-inspection-box.is-incompatible,
+.ipa-inspection-state.is-error {
+  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.06);
+  color: #b91c1c;
+}
+
+.ipa-inspection-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #0f172a;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.ipa-compatibility-message {
+  margin-top: 3px;
+  padding-top: 7px;
+  border-top: 1px solid rgba(100, 116, 139, 0.2);
+  line-height: 1.45;
+}
+
+.dark-mode .ipa-inspection-state,
+.dark-mode .ipa-inspection-box {
+  border-color: #334155;
+  background: #0f172a;
+  color: #94a3b8;
+}
+
+.dark-mode .ipa-inspection-title {
+  color: #f1f5f9;
+}
+
+.dark-mode .ipa-inspection-box.is-compatible {
+  border-color: rgba(52, 199, 89, 0.35);
+  background: rgba(52, 199, 89, 0.08);
+}
+
+.dark-mode .ipa-inspection-box.is-incompatible,
+.dark-mode .ipa-inspection-state.is-error {
+  border-color: rgba(248, 113, 113, 0.4);
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
 }
 
 .spec-row {
@@ -1264,6 +1333,41 @@
 .account-empty-state { padding: 24px 12px; color: #94a3b8; font-size: 12px; text-align: center; }
 .dark-mode .account-list-email { color: #94a3b8; }
 .dark-mode .account-region-pill { background: #334155; color: #cbd5e1; }
+
+.account-keychain-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.account-keychain-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.account-keychain-copy .card-headline {
+  margin-bottom: 4px;
+}
+
+.account-keychain-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(440px, 48%);
+}
+
+@media (max-width: 820px) {
+  .account-keychain-card {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .account-keychain-control {
+    width: 100%;
+  }
+}
 
 .account-profile-box {
   display: flex;

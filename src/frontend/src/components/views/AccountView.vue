@@ -7,6 +7,30 @@
       </div>
     </div>
 
+    <AppCard class="clean-card account-keychain-card mb-4">
+      <div class="account-keychain-copy">
+        <div class="card-headline"><span class="headline-title">钥匙串密码</span></div>
+        <div class="field-desc">用于加密本地 Apple ID 凭据。已有账号依赖当前密码，请勿随意修改；已有配置中的密码会继续保留。</div>
+      </div>
+      <div class="account-keychain-control">
+        <AppInput
+          v-model="keychainPassphrase"
+          type="password"
+          size="small"
+          placeholder="请设置钥匙串密码"
+          @keydown.enter="handleSaveKeychainPassphrase"
+        />
+        <AppButton
+          type="primary"
+          size="small"
+          :loading="isSavingKeychainPassphrase"
+          @click="handleSaveKeychainPassphrase"
+        >
+          保存密码
+        </AppButton>
+      </div>
+    </AppCard>
+
     <div class="two-columns-layout">
       <!-- 已保存账号 -->
       <AppCard class="clean-card">
@@ -141,7 +165,9 @@ import {
   Login,
   Revoke,
   SwitchAccount,
-  ClearKeychainCache
+  ClearKeychainCache,
+  GetSettings,
+  SetKeychainPassphrase
 } from '../../../wailsjs/go/backend/App'
 import AppButton from '../../ui/components/AppButton.vue'
 import AppCard from '../../ui/components/AppCard.vue'
@@ -168,6 +194,9 @@ const isRevoking = ref(false)
 const isClearing = ref(false)
 const isLoggingIn = ref(false)
 const isSwitching = ref(false)
+const keychainPassphrase = ref('')
+const savedKeychainPassphrase = ref('')
+const isSavingKeychainPassphrase = ref(false)
 
 // 登录表单
 const loginForm = ref({
@@ -193,6 +222,7 @@ watch(show2FAModal, async visible => {
 async function refreshAccount(autoNavigate = false) {
   isAccountLoading.value = true
   emit('busyChange', false, '正在获取账号信息...')
+  await loadKeychainPassphrase()
   try {
     const res = await GetAccountInfo()
     accounts.value = await GetAccounts()
@@ -223,6 +253,50 @@ async function refreshAccount(autoNavigate = false) {
   } finally {
     isAccountLoading.value = false
   }
+}
+
+async function saveKeychainPassphrase() {
+  isSavingKeychainPassphrase.value = true
+  emit('busyChange', true, '正在保存钥匙串密码...')
+  try {
+    await SetKeychainPassphrase(keychainPassphrase.value)
+    savedKeychainPassphrase.value = keychainPassphrase.value
+    message.success('钥匙串密码已保存')
+    emit('busyChange', false, '钥匙串密码已更新')
+  } catch (err: any) {
+    message.error(`保存钥匙串密码失败: ${err}`)
+    emit('busyChange', false, '钥匙串密码保存失败')
+  } finally {
+    isSavingKeychainPassphrase.value = false
+  }
+}
+
+async function loadKeychainPassphrase() {
+  try {
+    const settings = await GetSettings()
+    keychainPassphrase.value = settings.keychainPassphrase || ''
+    savedKeychainPassphrase.value = keychainPassphrase.value
+  } catch (err) {
+    console.error('加载钥匙串密码失败:', err)
+  }
+}
+
+function handleSaveKeychainPassphrase() {
+  if (!keychainPassphrase.value) {
+    message.warning('钥匙串密码不能为空')
+    return
+  }
+  if (accounts.value.length > 0 && keychainPassphrase.value !== savedKeychainPassphrase.value) {
+    dialog.warning({
+      title: '确认修改钥匙串密码',
+      content: '现有账号凭据使用当前密码加密。修改后可能无法读取已有钥匙串，需要重新登录账号。确定继续吗？',
+      positiveText: '确认修改',
+      negativeText: '取消',
+      onPositiveClick: saveKeychainPassphrase
+    })
+    return
+  }
+  void saveKeychainPassphrase()
 }
 
 async function handleSwitchAccount(item: main.AccountInfo) {
@@ -404,6 +478,7 @@ defineExpose({
   account,
   accounts,
   isLoggedIn,
+  keychainPassphrase,
   refreshAccount
 })
 </script>

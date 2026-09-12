@@ -12,7 +12,7 @@
       <div class="brand-text">
         <div class="brand-title-row">
           <div class="brand-name">果仓助手</div>
-          <div class="brand-tag">v1.2</div>
+          <div class="brand-tag">v{{ appVersion }}</div>
         </div>
         <div class="brand-sub">AppleVault</div>
       </div>
@@ -276,6 +276,7 @@ const props = defineProps<{
   enableProxy: boolean
   activeTaskCount: number
   isDemoMode?: boolean
+  appVersion: string
 }>()
 
 const emit = defineEmits<{

@@ -14,6 +14,10 @@ export function CancelRunningCommand() {
   return window['go']['backend']['App']['CancelRunningCommand']();
 }
 
+export function CheckForUpdates() {
+  return window['go']['backend']['App']['CheckForUpdates']();
+}
+
 export function ClearCompletedDownloadTasks() {
   return window['go']['backend']['App']['ClearCompletedDownloadTasks']();
 }
@@ -34,6 +38,10 @@ export function GetAccountInfo() {
   return window['go']['backend']['App']['GetAccountInfo']();
 }
 
+export function GetAppVersion() {
+  return window['go']['backend']['App']['GetAppVersion']();
+}
+
 export function GetAccounts() {
   return window['go']['backend']['App']['GetAccounts']();
 }
@@ -52,6 +60,10 @@ export function GetVersionMetadata(arg1, arg2, arg3) {
 
 export function InstallIPA(arg1, arg2) {
   return window['go']['backend']['App']['InstallIPA'](arg1, arg2);
+}
+
+export function InspectIPA(arg1, arg2, arg3) {
+  return window['go']['backend']['App']['InspectIPA'](arg1, arg2, arg3);
 }
 
 export function ListDevices() {
@@ -82,6 +94,10 @@ export function Revoke() {
   return window['go']['backend']['App']['Revoke']();
 }
 
+export function RetryDownloadTask(arg1) {
+  return window['go']['backend']['App']['RetryDownloadTask'](arg1);
+}
+
 export function PairDeviceForWiFi(arg1) {
   return window['go']['backend']['App']['PairDeviceForWiFi'](arg1);
 }
@@ -104,6 +120,10 @@ export function SelectDirectory(arg1, arg2) {
 
 export function SelectIPA() {
   return window['go']['backend']['App']['SelectIPA']();
+}
+
+export function SetKeychainPassphrase(arg1) {
+  return window['go']['backend']['App']['SetKeychainPassphrase'](arg1);
 }
 
 export function SwitchAccount(arg1) {

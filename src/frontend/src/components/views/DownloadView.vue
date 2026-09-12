@@ -99,6 +99,7 @@ import { ref, computed } from 'vue'
 import { backend as main } from '../../../wailsjs/go/models'
 import {
   AddDownloadTask,
+  RetryDownloadTask,
   GetDownloadTasks,
   CancelDownloadTask,
   DeleteDownloadTask,
@@ -200,15 +201,9 @@ async function handleDeleteTask(id: string) {
  */
 async function handleRetryTask(task: main.DownloadTask) {
   try {
-    await AddDownloadTask(
-      task.appName,
-      task.bundleID,
-      task.appId,
-      task.version,
-      task.versionId,
-      task.fileSize
-    )
+    await RetryDownloadTask(task.id)
     message.success(`已重新添加任务「${task.appName}」`)
+    await loadDownloadTasks()
   } catch (err: any) {
     message.error(`重试失败: ${err}`)
   }

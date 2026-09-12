@@ -140,6 +140,42 @@ export namespace backend {
 	        this.output = source["output"];
 	    }
 	}
+	export class IPAInspectionResult {
+	    success: boolean;
+	    appName: string;
+	    bundleID: string;
+	    version: string;
+	    buildVersion: string;
+	    minimumOSVersion: string;
+	    supportedPlatforms: string[];
+	    supportedDeviceTypes: string[];
+	    signed: boolean;
+	    fileSize: number;
+	    displayFileSize: string;
+	    compatible: boolean;
+	    compatibilityMessage: string;
+
+	    static createFrom(source: any = {}) {
+	        return new IPAInspectionResult(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.success = source["success"];
+	        this.appName = source["appName"];
+	        this.bundleID = source["bundleID"];
+	        this.version = source["version"];
+	        this.buildVersion = source["buildVersion"];
+	        this.minimumOSVersion = source["minimumOSVersion"];
+	        this.supportedPlatforms = source["supportedPlatforms"];
+	        this.supportedDeviceTypes = source["supportedDeviceTypes"];
+	        this.signed = source["signed"];
+	        this.fileSize = source["fileSize"];
+	        this.displayFileSize = source["displayFileSize"];
+	        this.compatible = source["compatible"];
+	        this.compatibilityMessage = source["compatibilityMessage"];
+	    }
+	}
 	export class LoginResult {
 	    success: boolean;
 	    requires2FA: boolean;
@@ -314,6 +350,30 @@ export namespace backend {
 	        this.fileSize = source["fileSize"];
 	        this.displayFileSize = source["displayFileSize"];
 	        this.success = source["success"];
+	    }
+	}
+	export class UpdateInfo {
+	    currentVersion: string;
+	    latestVersion: string;
+	    available: boolean;
+	    releaseName: string;
+	    releaseNotes: string;
+	    releaseURL: string;
+	    publishedAt: string;
+
+	    static createFrom(source: any = {}) {
+	        return new UpdateInfo(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.currentVersion = source["currentVersion"];
+	        this.latestVersion = source["latestVersion"];
+	        this.available = source["available"];
+	        this.releaseName = source["releaseName"];
+	        this.releaseNotes = source["releaseNotes"];
+	        this.releaseURL = source["releaseURL"];
+	        this.publishedAt = source["publishedAt"];
 	    }
 	}
 	export class VersionsResult {

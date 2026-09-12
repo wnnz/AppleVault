@@ -53,6 +53,48 @@ func newDownloadTask(accountID, id, appName, bundleID string, appID int64, versi
 	}
 }
 
+func retryDownloadTaskFrom(source *DownloadTask, id, fallbackAccountID string) (*DownloadTask, error) {
+	if source == nil {
+		return nil, fmt.Errorf("下载任务不存在")
+	}
+	if source.Status != "error" && source.Status != "canceled" {
+		return nil, fmt.Errorf("只有失败或已取消的任务可以重试")
+	}
+	accountID := source.AccountID
+	if accountID == "" {
+		accountID = fallbackAccountID
+	}
+	if accountID == "" {
+		return nil, fmt.Errorf("下载任务缺少可用账号")
+	}
+	return newDownloadTask(accountID, id, source.AppName, source.BundleID, source.AppID, source.Version, source.VersionID, source.FileSize), nil
+}
+
+func (a *App) RetryDownloadTask(id string) (*DownloadTask, error) {
+	a.tasksMu.Lock()
+	var source *DownloadTask
+	for _, task := range a.tasks {
+		if task.ID == id {
+			source = task
+			break
+		}
+	}
+	retry, err := retryDownloadTaskFrom(source, fmt.Sprintf("%d", time.Now().UnixNano()), a.activeAccountID())
+	if err != nil {
+		a.tasksMu.Unlock()
+		return nil, err
+	}
+	if _, ok := a.accountByID(retry.AccountID); !ok {
+		a.tasksMu.Unlock()
+		return nil, fmt.Errorf("原下载账号已被移除，无法重试")
+	}
+	a.tasks = append([]*DownloadTask{retry}, a.tasks...)
+	a.saveTasksLocked()
+	a.tasksMu.Unlock()
+	go a.runDownloadTask(retry)
+	return retry, nil
+}
+
 func (a *App) runDownloadTask(task *DownloadTask) {
 	ctx, cancel := context.WithCancel(context.Background())
 	a.tasksMu.Lock()

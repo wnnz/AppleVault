@@ -2,9 +2,13 @@ package appstore
 
 import (
 	"archive/zip"
+	"crypto/md5"
+	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -95,10 +99,18 @@ func (t *appstore) Download(input DownloadInput) (DownloadOutput, error) {
 	if err != nil {
 		return DownloadOutput{}, fmt.Errorf("failed to download file: %w", err)
 	}
+	if err = validateFileMD5(tmpPath, item.HashMD5); err != nil {
+		_ = t.os.Remove(tmpPath)
+		return DownloadOutput{}, fmt.Errorf("failed to verify download checksum: %w", err)
+	}
 
 	err = t.applyPatches(item, input.Account, tmpPath, destination)
 	if err != nil {
 		return DownloadOutput{}, fmt.Errorf("failed to apply patches: %w", err)
+	}
+	if err = validateIPAZip(destination); err != nil {
+		_ = t.os.Remove(destination)
+		return DownloadOutput{}, fmt.Errorf("failed to validate IPA integrity: %w", err)
 	}
 
 	err = t.validatePackagePlatform(destination, input.Platform)
@@ -214,7 +226,8 @@ func (t *appstore) downloadFile(src, dst string, progress *progressbar.ProgressB
 		return fmt.Errorf("failed to get file info: %w", err)
 	}
 
-	if req != nil && stat != nil {
+	resumeOffset := stat.Size()
+	if req != nil && resumeOffset > 0 {
 		req.Header.Add("range", fmt.Sprintf("bytes=%d-", stat.Size()))
 	}
 
@@ -223,18 +236,41 @@ func (t *appstore) downloadFile(src, dst string, progress *progressbar.ProgressB
 		return fmt.Errorf("request failed: %w", err)
 	}
 	defer res.Body.Close()
+	if resumeOffset > 0 && res.StatusCode == http.StatusRequestedRangeNotSatisfiable && validContentRangeComplete(res.Header.Get("Content-Range"), resumeOffset) {
+		// A fully downloaded temporary file can remain after an interrupted post-processing step.
+		// Let the caller's checksum validation decide whether it is safe to reuse.
+		return nil
+	}
+	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
+		return fmt.Errorf("download server returned HTTP %d", res.StatusCode)
+	}
+	if res.StatusCode == http.StatusPartialContent {
+		if !validContentRangeStart(res.Header.Get("Content-Range"), resumeOffset) {
+			return fmt.Errorf("download server returned an invalid Content-Range for offset %d", resumeOffset)
+		}
+	} else if resumeOffset > 0 {
+		switch res.StatusCode {
+		case http.StatusOK:
+			if err = file.Truncate(0); err != nil {
+				return fmt.Errorf("failed to restart download: %w", err)
+			}
+			resumeOffset = 0
+		default:
+			return fmt.Errorf("download server did not honor resume request (HTTP %d)", res.StatusCode)
+		}
+	}
+	if _, err = file.Seek(resumeOffset, io.SeekStart); err != nil {
+		return fmt.Errorf("failed to seek download file: %w", err)
+	}
 
 	if progress != nil {
-		progress.ChangeMax64(res.ContentLength + stat.Size())
-		err = progress.Set64(stat.Size())
+		if res.ContentLength >= 0 {
+			progress.ChangeMax64(res.ContentLength + resumeOffset)
+		}
+		err = progress.Set64(resumeOffset)
 
 		if err != nil {
 			return fmt.Errorf("can not set bar progress: %w", err)
-		}
-
-		_, err = file.Seek(0, io.SeekEnd)
-		if err != nil {
-			return fmt.Errorf("can not seek file: %w", err)
 		}
 
 		_, err = io.Copy(io.MultiWriter(file, progress), res.Body)
@@ -246,6 +282,89 @@ func (t *appstore) downloadFile(src, dst string, progress *progressbar.ProgressB
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
+	return nil
+}
+
+func validContentRangeStart(value string, expected int64) bool {
+	prefix := fmt.Sprintf("bytes %d-", expected)
+	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(value)), prefix)
+}
+
+func validContentRangeComplete(value string, expected int64) bool {
+	value = strings.ToLower(strings.TrimSpace(value))
+	const prefix = "bytes */"
+	if !strings.HasPrefix(value, prefix) {
+		return false
+	}
+	total, err := strconv.ParseInt(strings.TrimSpace(strings.TrimPrefix(value, prefix)), 10, 64)
+	return err == nil && total == expected
+}
+
+func validateFileMD5(path, expected string) error {
+	expected = strings.TrimSpace(expected)
+	if expected == "" {
+		return nil
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	hash := md5.New()
+	if _, err = io.Copy(hash, file); err != nil {
+		return err
+	}
+	want, err := decodeMD5(expected)
+	if err != nil {
+		return err
+	}
+	got := hash.Sum(nil)
+	if !strings.EqualFold(hex.EncodeToString(got), hex.EncodeToString(want)) {
+		return fmt.Errorf("MD5 mismatch: got %s", hex.EncodeToString(got))
+	}
+	return nil
+}
+
+func decodeMD5(value string) ([]byte, error) {
+	if decoded, err := hex.DecodeString(value); err == nil && len(decoded) == md5.Size {
+		return decoded, nil
+	}
+	if decoded, err := base64.StdEncoding.DecodeString(value); err == nil && len(decoded) == md5.Size {
+		return decoded, nil
+	}
+	return nil, errors.New("invalid MD5 value from download response")
+}
+
+func validateIPAZip(path string) error {
+	reader, err := zip.OpenReader(path)
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+	foundInfo := false
+	for _, entry := range reader.File {
+		if isTopLevelAppInfoPlist(entry.Name) {
+			foundInfo = true
+		}
+		if entry.FileInfo().IsDir() {
+			continue
+		}
+		stream, err := entry.Open()
+		if err != nil {
+			return fmt.Errorf("open %s: %w", entry.Name, err)
+		}
+		_, copyErr := io.Copy(io.Discard, stream)
+		closeErr := stream.Close()
+		if copyErr != nil {
+			return fmt.Errorf("verify %s: %w", entry.Name, copyErr)
+		}
+		if closeErr != nil {
+			return fmt.Errorf("close %s: %w", entry.Name, closeErr)
+		}
+	}
+	if !foundInfo {
+		return errors.New("archive does not contain Payload/*.app/Info.plist")
+	}
 	return nil
 }
 

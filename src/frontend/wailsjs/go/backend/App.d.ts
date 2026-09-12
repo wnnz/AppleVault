@@ -8,6 +8,8 @@ export function CancelDownloadTask(arg1:string):Promise<void>;
 
 export function CancelRunningCommand():Promise<void>;
 
+export function CheckForUpdates():Promise<main.UpdateInfo>;
+
 export function ClearCompletedDownloadTasks():Promise<void>;
 
 export function ClearKeychainCache():Promise<void>;
@@ -18,6 +20,8 @@ export function Download(arg1:string,arg2:number,arg3:string,arg4:string,arg5:st
 
 export function GetAccountInfo():Promise<main.AccountInfo>;
 
+export function GetAppVersion():Promise<string>;
+
 export function GetAccounts():Promise<Array<main.AccountInfo>>;
 
 export function GetDownloadTasks():Promise<Array<main.DownloadTask>>;
@@ -27,6 +31,8 @@ export function GetSettings():Promise<main.Settings>;
 export function GetVersionMetadata(arg1:string,arg2:string,arg3:number):Promise<main.VersionMetadataResult>;
 
 export function InstallIPA(arg1:string,arg2:string):Promise<main.InstallResult>;
+
+export function InspectIPA(arg1:string,arg2:string,arg3:string):Promise<main.IPAInspectionResult>;
 
 export function ListDevices():Promise<Array<main.DeviceInfo>>;
 
@@ -44,6 +50,8 @@ export function Purchase(arg1:string):Promise<main.PurchaseResult>;
 
 export function Revoke():Promise<boolean>;
 
+export function RetryDownloadTask(arg1:string):Promise<main.DownloadTask>;
+
 export function RemoveAccount(arg1:string):Promise<main.AccountInfo>;
 
 export function SaveSettings(arg1:main.Settings):Promise<void>;
@@ -53,6 +61,8 @@ export function Search(arg1:string,arg2:number,arg3:string):Promise<main.SearchR
 export function SelectDirectory(arg1:string,arg2:string):Promise<string>;
 
 export function SelectIPA():Promise<string>;
+
+export function SetKeychainPassphrase(arg1:string):Promise<void>;
 
 export function SwitchAccount(arg1:string):Promise<main.AccountInfo>;
 

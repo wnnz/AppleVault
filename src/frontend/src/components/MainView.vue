@@ -18,6 +18,7 @@
       :enable-proxy="currentSettings.enableProxy"
       :active-task-count="activeTaskCount"
       :is-demo-mode="isDemoMode"
+      :app-version="appVersion"
       @update:current-theme="emit('update:currentTheme', $event)"
       @proxy-toggle="onProxyToggle"
     />
@@ -115,10 +116,11 @@ import PurchasedView from './views/PurchasedView.vue'
 import SearchView from './views/SearchView.vue'
 import SettingsView from './views/SettingsView.vue'
 import VersionsView, { type VersionItem } from './views/VersionsView.vue'
-import { CancelRunningCommand } from '../../wailsjs/go/backend/App'
-import { EventsOn, OnFileDrop, OnFileDropOff } from '../../wailsjs/runtime/runtime'
+import { CancelRunningCommand, CheckForUpdates, GetAppVersion } from '../../wailsjs/go/backend/App'
+import { BrowserOpenURL, EventsOn, OnFileDrop, OnFileDropOff } from '../../wailsjs/runtime/runtime'
 import { backend as main } from '../../wailsjs/go/models'
 import type { AppTheme } from '../ui/theme'
+import { useAppDialog } from '../ui/feedback'
 
 const props = withDefaults(
   defineProps<{
@@ -148,6 +150,10 @@ const storedLoggedIn = typeof window !== 'undefined' ? localStorage.getItem('app
 const activeTab = ref(initialTabParam || (isDemoMode || storedLoggedIn ? 'search' : 'account'))
 const isAnyOperationRunning = ref(false)
 const statusText = ref('就绪')
+const appVersion = ref('1.3.0')
+const dialog = useAppDialog()
+const updateCheckStorageKey = 'apple_vault_update_checked_at_v1'
+const updateCheckInterval = 24 * 60 * 60 * 1000
 
 // 各子视图组件引用
 const searchViewRef = ref<InstanceType<typeof SearchView> | null>(null)
@@ -163,7 +169,7 @@ const statusBarRef = ref<InstanceType<typeof MainStatusBar> | null>(null)
 const currentAccount = ref<main.AccountInfo>({ id: '', name: '', email: '', region: '', active: false, success: false })
 const isLoggedIn = computed(() => currentAccount.value.success && !!currentAccount.value.email)
 const currentSettings = ref<main.Settings>({
-  keychainPassphrase: '123456',
+  keychainPassphrase: '',
   defaultDownloadDir: 'data/downloads/default',
   defaultPlatform: 'iphone',
   enableProxy: true,
@@ -244,6 +250,37 @@ function handleCancel() {
   statusText.value = '已终止当前操作'
 }
 
+async function loadAppVersion() {
+  try {
+    appVersion.value = await GetAppVersion()
+  } catch {
+    // Keep the bundled version when the Wails bridge is unavailable (for example, browser preview).
+  }
+}
+
+async function checkForUpdatesOnStartup() {
+  const lastChecked = Number(localStorage.getItem(updateCheckStorageKey) || 0)
+  if (Date.now() - lastChecked < updateCheckInterval) return
+  try {
+    const info = await CheckForUpdates()
+    localStorage.setItem(updateCheckStorageKey, String(Date.now()))
+    if (!info.available) return
+    const notes = (info.releaseNotes || '').trim()
+    const summary = notes.length > 500 ? `${notes.slice(0, 500)}…` : notes
+    dialog.info({
+      title: `发现新版本 v${info.latestVersion}`,
+      content: summary || info.releaseName || '新版本已发布，可前往 GitHub 查看并下载。',
+      positiveText: '立即查看',
+      negativeText: '稍后',
+      onPositiveClick: () => {
+        if (info.releaseURL) BrowserOpenURL(info.releaseURL)
+      }
+    })
+  } catch {
+    // Automatic update checks are best-effort and must not interrupt startup.
+  }
+}
+
 // 演示模式提示文案字典
 const demoStatusByTab: Record<string, string> = {
   search: '搜索完成，找到 6 个应用。',
@@ -253,7 +290,7 @@ const demoStatusByTab: Record<string, string> = {
   installer: '已就绪，已检测到 iPhone 15 Pro Max',
   account: '已登录 果仓助手用户（applevault.user@icloud.com）',
   settings: '底层引擎就绪，配置已加载',
-  about: '果仓助手 (AppleVault) v1.2.0'
+  about: '果仓助手 (AppleVault) v1.3.0'
 }
 
 /**
@@ -317,6 +354,21 @@ function applyDemoMockData(tabParam: string | null) {
     ]
     installerViewRef.value.selectedDeviceUDID = '00008130-001A49021E28001C'
     installerViewRef.value.selectedIPAPath = 'D:\\Dev\\AppleVault\\data\\downloads\\applevault.user@icloud.com\\WeChat_8.0.50.ipa'
+    installerViewRef.value.ipaInspection = {
+      success: true,
+      appName: '微信',
+      bundleID: 'com.tencent.xin',
+      version: '8.0.50',
+      buildVersion: '868192301',
+      minimumOSVersion: '13.0',
+      supportedPlatforms: ['iPhoneOS'],
+      supportedDeviceTypes: ['iPhone/iPod', 'iPad'],
+      signed: true,
+      fileSize: 300312000,
+      displayFileSize: '286.4 MB',
+      compatible: true,
+      compatibilityMessage: 'IPA 完整性、签名结构和设备兼容性检查通过'
+    }
   }
 
   if (accountViewRef.value) {
@@ -346,6 +398,8 @@ onMounted(() => {
   if (isDemo) {
     applyDemoMockData(tabParam)
   } else {
+    void loadAppVersion()
+    void checkForUpdatesOnStartup()
     void settingsViewRef.value?.loadSettings()
     void accountViewRef.value?.refreshAccount(!tabParam)
     void downloadViewRef.value?.loadDownloadTasks()

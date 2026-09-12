@@ -69,6 +69,32 @@ type ProxyTestResult struct {
 	Message string `json:"message"`
 }
 
+type UpdateInfo struct {
+	CurrentVersion string `json:"currentVersion"`
+	LatestVersion  string `json:"latestVersion"`
+	Available      bool   `json:"available"`
+	ReleaseName    string `json:"releaseName"`
+	ReleaseNotes   string `json:"releaseNotes"`
+	ReleaseURL     string `json:"releaseURL"`
+	PublishedAt    string `json:"publishedAt"`
+}
+
+type IPAInspectionResult struct {
+	Success              bool     `json:"success"`
+	AppName              string   `json:"appName"`
+	BundleID             string   `json:"bundleID"`
+	Version              string   `json:"version"`
+	BuildVersion         string   `json:"buildVersion"`
+	MinimumOSVersion     string   `json:"minimumOSVersion"`
+	SupportedPlatforms   []string `json:"supportedPlatforms"`
+	SupportedDeviceTypes []string `json:"supportedDeviceTypes"`
+	Signed               bool     `json:"signed"`
+	FileSize             int64    `json:"fileSize"`
+	DisplayFileSize      string   `json:"displayFileSize"`
+	Compatible           bool     `json:"compatible"`
+	CompatibilityMessage string   `json:"compatibilityMessage"`
+}
+
 // DeviceInfo 描述一台可供 IPA 安装使用的已连接苹果设备。
 type DeviceInfo struct {
 	UDID           string `json:"udid"`

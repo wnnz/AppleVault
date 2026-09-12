@@ -41,10 +41,9 @@ type App struct {
 func NewApp() *App {
 	app := &App{
 		settings: Settings{
-			KeychainPassphrase: "123456",
-			DefaultPlatform:    "iphone",
-			EnableProxy:        true,
-			ProxyUrl:           "http://127.0.0.1:10808",
+			DefaultPlatform: "iphone",
+			EnableProxy:     true,
+			ProxyUrl:        "http://127.0.0.1:10808",
 		},
 		tasks:             make([]*DownloadTask, 0),
 		taskCancels:       make(map[string]context.CancelFunc),
@@ -299,12 +298,28 @@ func (a *App) GetSettings() Settings {
 
 func (a *App) SaveSettings(s Settings) error {
 	a.settingsMu.Lock()
+	defer a.settingsMu.Unlock()
+	// The keychain passphrase is managed explicitly from Account Center. Preserve it
+	// when other settings are saved so a stale frontend form cannot invalidate credentials.
+	s.KeychainPassphrase = a.settings.KeychainPassphrase
 	s.DefaultDownloadDir = a.getDownloadsDir()
 	a.settings = s
 	a.settings.IpaToolPath = "内置 App Store 服务"
 	data, err := json.MarshalIndent(a.settings, "", "  ")
-	a.settingsMu.Unlock()
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(a.getSettingsFilePath(), data, 0644)
+}
 
+func (a *App) SetKeychainPassphrase(passphrase string) error {
+	if passphrase == "" {
+		return fmt.Errorf("钥匙串密码不能为空")
+	}
+	a.settingsMu.Lock()
+	defer a.settingsMu.Unlock()
+	a.settings.KeychainPassphrase = passphrase
+	data, err := json.MarshalIndent(a.settings, "", "  ")
 	if err != nil {
 		return err
 	}

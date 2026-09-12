@@ -12,7 +12,7 @@
         <div class="about-large-icon"><img class="about-logo-image" :src="logo" alt="AppleVault" /></div>
         <div class="about-hero-text">
           <div class="about-app-title">果仓助手 (AppleVault)</div>
-          <div class="about-version-line"><span class="about-version-badge">版本 v1.2</span><span class="about-badge-sub">基于 Wails & Go 构建</span></div>
+          <div class="about-version-line"><span class="about-version-badge">版本 v{{ appVersion }}</span><span class="about-badge-sub">基于 Wails & Go 构建</span></div>
           <p class="about-intro">现代优雅的 Apple App Store 正版应用与历史版本下载管理工具，支持 iOS 设备一键直装。</p>
         </div>
       </div>
@@ -22,6 +22,7 @@
         <div class="repo-link-bar">
           <AppInput model-value="https://github.com/wnnz/AppleVault" readonly size="small" class="flex-1" />
           <AppButton type="primary" size="small" @click="openGitHub">访问 GitHub</AppButton>
+          <AppButton secondary size="small" :loading="isCheckingUpdate" @click="checkForUpdates">检查更新</AppButton>
           <AppButton secondary size="small" class="copy-address-btn" @click="copyGitHubUrl">复制地址</AppButton>
         </div>
       </div>
@@ -39,16 +40,20 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
 import { useClipboard } from '@vueuse/core'
 import AppButton from '../../ui/components/AppButton.vue'
 import AppCard from '../../ui/components/AppCard.vue'
 import AppInput from '../../ui/components/AppInput.vue'
 import { useAppMessage } from '../../ui/feedback'
 import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
+import { CheckForUpdates, GetAppVersion } from '../../../wailsjs/go/backend/App'
 import logo from '../../assets/applevault-logo.webp'
 
 const message = useAppMessage()
 const { copy } = useClipboard({ legacy: true })
+const appVersion = ref('1.3.0')
+const isCheckingUpdate = ref(false)
 
 function openGitHub() {
   BrowserOpenURL('https://github.com/wnnz/AppleVault')
@@ -58,4 +63,29 @@ async function copyGitHubUrl() {
   await copy('https://github.com/wnnz/AppleVault')
   message.success('已复制仓库地址到剪贴板！')
 }
+
+async function checkForUpdates() {
+  isCheckingUpdate.value = true
+  try {
+    const info = await CheckForUpdates()
+    if (info.available) {
+      message.info(`发现新版本 v${info.latestVersion}，正在打开发布页面`)
+      if (info.releaseURL) BrowserOpenURL(info.releaseURL)
+    } else {
+      message.success(`当前 v${info.currentVersion} 已是最新版本`)
+    }
+  } catch (err: any) {
+    message.error(`检查更新失败: ${err}`)
+  } finally {
+    isCheckingUpdate.value = false
+  }
+}
+
+onMounted(async () => {
+  try {
+    appVersion.value = await GetAppVersion()
+  } catch {
+    // Browser preview has no Wails bridge; retain the bundled version.
+  }
+})
 </script>

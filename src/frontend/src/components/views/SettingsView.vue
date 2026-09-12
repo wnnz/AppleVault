@@ -28,25 +28,6 @@
         </div>
       </div>
 
-      <!-- 安全与钥匙串 -->
-      <div class="settings-group">
-        <div class="settings-group-title">安全与钥匙串</div>
-        <div class="settings-field-row">
-          <div class="field-meta">
-            <div class="field-title">密钥库解锁密码 (--keychain-passphrase)</div>
-            <div class="field-desc">自动注入命令行参数，彻底杜绝 Windows 终端弹窗与死锁卡死</div>
-          </div>
-          <div class="field-control">
-            <AppInput
-              v-model="settings.keychainPassphrase"
-              type="password"
-              size="small"
-              placeholder="输入密钥库密码（默认 123456）"
-            />
-          </div>
-        </div>
-      </div>
-
       <!-- 网络与代理 -->
       <div class="settings-group">
         <div class="settings-group-title">网络与代理</div>
@@ -170,7 +151,7 @@ const platformOptions = [
 ]
 
 const settings = ref<main.Settings>({
-  keychainPassphrase: '123456',
+  keychainPassphrase: '',
   defaultDownloadDir: 'data/downloads/default',
   defaultPlatform: 'iphone',
   enableProxy: true,

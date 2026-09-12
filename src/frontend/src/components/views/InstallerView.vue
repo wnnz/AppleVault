@@ -22,6 +22,21 @@
           <AppInput :model-value="selectedIPAPath" readonly size="small" class="flex-1 mr-2" placeholder="尚未选择文件" />
           <AppButton secondary size="small" @click="handleSelectIPA">浏览文件</AppButton>
         </div>
+        <div v-if="isInspectingIPA" class="ipa-inspection-state mt-3">正在校验 IPA 完整性与兼容性...</div>
+        <div v-else-if="ipaInspection" class="ipa-inspection-box mt-3" :class="ipaInspection.compatible ? 'is-compatible' : 'is-incompatible'">
+          <div class="ipa-inspection-title">
+            <span>{{ ipaInspection.appName || selectedIPAFileName }}</span>
+            <span class="headline-badge">{{ ipaInspection.compatible ? '检查通过' : '需要处理' }}</span>
+          </div>
+          <div class="spec-row"><span class="spec-k">Bundle ID</span><span class="spec-v text-ellipsis" :title="ipaInspection.bundleID">{{ ipaInspection.bundleID || '-' }}</span></div>
+          <div class="spec-row"><span class="spec-k">应用版本</span><span class="spec-v">{{ ipaInspection.version || '-' }}<template v-if="ipaInspection.buildVersion">（Build {{ ipaInspection.buildVersion }}）</template></span></div>
+          <div class="spec-row"><span class="spec-k">最低系统</span><span class="spec-v">{{ ipaInspection.minimumOSVersion || '未声明' }}</span></div>
+          <div class="spec-row"><span class="spec-k">支持设备</span><span class="spec-v">{{ ipaInspection.supportedDeviceTypes?.join('、') || '未限制' }}</span></div>
+          <div class="spec-row"><span class="spec-k">签名结构</span><span class="spec-v">{{ ipaInspection.signed ? '已检测到' : '未检测到' }}</span></div>
+          <div class="spec-row"><span class="spec-k">文件大小</span><span class="spec-v">{{ ipaInspection.displayFileSize || '-' }}</span></div>
+          <div class="ipa-compatibility-message">{{ ipaInspection.compatibilityMessage }}</div>
+        </div>
+        <div v-else-if="ipaInspectionError" class="ipa-inspection-state is-error mt-3">{{ ipaInspectionError }}</div>
       </AppCard>
 
       <!-- 2. 选择苹果设备 -->
@@ -78,14 +93,14 @@
     <AppCard class="clean-card mt-4 installer-action-banner">
       <div class="installer-action-info">
         <div class="action-banner-title">
-          {{ !selectedIPAPath ? '请先选择待安装的 IPA 文件' : (!selectedDeviceUDID ? '请选择目标苹果设备' : '就绪，可以开始安装') }}
+          {{ !selectedIPAPath ? '请先选择待安装的 IPA 文件' : (!selectedDeviceUDID ? '请选择目标苹果设备' : (ipaInspection && !ipaInspection.compatible ? 'IPA 与所选设备不兼容' : '就绪，可以开始安装')) }}
         </div>
         <div class="action-banner-desc">本工具下载的正版 IPA 需安装至登录了相同 Apple ID 的设备上，未签名包将无法被系统接受。</div>
       </div>
       <AppButton
         type="primary"
         size="large"
-        :disabled="!selectedIPAPath || !selectedDeviceUDID || isLoadingDevices"
+        :disabled="!selectedIPAPath || !selectedDeviceUDID || isLoadingDevices || isInspectingIPA || !!(ipaInspection && !ipaInspection.compatible)"
         :loading="isInstallingIPA"
         class="install-submit-btn"
         @click="handleInstallIPA"
@@ -97,9 +112,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { backend as main } from '../../../wailsjs/go/models'
-import { SelectIPA, ListDevices, InstallIPA, PairDeviceForWiFi } from '../../../wailsjs/go/backend/App'
+import { SelectIPA, ListDevices, InstallIPA, InspectIPA, PairDeviceForWiFi } from '../../../wailsjs/go/backend/App'
 import AppButton from '../../ui/components/AppButton.vue'
 import AppCard from '../../ui/components/AppCard.vue'
 import AppInput from '../../ui/components/AppInput.vue'
@@ -119,6 +134,11 @@ const selectedDeviceUDID = ref<string | null>(null)
 const isLoadingDevices = ref(false)
 const isInstallingIPA = ref(false)
 const isPairingWiFi = ref(false)
+const isInspectingIPA = ref(false)
+const ipaInspection = ref<main.IPAInspectionResult | null>(null)
+const ipaInspectionError = ref('')
+let inspectionSequence = 0
+const isDemoMode = new URLSearchParams(window.location.search).get('demo') === '1'
 
 const selectedIPAFileName = computed(() =>
   selectedIPAPath.value.split(/[\\/]/).pop() || selectedIPAPath.value
@@ -144,6 +164,32 @@ const deviceOptions = computed(() =>
     }
   })
 )
+
+async function inspectSelectedIPA() {
+  const ipaPath = selectedIPAPath.value
+  const device = selectedDevice.value
+  const sequence = ++inspectionSequence
+  if (isDemoMode) return ipaInspection.value
+  ipaInspection.value = null
+  ipaInspectionError.value = ''
+  if (!ipaPath) return null
+
+  isInspectingIPA.value = true
+  try {
+    const result = await InspectIPA(ipaPath, device?.productType || '', device?.productVersion || '')
+    if (sequence === inspectionSequence) ipaInspection.value = result
+    return result
+  } catch (err: any) {
+    if (sequence === inspectionSequence) ipaInspectionError.value = `IPA 检查失败: ${err}`
+    return null
+  } finally {
+    if (sequence === inspectionSequence) isInspectingIPA.value = false
+  }
+}
+
+watch([selectedIPAPath, () => selectedDevice.value?.productType, () => selectedDevice.value?.productVersion], () => {
+  void inspectSelectedIPA()
+})
 
 /**
  * 接收来自拖拽或外部选定的 IPA 文件路径
@@ -243,6 +289,16 @@ async function handleInstallIPA() {
     return
   }
 
+  const inspection = await inspectSelectedIPA()
+  if (!inspection) {
+    message.error(ipaInspectionError.value || 'IPA 完整性检查失败')
+    return
+  }
+  if (!inspection.compatible) {
+    message.error(inspection.compatibilityMessage || 'IPA 与所选设备不兼容')
+    return
+  }
+
   isInstallingIPA.value = true
   emit('busyChange', true, `正在安装 ${selectedIPAFileName.value}（请保持设备屏幕常亮勿息屏）...`)
   message.info('开始安装应用，请确保设备屏幕保持常亮解锁...')
@@ -268,6 +324,7 @@ defineExpose({
   selectedIPAPath,
   devices,
   selectedDeviceUDID,
+  ipaInspection,
   useIPAPath,
   loadConnectedDevices
 })
