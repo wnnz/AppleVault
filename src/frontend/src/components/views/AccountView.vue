@@ -31,23 +31,29 @@
       </div>
     </AppCard>
 
-    <div class="two-columns-layout">
-      <!-- 已保存账号 -->
-      <AppCard class="clean-card">
-        <div class="card-headline">
-          <span class="headline-title">已保存账号</span>
+    <AppCard class="clean-card account-list-card">
+      <div class="account-list-toolbar">
+        <div class="card-headline account-list-heading">
+          <span class="headline-title">已登录账号</span>
           <span class="account-pill" :class="isLoggedIn ? 'pill-success' : 'pill-gray'">
             {{ accounts.length }} 个账号
           </span>
         </div>
-        <div v-if="accounts.length" class="account-list">
+        <AppButton type="primary" size="small" @click="openLoginModal">
+          添加账号
+        </AppButton>
+      </div>
+      <div v-if="accounts.length" class="account-list">
+        <div
+          v-for="item in accounts"
+          :key="item.id"
+          class="account-list-item"
+          :class="{ active: item.active }"
+        >
           <button
-            v-for="item in accounts"
-            :key="item.id"
             type="button"
-            class="account-list-item"
-            :class="{ active: item.active }"
-            :disabled="isSwitching"
+            class="account-list-main"
+            :disabled="isSwitching || isAccountActionRunning"
             @click="handleSwitchAccount(item)"
           >
             <span class="account-list-avatar">{{ item.name ? item.name.charAt(0).toUpperCase() : '' }}</span>
@@ -58,50 +64,57 @@
             <span v-if="item.region" class="account-region-pill">{{ item.region }}</span>
             <span v-if="item.active" class="account-current-label">当前</span>
           </button>
+          <div class="account-row-actions">
+            <AppButton
+              type="error"
+              secondary
+              size="tiny"
+              :disabled="isAccountActionRunning"
+              :loading="revokingAccountID === item.id"
+              @click="handleRevoke(item)"
+            >
+              退出登录
+            </AppButton>
+            <AppButton
+              secondary
+              size="tiny"
+              :disabled="isAccountActionRunning"
+              :loading="clearingAccountID === item.id"
+              title="清理该账号的本地钥匙串凭据与 Cookie"
+              @click="handleClearKeychain(item)"
+            >
+              清理钥匙串缓存
+            </AppButton>
+            <AppButton
+              secondary
+              size="tiny"
+              :disabled="isAccountActionRunning"
+              :loading="refreshingAccountID === item.id"
+              @click="handleRefreshAccount(item)"
+            >
+              刷新状态
+            </AppButton>
+          </div>
         </div>
-        <div v-else class="account-empty-state">
-          尚未保存 Apple ID，请使用右侧表单登录。
-        </div>
-        <div class="sub-alert-box mt-4">
-          <span>官方直接认证：所有凭据直接向 Apple 官方接口请求并保存在本地钥匙串，不经过任何第三方服务器。</span>
-        </div>
-        <div class="account-card-actions mt-4">
-          <AppButton
-            type="error"
-            secondary
-            :disabled="!isLoggedIn"
-            :loading="isRevoking"
-            @click="handleRevoke"
-          >
-            退出登录
-          </AppButton>
-          <AppButton
-            secondary
-            :loading="isClearing"
-            title="清理本地钥匙串缓存解决校验异常"
-            @click="handleClearKeychain"
-          >
-            清理钥匙串缓存
-          </AppButton>
-          <AppButton
-            secondary
-            :loading="isAccountLoading"
-            @click="refreshAccount(false)"
-          >
-            刷新状态
-          </AppButton>
-        </div>
-      </AppCard>
+      </div>
+      <div v-else class="account-empty-state">
+        尚未登录 Apple ID，点击上方“添加账号”开始登录。
+      </div>
+      <div class="sub-alert-box mt-4">
+        <span>官方直接认证：所有凭据直接向 Apple 官方接口请求并保存在本地钥匙串，不经过任何第三方服务器。</span>
+      </div>
+    </AppCard>
 
-      <!-- 登录表单 -->
-      <AppCard class="clean-card">
-        <div class="card-headline"><span class="headline-title">登录 Apple ID</span></div>
+    <!-- 添加账号弹窗 -->
+    <AppDialog v-model="showLoginModal" title="添加 Apple ID" style="width: 440px; border-radius: 14px;">
+      <div class="modal-dialog-inner">
         <div class="form-item-clean">
           <label class="clean-label">Apple ID 账户邮箱</label>
           <AppInput
+            ref="loginEmailInputRef"
             v-model="loginForm.email"
-            size="small"
             placeholder="例如: your_apple_id@icloud.com"
+            autofocus
             @keydown.enter="handleLogin"
           />
         </div>
@@ -110,7 +123,6 @@
           <AppInput
             v-model="loginForm.password"
             type="password"
-            size="small"
             placeholder="输入 Apple ID 账户密码"
             @keydown.enter="handleLogin"
           />
@@ -118,19 +130,12 @@
         <div class="sub-alert-box mt-3">
           <span>安全声明：本软件完全开源，账号与密码仅在登录鉴权时直接发送给苹果官方服务器，绝不在本地或外部以任何形式上传明文。</span>
         </div>
-        <div class="form-action-btn-row mt-4">
-          <AppButton
-            type="primary"
-            size="large"
-            :loading="isLoggingIn"
-            class="full-width"
-            @click="handleLogin"
-          >
-            登录并获取授权
-          </AppButton>
+        <div class="dialog-action-buttons mt-4">
+          <AppButton secondary :disabled="isLoggingIn" @click="showLoginModal = false">取消</AppButton>
+          <AppButton type="primary" :loading="isLoggingIn" @click="handleLogin">登录并添加</AppButton>
         </div>
-      </AppCard>
-    </div>
+      </div>
+    </AppDialog>
 
     <!-- 2FA 验证码输入弹窗 -->
     <AppDialog v-model="show2FAModal" title="Apple ID 双重认证" style="width: 420px; border-radius: 14px;">
@@ -163,9 +168,9 @@ import {
   GetAccountInfo,
   GetAccounts,
   Login,
-  Revoke,
+  RefreshAccount,
+  RemoveAccount,
   SwitchAccount,
-  ClearKeychainCache,
   GetSettings,
   SetKeychainPassphrase
 } from '../../../wailsjs/go/backend/App'
@@ -190,24 +195,36 @@ const account = ref<main.AccountInfo>({ id: '', name: '', email: '', region: '',
 const accounts = ref<main.AccountInfo[]>([])
 const isLoggedIn = computed(() => account.value.success && !!account.value.email)
 const isAccountLoading = ref(false)
-const isRevoking = ref(false)
-const isClearing = ref(false)
 const isLoggingIn = ref(false)
 const isSwitching = ref(false)
+const revokingAccountID = ref('')
+const clearingAccountID = ref('')
+const refreshingAccountID = ref('')
+const isAccountActionRunning = computed(() =>
+  isAccountLoading.value || !!revokingAccountID.value || !!clearingAccountID.value || !!refreshingAccountID.value
+)
 const keychainPassphrase = ref('')
 const savedKeychainPassphrase = ref('')
 const isSavingKeychainPassphrase = ref(false)
 
 // 登录表单
+const showLoginModal = ref(false)
 const loginForm = ref({
   email: '',
   password: ''
 })
+const loginEmailInputRef = ref<InstanceType<typeof AppInput> | null>(null)
 
 // 2FA 弹窗
 const show2FAModal = ref(false)
 const twoFACode = ref('')
 const twoFAInputRef = ref<InstanceType<typeof AppInput> | null>(null)
+
+watch(showLoginModal, async visible => {
+  if (!visible) return
+  await nextTick()
+  loginEmailInputRef.value?.focus()
+})
 
 watch(show2FAModal, async visible => {
   if (!visible) return
@@ -320,6 +337,11 @@ async function handleSwitchAccount(item: main.AccountInfo) {
   }
 }
 
+function openLoginModal() {
+  loginForm.value = { email: '', password: '' }
+  showLoginModal.value = true
+}
+
 /**
  * 执行 Apple ID 账户与密码登录
  */
@@ -336,6 +358,7 @@ async function handleLogin() {
     const res = await Login(loginForm.value.email, loginForm.value.password, '')
     if (res.requires2FA) {
       twoFACode.value = ''
+      showLoginModal.value = false
       show2FAModal.value = true
       emit('busyChange', true, '等待输入双重认证验证码...')
       return
@@ -343,6 +366,7 @@ async function handleLogin() {
 
     if (res.success) {
       localStorage.setItem('apple_vault_logged_in', 'true')
+      showLoginModal.value = false
       account.value = res.account
       accounts.value = await GetAccounts()
       emit('accountChanged', res.account)
@@ -409,41 +433,44 @@ async function confirm2FA() {
 function cancel2FA() {
   show2FAModal.value = false
   twoFACode.value = ''
+  showLoginModal.value = true
   emit('busyChange', false, '用户取消了验证。')
 }
 
 /**
  * 注销登录凭据
  */
-async function handleRevoke() {
+async function applyRemovedAccount(item: main.AccountInfo, next: main.AccountInfo) {
+  accounts.value = await GetAccounts()
+  if (!item.active) return
+  account.value = next
+  localStorage.setItem('apple_vault_logged_in', next.success ? 'true' : 'false')
+  emit('accountChanged', next)
+  if (next.success) {
+    emit('loginSuccess', next)
+  } else {
+    emit('navigate', 'account')
+  }
+}
+
+async function handleRevoke(item: main.AccountInfo) {
   dialog.warning({
     title: '确认退出登录',
-    content: '确定要退出当前 Apple ID 账号并清除本地授权凭证吗？',
+    content: `确定要退出 ${item.email} 并清除该账号的本地授权凭证吗？`,
     positiveText: '确定退出',
     negativeText: '取消',
     onPositiveClick: async () => {
-      isRevoking.value = true
+      revokingAccountID.value = item.id
       emit('busyChange', true)
       try {
-        const ok = await Revoke()
-        if (ok) {
-          const next = await GetAccountInfo()
-          accounts.value = await GetAccounts()
-          account.value = next
-          localStorage.setItem('apple_vault_logged_in', next.success ? 'true' : 'false')
-          emit('accountChanged', next)
-          message.success('已成功注销登录凭据')
-          emit('busyChange', false, next.success ? `已切换至: ${next.email}` : '已退出登录')
-          if (next.success) {
-            emit('loginSuccess', next)
-          } else {
-            emit('navigate', 'account')
-          }
-        }
+        const next = await RemoveAccount(item.id)
+        await applyRemovedAccount(item, next)
+        message.success(`已退出 ${item.email}`)
+        emit('busyChange', false, next.success ? `当前账号: ${next.email}` : '已退出登录')
       } catch (err: any) {
         message.error(`注销失败: ${err}`)
       } finally {
-        isRevoking.value = false
+        revokingAccountID.value = ''
         emit('busyChange', false)
       }
     }
@@ -453,25 +480,45 @@ async function handleRevoke() {
 /**
  * 清空本地钥匙串缓存
  */
-async function handleClearKeychain() {
+async function handleClearKeychain(item: main.AccountInfo) {
   dialog.warning({
     title: '清空本地密钥库缓存',
-    content: '此操作将删除当前 Apple ID 的本地凭据与 Cookie，并从账号列表中移除。确定清理吗？',
+    content: `此操作将删除 ${item.email} 的本地凭据与 Cookie，并从账号列表中移除。确定清理吗？`,
     positiveText: '确定清理',
     negativeText: '取消',
     onPositiveClick: async () => {
-      isClearing.value = true
+      clearingAccountID.value = item.id
       try {
-        await ClearKeychainCache()
-        message.success('本地密钥缓存已清除')
-        await refreshAccount()
+        const next = await RemoveAccount(item.id)
+        await applyRemovedAccount(item, next)
+        message.success(`已清除 ${item.email} 的本地密钥缓存`)
       } catch (err: any) {
         message.error(`清理失败: ${err}`)
       } finally {
-        isClearing.value = false
+        clearingAccountID.value = ''
       }
     }
   })
+}
+
+async function handleRefreshAccount(item: main.AccountInfo) {
+  refreshingAccountID.value = item.id
+  emit('busyChange', true, `正在刷新 ${item.email}...`)
+  try {
+    const updated = await RefreshAccount(item.id)
+    accounts.value = await GetAccounts()
+    if (updated.active) {
+      account.value = updated
+      emit('accountChanged', updated)
+    }
+    message.success(`已刷新 ${updated.email} 的登录状态`)
+    emit('busyChange', false, `账号状态正常: ${updated.email}`)
+  } catch (err: any) {
+    message.error(`刷新失败: ${err}`)
+    emit('busyChange', false, `账号状态异常: ${item.email}`)
+  } finally {
+    refreshingAccountID.value = ''
+  }
 }
 
 defineExpose({

@@ -58,6 +58,8 @@ export function RetryDownloadTask(arg1:string):Promise<main.DownloadTask>;
 
 export function RemoveAccount(arg1:string):Promise<main.AccountInfo>;
 
+export function RefreshAccount(arg1:string):Promise<main.AccountInfo>;
+
 export function SaveSettings(arg1:main.Settings):Promise<void>;
 
 export function Search(arg1:string,arg2:number,arg3:string):Promise<main.SearchResult>;

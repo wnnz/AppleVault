@@ -114,6 +114,10 @@ export function RemoveAccount(arg1) {
   return window['go']['backend']['App']['RemoveAccount'](arg1);
 }
 
+export function RefreshAccount(arg1) {
+  return window['go']['backend']['App']['RefreshAccount'](arg1);
+}
+
 export function SaveSettings(arg1) {
   return window['go']['backend']['App']['SaveSettings'](arg1);
 }

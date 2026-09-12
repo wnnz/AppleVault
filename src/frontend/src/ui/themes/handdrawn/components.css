@@ -705,13 +705,9 @@
   padding-bottom: 18px;
 }
 
-.theme-handdrawn.active-tab-account .two-columns-layout {
-  grid-template-columns: 1.025fr 0.975fr;
+.theme-handdrawn.active-tab-account .account-list-card {
   margin-top: 6px;
-}
-
-.theme-handdrawn.active-tab-account .two-columns-layout > .clean-card {
-  min-height: 306px;
+  min-height: 310px;
 }
 
 .theme-handdrawn.active-tab-account .large-avatar {

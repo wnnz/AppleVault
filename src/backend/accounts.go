@@ -219,6 +219,37 @@ func (a *App) GetAccounts() []AccountInfo {
 	return result
 }
 
+func (a *App) RefreshAccount(accountID string) (AccountInfo, error) {
+	item, ok := a.accountByID(accountID)
+	if !ok {
+		return AccountInfo{}, errors.New("账号不存在")
+	}
+	store, err := a.newAppStoreWithStorage(context.Background(), item.ID, item.Legacy)
+	if err != nil {
+		return AccountInfo{}, err
+	}
+	storedInfo, err := store.AccountInfo()
+	if err != nil {
+		return AccountInfo{}, fmt.Errorf("读取账号凭据失败: %w", err)
+	}
+
+	a.accountMu.Lock()
+	defer a.accountMu.Unlock()
+	for index := range a.accounts.Accounts {
+		if a.accounts.Accounts[index].ID != accountID {
+			continue
+		}
+		a.accounts.Accounts[index].Name = storedInfo.Account.Name
+		a.accounts.Accounts[index].Email = storedInfo.Account.Email
+		a.accounts.Accounts[index].Region = regionFromStoreFront(storedInfo.Account.StoreFront)
+		if err := a.saveAccountsLocked(); err != nil {
+			return AccountInfo{}, err
+		}
+		return accountInfo(a.accounts.Accounts[index], a.accounts.ActiveAccountID), nil
+	}
+	return AccountInfo{}, errors.New("账号不存在")
+}
+
 func (a *App) upsertAccount(account appstore.Account, storageID string, legacy bool) (AccountInfo, error) {
 	region := regionFromStoreFront(account.StoreFront)
 	a.accountMu.Lock()
