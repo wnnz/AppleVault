@@ -25,10 +25,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import type { ControlSize } from '../control'
 
 type AppButtonVariant = 'primary' | 'secondary'
 type AppButtonType = 'default' | 'tertiary' | 'primary' | 'info' | 'success' | 'warning' | 'error'
-type AppButtonSize = 'tiny' | 'small' | 'medium' | 'large'
+type AppButtonSize = 'tiny' | ControlSize
 
 const props = withDefaults(defineProps<{
   variant?: AppButtonVariant
@@ -72,9 +73,9 @@ function onClick(event: MouseEvent) {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-width: 0;
+  flex-shrink: 0;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 4px;
   padding: 0 14px;
   background: transparent;
   color: var(--ui-text, #334155);
@@ -88,22 +89,22 @@ function onClick(event: MouseEvent) {
   transition: color .15s ease, background-color .15s ease, border-color .15s ease, opacity .15s ease;
 }
 
-.app-button--tiny { height: 22px; padding: 0 7px; border-radius: 6px; font-size: 12px; }
-.app-button--small { height: 28px; padding: 0 12px; font-size: 12px; }
-.app-button--medium { height: 34px; }
-.app-button--large { height: 40px; padding: 0 18px; }
+.app-button--tiny { height: var(--ui-control-height-small); padding: 0 7px; font-size: 12px; }
+.app-button--small { height: var(--ui-control-height-small); padding: 0 12px; font-size: 12px; }
+.app-button--medium { height: var(--ui-control-height-medium); }
+.app-button--large { height: var(--ui-control-height-large); padding: 0 18px; }
 .app-button--block { display: flex; width: 100%; }
 .app-button--primary { border-color: var(--ui-primary); background: var(--ui-primary); color: #fff; }
 .app-button--primary:hover:not(:disabled) { background: var(--ui-primary-hover); }
 .app-button--secondary { border-color: var(--ui-border); background: var(--ui-control-bg); color: var(--ui-text); }
 .app-button--secondary:hover:not(:disabled) { background: var(--ui-control-hover); }
 .app-button:disabled { cursor: not-allowed; opacity: .5; }
-.app-button__content { display: inline-flex; align-items: center; justify-content: center; }
-.app-button__spinner { width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: app-spin .7s linear infinite; }
+.app-button__content { position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; }
+.app-button__spinner { position: relative; z-index: 1; width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: app-spin .7s linear infinite; }
 @keyframes app-spin { to { transform: rotate(360deg); } }
 
 .theme-handdrawn .app-button {
-  border-radius: 9px !important;
+  border-radius: 4px !important;
   border-color: transparent !important;
   background-color: transparent !important;
   color: #31547e !important;
@@ -135,8 +136,7 @@ function onClick(event: MouseEvent) {
 
 .theme-handdrawn .app-button--secondary:not(.app-button--tertiary):not(.app-button--quaternary) {
   border: 1px solid transparent !important;
-  border-image: url('../themes/handdrawn/assets/sketch-frame-blue.svg') 24 / 7px stretch !important;
-  border-radius: 0 !important;
+  border-image: url('../themes/handdrawn/assets/sketch-frame-blue.svg') 24 / 6px stretch !important;
   background-color: rgba(255, 255, 255, 0.72) !important;
 }
 .theme-handdrawn .app-button--secondary:not(.app-button--tertiary):not(.app-button--quaternary):hover,
@@ -144,19 +144,28 @@ function onClick(event: MouseEvent) {
   background-color: rgba(239, 250, 255, 0.84) !important;
 }
 .theme-handdrawn .app-button--primary {
-  /* The light controls use a hand-drawn border with transparent outer
-     breathing room. Keep the same optical height for filled controls. */
-  border-width: 2px !important;
+  position: relative;
+  isolation: isolate;
+  border-width: 1px !important;
   border-color: transparent !important;
   color: #fff !important;
-  background-color: var(--hd-blue) !important;
-  background-image: url('../themes/handdrawn/assets/handdrawn-blue-button-texture.webp') !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+.theme-handdrawn .app-button--primary::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  inset: 2px 0;
+  border-radius: 4px;
+  background-color: var(--hd-blue);
+  background-image: url('../themes/handdrawn/assets/handdrawn-blue-button-texture.webp');
   background-size: 240px 80px !important;
   background-position: 0 0 !important;
   background-repeat: repeat !important;
-  background-clip: padding-box !important;
 }
-.theme-handdrawn .app-button--primary:hover { color: #fff !important; border-color: transparent !important; background-color: #1288e2 !important; }
+.theme-handdrawn .app-button--primary:hover { color: #fff !important; border-color: transparent !important; background-color: transparent !important; }
+.theme-handdrawn .app-button--primary:hover::before { background-color: #1288e2; }
 .theme-handdrawn .app-button--secondary.app-button--type-error { color: #d94f5c !important; }
 .theme-handdrawn .app-button--tiny { padding-right: 6px; padding-left: 6px; font-size: 12px; }
 </style>

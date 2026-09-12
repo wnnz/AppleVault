@@ -35,10 +35,8 @@ if (-not (Test-Path $ToolsDir)) {
     New-Item -ItemType Directory -Force $ToolsDir | Out-Null
 }
 
-# 若源码仓库 tools 目录下有外部依赖，自动补充同步至发布目录（不覆盖已有）
-if ((Test-Path "$ExternalToolsDir/ipatool.exe") -and -not (Test-Path "$ToolsDir/ipatool.exe")) {
-    Copy-Item "$ExternalToolsDir/ipatool.exe" "$ToolsDir/" -Force
-}
+# App Store 能力已编译进主程序，仅需同步设备管理工具。
+Get-ChildItem -LiteralPath $ToolsDir -Filter "ipatool*.exe" -File | Remove-Item -Force
 if ((Test-Path "$ExternalToolsDir/ios.exe") -and -not (Test-Path "$ToolsDir/ios.exe")) {
     Copy-Item "$ExternalToolsDir/ios.exe" "$ToolsDir/" -Force
 }
@@ -83,5 +81,5 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "`n✅ 发布构建完成！主程序输出于: $BinDir/AppleVault.exe" -ForegroundColor Green
 Write-Host "   目录结构："
 Write-Host "   ├── AppleVault.exe        (主程序)"
-Write-Host "   ├── tools/                (外部依赖目录: ipatool.exe, ios.exe)"
+Write-Host "   ├── tools/                (外部依赖目录: ios.exe)"
 Write-Host "   └── data/                 (程序数据目录: 自动生成 settings.json, tasks.json, 登录凭据)"

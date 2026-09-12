@@ -8,6 +8,12 @@ html, body, #app {
   user-select: none;
 }
 
+:root {
+  --ui-control-height-small: 28px;
+  --ui-control-height-medium: 34px;
+  --ui-control-height-large: 40px;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

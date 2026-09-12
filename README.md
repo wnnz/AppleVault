@@ -93,7 +93,7 @@ AppleVault/
 │   ├── main.go              # Wails 应用入口
 │   ├── backend/             # Go 后端实现与测试
 │   └── frontend/            # Vue 前端源码及 Wails 绑定
-├── tools/                   # 开发与发布所需的外部工具
+├── tools/                   # 设备管理所需的外部工具
 ├── build/                   # Wails 资源与发布产物
 ├── docs/                    # 项目文档和截图
 ├── third_party/             # 第三方许可证
@@ -112,7 +112,6 @@ AppleVault/
 AppleVault/
 ├── AppleVault.exe            # 软件主程序
 ├── tools/                    # 外部运行依赖工具
-│   ├── ipatool.exe           # App Store 认证与下载支持
 │   └── ios.exe               # 苹果设备检测与安装支持
 └── data/                     # 运行时自动生成的全量数据目录
     ├── settings.json         # 软件偏好与代理配置
@@ -125,6 +124,7 @@ AppleVault/
 
 ## 📜 致谢与免责声明
 
-- 本工具底层基于开源社区优秀的 [majd/ipatool](https://github.com/majd/ipatool) 与 [danielpaulus/go-ios](https://github.com/danielpaulus/go-ios) 项目提供支撑，在此对开源作者致以崇高敬意。
+- App Store 模块衍生自 MIT 许可的 [majd/ipatool](https://github.com/majd/ipatool)，已按 AppleVault 的调用方式移植为进程内 Go 实现；版权与许可证见 `third_party/ipatool-LICENSE.txt`。
+- 苹果设备检测与安装功能由 [danielpaulus/go-ios](https://github.com/danielpaulus/go-ios) 提供支持。
 - 本项目仅为第三方独立开源图形界面工具，所有应用包均来自 Apple 官方服务器，与 Apple Inc. 无任何官方隶属、赞助或合作关系。
 - 使用本项目下载应用请遵守 Apple 开发者协议及相关法律法规，请勿用于商业传播或侵权用途。

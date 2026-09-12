@@ -7,7 +7,7 @@
     <SelectTrigger
       v-bind="$attrs"
       class="app-select"
-      :class="{ 'app-select--disabled': disabled || loading }"
+      :class="[`app-select--${size}`, { 'app-select--disabled': disabled || loading }]"
       :aria-label="placeholder"
     >
       <SelectValue class="app-select__label" :placeholder="loading ? '加载中…' : placeholder" />
@@ -50,6 +50,7 @@ import {
   SelectValue,
   SelectViewport
 } from 'reka-ui'
+import type { ControlSize } from '../control'
 
 defineOptions({ inheritAttrs: false })
 
@@ -66,7 +67,7 @@ withDefaults(defineProps<{
   placeholder?: string
   disabled?: boolean
   loading?: boolean
-  size?: 'small' | 'medium'
+  size?: ControlSize
 }>(), {
   modelValue: null,
   placeholder: '请选择',
@@ -85,7 +86,6 @@ const emit = defineEmits<{ 'update:modelValue': [value: SelectValue] }>()
   justify-content: space-between;
   gap: 8px;
   width: 100%;
-  min-height: 30px;
   padding: 0 10px;
   border: 1px solid var(--ui-border);
   border-radius: 8px;
@@ -97,6 +97,9 @@ const emit = defineEmits<{ 'update:modelValue': [value: SelectValue] }>()
   box-sizing: border-box;
   outline: none;
 }
+.app-select--small { min-height: var(--ui-control-height-small); height: var(--ui-control-height-small); }
+.app-select--medium { min-height: var(--ui-control-height-medium); height: var(--ui-control-height-medium); }
+.app-select--large { min-height: var(--ui-control-height-large); height: var(--ui-control-height-large); }
 .app-select:hover { border-color: var(--ui-border); }
 .app-select[data-state='open'] { border-color: var(--ui-primary); }
 .app-select:focus-visible { box-shadow: 0 0 0 2px var(--ui-focus); }

@@ -33,7 +33,6 @@
   --hd-green: #4ed18c;
   --hd-yellow: #f7c94f;
   --hd-red: #ff5b5b;
-  --hd-control-height: 32px;
   --hd-yellow-accent-image: url('./assets/sketch-title-accent.svg');
   position: relative;
   isolation: isolate;
@@ -73,22 +72,6 @@
   padding-bottom: 105px;
   padding-left: 1px;
   overflow-x: hidden;
-}
-
-.theme-handdrawn .height-aligned,
-.theme-handdrawn .height-aligned-btn {
-  height: var(--hd-control-height) !important;
-  box-sizing: border-box !important;
-}
-
-.theme-handdrawn .height-aligned {
-  line-height: calc(var(--hd-control-height) - 2px) !important;
-}
-
-.theme-handdrawn .height-aligned-select.app-select,
-.theme-handdrawn .height-aligned-select.app-select__label {
-  min-height: var(--hd-control-height) !important;
-  height: var(--hd-control-height) !important;
 }
 
 .theme-handdrawn .sidebar-brand,
@@ -496,16 +479,7 @@
   justify-content: center;
 }
 
-.theme-handdrawn.active-tab-versions .bundle-input-row,
-.theme-handdrawn.active-tab-versions .filter-search-row,
-.theme-handdrawn.active-tab-versions .clean-input-prefix-box,
-.theme-handdrawn.active-tab-versions .filter-input,
 .theme-handdrawn.active-tab-versions .bundle-input-row .app-button {
-  height: var(--hd-control-height) !important;
-}
-
-.theme-handdrawn.active-tab-versions .bundle-input-row .app-button {
-  min-width: 0 !important;
   padding-right: 10px !important;
   padding-left: 10px !important;
   font-size: 13px !important;
@@ -515,18 +489,6 @@
   gap: 4px;
   padding-right: 8px !important;
   padding-left: 8px !important;
-}
-
-.theme-handdrawn.active-tab-versions .bundle-input-row .app-button:nth-of-type(1) {
-  width: 114px;
-}
-
-.theme-handdrawn.active-tab-versions .bundle-input-row .app-button:nth-of-type(2) {
-  width: 128px;
-}
-
-.theme-handdrawn.active-tab-versions .bundle-input-row .app-button:nth-of-type(3) {
-  width: 105px;
 }
 
 .theme-handdrawn .view-title::after {
@@ -554,13 +516,6 @@
 
 .theme-handdrawn.active-tab-purchased .filter-controls .app-button {
   min-width: 86px;
-}
-
-.theme-handdrawn.active-tab-purchased .purchased-search-input-box,
-.theme-handdrawn.active-tab-purchased .purchased-page-controls,
-.theme-handdrawn.active-tab-purchased .purchased-page-controls .app-button,
-.theme-handdrawn.active-tab-purchased .purchased-page-controls .app-select {
-  height: var(--hd-control-height) !important;
 }
 
 .theme-handdrawn.active-tab-purchased .table-flex-card {
@@ -693,56 +648,12 @@
   height: 58px;
 }
 
-.theme-handdrawn .clean-input,
-.theme-handdrawn .clean-input-prefix-box,
-.theme-handdrawn .purchased-search-input-box {
-  box-sizing: border-box;
-  border: 1px solid transparent;
-  border-image: url('./assets/sketch-frame-blue.svg') 24 / 7px stretch;
-  border-radius: 0;
-  background-color: transparent;
-  background-image: none;
+.theme-handdrawn .app-input {
   color: var(--hd-ink);
-  box-shadow: none;
 }
 
-.theme-handdrawn .clean-input-prefix-box .clean-input {
-  background: transparent;
-  background-image: none;
-}
-
-.theme-handdrawn .clean-input::placeholder,
-.theme-handdrawn .purchased-search-input::placeholder {
+.theme-handdrawn .app-input::placeholder {
   color: #7f9cba;
-}
-
-.theme-handdrawn .clean-input:focus,
-.theme-handdrawn .clean-input-prefix-box:focus-within,
-.theme-handdrawn .purchased-search-input-box:focus-within {
-  border-color: transparent;
-  background-color: transparent;
-  background-image: none;
-  box-shadow: none;
-}
-
-.theme-handdrawn .clean-input-prefix-box .clean-input:focus {
-  background: transparent;
-  background-image: none;
-  box-shadow: none;
-}
-
-.theme-handdrawn .prefix-label {
-  color: var(--hd-muted);
-  border-right-color: var(--hd-line);
-}
-
-.theme-handdrawn .purchased-search-input {
-  color: var(--hd-ink);
-}
-
-.theme-handdrawn .search-clear-btn:hover {
-  color: var(--hd-blue-dark);
-  background: rgba(175, 226, 251, 0.35);
 }
 
 .theme-handdrawn .tag-version-highlight {
@@ -962,11 +873,10 @@
   pointer-events: none;
 }
 
-.theme-handdrawn .settings-save-btn.height-aligned-btn {
+.theme-handdrawn .settings-save-btn {
   position: relative;
   width: 144px;
   min-width: 144px;
-  height: 40px !important;
   font-size: 14px !important;
   transform: translateY(-2px);
   overflow: visible !important;
@@ -1129,18 +1039,6 @@
 
 .theme-handdrawn .app-table .app-table__row:hover .app-table__cell {
   background-color: rgba(225, 247, 255, 0.72) !important;
-}
-
-.theme-handdrawn .app-table .app-button--tiny {
-  height: 26px !important;
-  line-height: 24px !important;
-  padding-right: 8px !important;
-  padding-left: 8px !important;
-  font-size: 12px !important;
-}
-
-.theme-handdrawn .app-table .app-button--secondary:not(.app-button--tertiary):not(.app-button--quaternary) {
-  border-image-width: 5px !important;
 }
 
 .theme-handdrawn .app-table__pagination .app-table__page {

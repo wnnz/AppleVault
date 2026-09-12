@@ -106,5 +106,6 @@ type Settings struct {
 	DefaultPlatform    string `json:"defaultPlatform"`
 	EnableProxy        bool   `json:"enableProxy"`
 	ProxyUrl           string `json:"proxyUrl"`
-	IpaToolPath        string `json:"ipaToolPath"`
+	// IpaToolPath is kept for settings-file and frontend compatibility.
+	IpaToolPath string `json:"ipaToolPath"`
 }
