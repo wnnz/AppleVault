@@ -17,6 +17,10 @@
   background-size: cover;
 }
 
+.theme-handdrawn .app-dialog-content {
+  border-radius: 4px;
+}
+
 /* Hand-drawn paper theme -------------------------------------------------- */
 .nav-icon {
   display: none;
@@ -691,7 +695,12 @@
 
 .theme-handdrawn.active-tab-installer .view-panel {
   box-sizing: border-box;
-  padding-bottom: 23px;
+  padding-bottom: 0;
+}
+
+.theme-handdrawn.active-tab-installer .view-content-wrapper,
+.theme-handdrawn.active-tab-account .view-content-wrapper {
+  padding-bottom: 0;
 }
 
 .theme-handdrawn.active-tab-installer .installer-grid {
@@ -707,7 +716,7 @@
 
 .theme-handdrawn.active-tab-account .account-list-card {
   margin-top: 6px;
-  min-height: 310px;
+  min-height: 0;
 }
 
 .theme-handdrawn.active-tab-account .large-avatar {

@@ -106,7 +106,7 @@
     </AppCard>
 
     <!-- 添加账号弹窗 -->
-    <AppDialog v-model="showLoginModal" title="添加 Apple ID" style="width: 440px; border-radius: 14px;">
+    <AppDialog v-model="showLoginModal" title="添加 Apple ID" style="width: 440px;">
       <div class="modal-dialog-inner">
         <div class="form-item-clean">
           <label class="clean-label">Apple ID 账户邮箱</label>
@@ -138,7 +138,7 @@
     </AppDialog>
 
     <!-- 2FA 验证码输入弹窗 -->
-    <AppDialog v-model="show2FAModal" title="Apple ID 双重认证" style="width: 420px; border-radius: 14px;">
+    <AppDialog v-model="show2FAModal" title="Apple ID 双重认证" style="width: 420px;">
       <div class="modal-dialog-inner">
         <p class="dialog-desc">
           已向您的受信任受认证 Apple 设备发送了验证码，请输入 6 位验证码以完成登录。
@@ -150,11 +150,19 @@
           maxlength="6"
           autofocus
           class="dialog-code-input"
+          :disabled="isLoggingIn"
           @keydown.enter="confirm2FA"
         />
         <div class="dialog-action-buttons mt-4">
-          <AppButton secondary @click="cancel2FA">取消</AppButton>
-          <AppButton type="primary" :disabled="twoFACode.length !== 6" @click="confirm2FA">确认登录</AppButton>
+          <AppButton secondary :disabled="isLoggingIn" @click="cancel2FA">取消</AppButton>
+          <AppButton
+            type="primary"
+            :loading="isLoggingIn"
+            :disabled="twoFACode.length !== 6"
+            @click="confirm2FA"
+          >
+            确认登录
+          </AppButton>
         </div>
       </div>
     </AppDialog>
@@ -346,6 +354,7 @@ function openLoginModal() {
  * 执行 Apple ID 账户与密码登录
  */
 async function handleLogin() {
+  if (isLoggingIn.value) return
   if (!loginForm.value.email || !loginForm.value.password) {
     message.warning('请输入 Apple ID 邮箱和密码！')
     return
@@ -393,6 +402,7 @@ async function handleLogin() {
  * 确认提交 2FA 验证码完成登录
  */
 async function confirm2FA() {
+  if (isLoggingIn.value) return
   if (twoFACode.value.length !== 6) {
     message.warning('请输入正确的 6 位数字验证码！')
     return

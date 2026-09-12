@@ -1273,7 +1273,11 @@
 
 /* Account Center View */
 .account-list-card {
-  min-height: 290px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .account-list-toolbar {
@@ -1296,9 +1300,10 @@
 
 .account-list {
   display: flex;
+  flex: 1;
+  min-height: 0;
   flex-direction: column;
   gap: 7px;
-  max-height: 280px;
   overflow-y: auto;
   padding: 3px 1px;
 }

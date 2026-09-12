@@ -83,7 +83,7 @@
     </AppCard>
 
     <!-- 查找指定版本弹窗 -->
-    <AppDialog v-model="showTargetVersionModal" title="查找指定版本" style="width: 440px; border-radius: 14px;">
+    <AppDialog v-model="showTargetVersionModal" title="查找指定版本" style="width: 440px;">
       <div class="modal-dialog-inner">
         <p class="dialog-desc">
           请输入目标版本号（例如 <code>10.2.80</code> 或 <code>8.0.0</code>），程序将智能检索历史构建记录并快速定位匹配版本。
