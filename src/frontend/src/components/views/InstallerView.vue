@@ -8,25 +8,35 @@
     </div>
 
     <div class="installer-grid">
+      <!-- 1. 选择安装包 -->
       <AppCard class="clean-card flex-col">
         <div class="card-headline">
           <span class="headline-title">1. 选择安装包</span>
           <span v-if="selectedIPAPath" class="headline-badge">已就绪</span>
         </div>
-        <div class="clean-drop-zone" :class="{ 'drop-active': !!selectedIPAPath }" @click="emit('selectIPA')">
+        <div class="clean-drop-zone" :class="{ 'drop-active': !!selectedIPAPath }" @click="handleSelectIPA">
           <div class="drop-primary-title">{{ selectedIPAPath ? selectedIPAFileName : '点击选择或拖拽 .ipa 文件到此处' }}</div>
           <div class="drop-secondary-path text-ellipsis" :title="selectedIPAPath">{{ selectedIPAPath || '支持标准 iOS 签名应用包格式' }}</div>
         </div>
         <div class="mt-3 flex-align-center">
           <AppInput :model-value="selectedIPAPath" readonly size="small" class="flex-1 mr-2" placeholder="尚未选择文件" />
-          <AppButton secondary size="small" @click="emit('selectIPA')">浏览文件</AppButton>
+          <AppButton secondary size="small" @click="handleSelectIPA">浏览文件</AppButton>
         </div>
       </AppCard>
 
+      <!-- 2. 选择苹果设备 -->
       <AppCard class="clean-card flex-col">
         <div class="card-headline">
           <span class="headline-title">2. 选择苹果设备</span>
-          <AppButton secondary size="small" :loading="isLoadingDevices" :disabled="isInstallingIPA" @click="emit('refreshDevices')">刷新检测</AppButton>
+          <AppButton
+            secondary
+            size="small"
+            :loading="isLoadingDevices"
+            :disabled="isInstallingIPA"
+            @click="loadConnectedDevices"
+          >
+            刷新检测
+          </AppButton>
         </div>
         <AppSelect
           v-model="selectedDeviceUDID"
@@ -36,7 +46,9 @@
           placeholder="请选择已连接的 iOS 设备"
           size="small"
         />
-        <div class="sub-alert-box mt-3"><span>请保持设备屏幕<b>常亮解锁</b>；若设备息屏休眠，USB 通信将中断并丢失连接。</span></div>
+        <div class="sub-alert-box mt-3">
+          <span>请保持设备屏幕<b>常亮解锁</b>；若设备息屏休眠，USB 通信将中断并丢失连接。</span>
+        </div>
         <div v-if="selectedDevice" class="device-spec-box mt-3">
           <div class="spec-row"><span class="spec-k">设备名称</span><span class="spec-v font-bold">{{ selectedDevice.name }}</span></div>
           <div class="spec-row"><span class="spec-k">设备型号</span><span class="spec-v">{{ selectedDevice.productType || '-' }}</span></div>
@@ -51,9 +63,12 @@
       </AppCard>
     </div>
 
+    <!-- 底部直装操作区 -->
     <AppCard class="clean-card mt-4 installer-action-banner">
       <div class="installer-action-info">
-        <div class="action-banner-title">{{ !selectedIPAPath ? '请先选择待安装的 IPA 文件' : (!selectedDeviceUDID ? '请选择目标苹果设备' : '就绪，可以开始安装') }}</div>
+        <div class="action-banner-title">
+          {{ !selectedIPAPath ? '请先选择待安装的 IPA 文件' : (!selectedDeviceUDID ? '请选择目标苹果设备' : '就绪，可以开始安装') }}
+        </div>
         <div class="action-banner-desc">本工具下载的正版 IPA 需安装至登录了相同 Apple ID 的设备上，未签名包将无法被系统接受。</div>
       </div>
       <AppButton
@@ -62,7 +77,7 @@
         :disabled="!selectedIPAPath || !selectedDeviceUDID || isLoadingDevices"
         :loading="isInstallingIPA"
         class="install-submit-btn"
-        @click="emit('installIPA')"
+        @click="handleInstallIPA"
       >
         {{ isInstallingIPA ? '正在安装中...' : '开始安装到设备' }}
       </AppButton>
@@ -71,33 +86,146 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed } from 'vue'
+import { backend as main } from '../../../wailsjs/go/models'
+import { SelectIPA, ListDevices, InstallIPA } from '../../../wailsjs/go/backend/App'
 import AppButton from '../../ui/components/AppButton.vue'
 import AppCard from '../../ui/components/AppCard.vue'
 import AppInput from '../../ui/components/AppInput.vue'
-import AppSelect, { type AppSelectOption } from '../../ui/components/AppSelect.vue'
+import AppSelect from '../../ui/components/AppSelect.vue'
+import { useAppMessage } from '../../ui/feedback'
 
-interface DeviceInfo {
-  udid: string
-  name: string
-  productType: string
-  productVersion: string
-  connectionType: string
+const emit = defineEmits<{
+  (e: 'busyChange', busy: boolean, text?: string): void
+}>()
+
+const message = useAppMessage()
+
+const selectedIPAPath = ref('')
+const devices = ref<main.DeviceInfo[]>([])
+const selectedDeviceUDID = ref<string | null>(null)
+const isLoadingDevices = ref(false)
+const isInstallingIPA = ref(false)
+
+const selectedIPAFileName = computed(() =>
+  selectedIPAPath.value.split(/[\\/]/).pop() || selectedIPAPath.value
+)
+
+const selectedDevice = computed(() =>
+  devices.value.find(device => device.udid === selectedDeviceUDID.value)
+)
+
+const deviceOptions = computed(() =>
+  devices.value.map(device => {
+    const modelShort = device.productType
+    const osPrefix = device.productType.toLowerCase().includes('ipad') ? 'iPadOS' : 'iOS'
+    const versionStr = device.productVersion ? `${osPrefix} ${device.productVersion}` : ''
+    const details = (
+      device.name === device.productType
+        ? [versionStr, device.connectionType]
+        : [modelShort, versionStr, device.connectionType]
+    ).filter(Boolean).join(' · ')
+    return {
+      label: details ? `${device.name} (${details})` : device.name,
+      value: device.udid
+    }
+  })
+)
+
+/**
+ * 接收来自拖拽或外部选定的 IPA 文件路径
+ */
+function useIPAPath(paths: string[]) {
+  const ipaPath = paths.find(path => path.toLowerCase().endsWith('.ipa'))
+  if (!ipaPath) {
+    message.warning('请拖放 .ipa 格式的安装包')
+    return
+  }
+  selectedIPAPath.value = ipaPath
+  emit('busyChange', false, `已选定 IPA: ${ipaPath}`)
 }
 
-defineProps<{
-  selectedIPAPath: string
-  selectedIPAFileName: string
-  devices: DeviceInfo[]
-  selectedDevice: DeviceInfo | null | undefined
-  deviceOptions: AppSelectOption[]
-  isLoadingDevices: boolean
-  isInstallingIPA: boolean
-}>()
+/**
+ * 打开系统文件选择框选取 IPA
+ */
+async function handleSelectIPA() {
+  try {
+    const path = await SelectIPA()
+    if (path) {
+      useIPAPath([path])
+    }
+  } catch (err: any) {
+    message.error(`选择 IPA 失败: ${err}`)
+  }
+}
 
-const selectedDeviceUDID = defineModel<string | null>('selectedDeviceUDID', { required: true })
-const emit = defineEmits<{
-  selectIPA: []
-  refreshDevices: []
-  installIPA: []
-}>()
+/**
+ * 检测当前已连接的真机设备
+ */
+async function loadConnectedDevices() {
+  isLoadingDevices.value = true
+  emit('busyChange', true, '正在检测已连接的苹果设备...')
+  try {
+    const result = await ListDevices()
+    devices.value = result || []
+    if (!devices.value.some(device => device.udid === selectedDeviceUDID.value)) {
+      selectedDeviceUDID.value = devices.value.length === 1 ? devices.value[0].udid : null
+    }
+    if (devices.value.length === 0) {
+      emit('busyChange', false, '未发现可用苹果设备')
+      message.warning('未发现设备，请确认设备已连接、解锁并信任此电脑')
+    } else {
+      emit('busyChange', false, `发现 ${devices.value.length} 台可用设备`)
+    }
+  } catch (err: any) {
+    devices.value = []
+    selectedDeviceUDID.value = null
+    emit('busyChange', false, '设备检测失败')
+    message.error(`设备检测失败: ${err}`)
+  } finally {
+    isLoadingDevices.value = false
+  }
+}
+
+/**
+ * 执行设备安装操作
+ */
+async function handleInstallIPA() {
+  if (!selectedIPAPath.value) {
+    message.warning('请先选择 IPA 文件')
+    return
+  }
+  if (!selectedDeviceUDID.value) {
+    message.warning('请选择要安装的苹果设备')
+    return
+  }
+
+  isInstallingIPA.value = true
+  emit('busyChange', true, `正在安装 ${selectedIPAFileName.value}（请保持设备屏幕常亮勿息屏）...`)
+  message.info('开始安装应用，请确保设备屏幕保持常亮解锁...')
+
+  try {
+    const result = await InstallIPA(selectedIPAPath.value, selectedDeviceUDID.value)
+    if (result.success) {
+      emit('busyChange', false, result.message)
+      message.success(result.message)
+    } else {
+      emit('busyChange', false, 'IPA 安装失败')
+      message.error(result.message || 'IPA 安装失败')
+    }
+  } catch (err: any) {
+    emit('busyChange', false, 'IPA 安装失败')
+    message.error(`IPA 安装失败: ${err}`)
+  } finally {
+    isInstallingIPA.value = false
+  }
+}
+
+defineExpose({
+  selectedIPAPath,
+  devices,
+  selectedDeviceUDID,
+  useIPAPath,
+  loadConnectedDevices
+})
 </script>

@@ -19,7 +19,7 @@
           终止操作
         </AppButton>
 
-        <button class="status-btn" @click="emit('toggleLogs')">
+        <button class="status-btn" @click="toggleLogs">
           {{ showLogs ? '收起日志' : '实时日志' }}
         </button>
       </div>
@@ -30,8 +30,8 @@
       <div class="console-action-bar">
         <div class="console-title">实时执行日志</div>
         <div class="console-btns">
-          <button class="console-bar-btn" @click="emit('clearLogs')">清空</button>
-          <button class="console-bar-btn" @click="emit('toggleLogs')">收起</button>
+          <button class="console-bar-btn" @click="clearLogs">清空</button>
+          <button class="console-bar-btn" @click="toggleLogs">收起</button>
         </div>
       </div>
       <div ref="logContainerRef" class="console-scroll-screen">
@@ -50,25 +50,46 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, nextTick } from 'vue'
 import AppButton from '../../ui/components/AppButton.vue'
 
 defineProps<{
   isAnyOperationRunning: boolean
   statusText: string
-  showLogs: boolean
-  logLines: string[]
 }>()
 
 const emit = defineEmits<{
   (e: 'cancel'): void
-  (e: 'toggleLogs'): void
-  (e: 'clearLogs'): void
 }>()
 
+const showLogs = ref<boolean>(localStorage.getItem('apple_vault_show_logs') === 'true')
+const logLines = ref<string[]>([])
 const logContainerRef = ref<HTMLElement | null>(null)
 
+function toggleLogs() {
+  showLogs.value = !showLogs.value
+  localStorage.setItem('apple_vault_show_logs', String(showLogs.value))
+}
+
+function clearLogs() {
+  logLines.value = []
+}
+
+function appendLog(line: string) {
+  logLines.value.push(line)
+  if (logLines.value.length > 600) {
+    logLines.value.shift()
+  }
+  nextTick(() => {
+    if (logContainerRef.value) {
+      logContainerRef.value.scrollTop = logContainerRef.value.scrollHeight
+    }
+  })
+}
+
 defineExpose({
-  logContainerRef
+  appendLog,
+  toggleLogs,
+  clearLogs
 })
 </script>

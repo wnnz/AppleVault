@@ -13,9 +13,9 @@
       v-model:active-tab="activeTab"
       :effective-theme="effectiveTheme"
       :is-dark-theme="isDarkTheme"
-      :account="account"
+      :account="currentAccount"
       :is-logged-in="isLoggedIn"
-      :enable-proxy="settings.enableProxy"
+      :enable-proxy="currentSettings.enableProxy"
       :active-task-count="activeTaskCount"
       @update:current-theme="emit('update:currentTheme', $event)"
       @proxy-toggle="onProxyToggle"
@@ -23,138 +23,80 @@
 
     <!-- Right Main Workspace -->
     <section class="app-main">
-      <!-- Dynamic View Container -->
       <div class="view-content-wrapper">
         <!-- VIEW 1: 应用搜索 (search) -->
         <SearchView
           v-show="activeTab === 'search'"
-          :search-form="searchForm"
-          :platform-options="platformOptions"
-          :limit-options="limitOptions"
-          :is-searching="isSearching"
-          :columns="displayedSearchColumns"
-          :results="searchResults"
-          @search="handleSearch"
+          ref="searchViewRef"
+          :effective-theme="effectiveTheme"
+          @select-app-for-versions="handleSelectAppForVersions"
+          @download-app="handleDownloadApp"
+          @busy-change="handleBusyChange"
         />
 
         <!-- VIEW 2: 历史版本 (versions) -->
         <VersionsView
           v-show="activeTab === 'versions'"
-          v-model:show-target-version-modal="showTargetVersionModal"
-          v-model:target-version-input="targetVersionInput"
-          :version-form="versionForm"
-          :version-items="versionItems"
-          :filtered-versions="filteredVersions"
-          :columns="displayedVersionColumns"
-          :is-listing-versions="isListingVersions"
-          :is-batch-querying="isBatchQuerying"
-          :is-target-querying="isTargetQuerying"
-          @list-versions="handleListVersions"
-          @batch-query="handleBatchQueryClick"
-          @target-query="handleTargetQueryClick"
-          @confirm-target-query="confirmStartTargetQuery"
+          ref="versionsViewRef"
+          :effective-theme="effectiveTheme"
+          @download-version="handleDownloadVersion"
+          @busy-change="handleBusyChange"
         />
 
         <!-- VIEW 3: 下载中心 (download) -->
         <DownloadView
           v-show="activeTab === 'download'"
-          :tasks="downloadTasks"
-          :completed-task-count="completedTaskCount"
-          @clear-completed="handleClearCompleted"
+          ref="downloadViewRef"
           @open-download-dir="handleOpenDefaultDownloadDir"
-          @cancel-task="handleCancelTask"
-          @install-task="handleInstallFromTask"
-          @retry-task="handleRetryTask"
-          @delete-task="handleDeleteTask"
+          @install-task="handleInstallTask"
+          @active-count-changed="onActiveCountChanged"
         />
 
         <!-- VIEW 4: 已购应用 (purchased) -->
         <PurchasedView
           v-show="activeTab === 'purchased'"
-          v-model:search-keyword="purchasedSearchKeyword"
-          :is-loading="isPurchasedLoading"
-          :load-total="purchasedLoadTotal"
-          :load-loaded="purchasedLoadLoaded"
-          :load-progress="purchasedLoadProgress"
-          :columns="displayedPurchasedColumns"
-          :apps="filteredPurchasedApps"
-          :match-total="purchasedMatchTotal"
-          :total-apps="purchasedApps.length"
-          :total="purchasedTotal"
-          :page="purchasedPage"
-          :page-count="purchasedPageCount"
-          :page-size="purchasedPageSize"
-          :page-size-options="purchasedPageSizeOptions"
-          @refresh="loadPurchases"
-          @previous="prevPurchasedPage"
-          @next="nextPurchasedPage"
-          @page-size-change="onPurchasedPageSizeChange"
+          ref="purchasedViewRef"
+          :effective-theme="effectiveTheme"
+          @select-app-for-versions="handleSelectAppForVersions"
+          @download-app="handleDownloadApp"
+          @busy-change="handleBusyChange"
         />
 
         <!-- VIEW 5: 设备直装 (installer) -->
         <InstallerView
           v-show="activeTab === 'installer'"
-          v-model:selected-device-u-d-i-d="selectedDeviceUDID"
-          :selected-i-p-a-path="selectedIPAPath"
-          :selected-i-p-a-file-name="selectedIPAFileName"
-          :devices="devices"
-          :selected-device="selectedDevice"
-          :device-options="deviceOptions"
-          :is-loading-devices="isLoadingDevices"
-          :is-installing-i-p-a="isInstallingIPA"
-          @select-i-p-a="handleSelectIPA"
-          @refresh-devices="loadConnectedDevices"
-          @install-i-p-a="handleInstallIPA"
+          ref="installerViewRef"
+          @busy-change="handleBusyChange"
         />
 
         <!-- VIEW 6: 账号中心 (account) -->
         <AccountView
           v-show="activeTab === 'account'"
-          v-model:show2-f-a-modal="show2FAModal"
-          v-model:two-f-a-code="twoFACode"
-          :account="account"
-          :is-logged-in="isLoggedIn"
-          :is-account-loading="isAccountLoading"
-          :is-revoking="isRevoking"
-          :is-clearing="isClearing"
-          :is-logging-in="isLoggingIn"
-          :login-form="loginForm"
-          @revoke="handleRevoke"
-          @clear-keychain="handleClearKeychain"
-          @refresh="refreshAccount(false)"
-          @login="handleLogin"
-          @confirm2-f-a="confirm2FA"
-          @cancel2-f-a="cancel2FA"
+          ref="accountViewRef"
+          @login-success="onLoginSuccess"
+          @account-changed="onAccountChanged"
+          @busy-change="handleBusyChange"
+          @navigate="activeTab = $event"
         />
 
         <!-- VIEW 7: 系统设置 (settings) -->
         <SettingsView
           v-show="activeTab === 'settings'"
-          :settings="settings"
-          :platform-options="platformOptions"
-          :is-testing-proxy="isTestingProxy"
-          @save="handleSaveSettings"
-          @test-proxy="handleTestProxy"
-          @open-download-dir="handleOpenDefaultDownloadDir"
+          ref="settingsViewRef"
+          @settings-changed="onSettingsChanged"
+          @busy-change="handleBusyChange"
         />
 
         <!-- VIEW 8: 关于软件 (about) -->
-        <AboutView
-          v-show="activeTab === 'about'"
-          @open-git-hub="openGitHub"
-          @copy-git-hub-url="copyGitHubUrl"
-        />
+        <AboutView v-show="activeTab === 'about'" />
       </div>
 
       <!-- Bottom Minimal Status Bar & Drawer -->
       <MainStatusBar
+        ref="statusBarRef"
         :is-any-operation-running="isAnyOperationRunning"
         :status-text="statusText"
-        :show-logs="showLogs"
-        :log-lines="logLines"
         @cancel="handleCancel"
-        @toggle-logs="toggleLogs"
-        @clear-logs="clearLogs"
       />
     </section>
   </div>
@@ -162,7 +104,6 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { useClipboard } from '@vueuse/core'
 import MainSidebar from './layout/MainSidebar.vue'
 import MainStatusBar from './layout/MainStatusBar.vue'
 import AboutView from './views/AboutView.vue'
@@ -172,22 +113,11 @@ import InstallerView from './views/InstallerView.vue'
 import PurchasedView from './views/PurchasedView.vue'
 import SearchView from './views/SearchView.vue'
 import SettingsView from './views/SettingsView.vue'
-import VersionsView from './views/VersionsView.vue'
-import { useAppMessage } from '../ui/feedback'
+import VersionsView, { type VersionItem } from './views/VersionsView.vue'
 import { CancelRunningCommand } from '../../wailsjs/go/backend/App'
-import { EventsOn, OnFileDrop, OnFileDropOff, BrowserOpenURL } from '../../wailsjs/runtime/runtime'
+import { EventsOn, OnFileDrop, OnFileDropOff } from '../../wailsjs/runtime/runtime'
 import { backend as main } from '../../wailsjs/go/models'
 import type { AppTheme } from '../ui/theme'
-
-import { useSettings } from '../composables/useSettings'
-import { useAccount } from '../composables/useAccount'
-import { useDownloads } from '../composables/useDownloads'
-import { useInstaller } from '../composables/useInstaller'
-import { useSearch } from '../composables/useSearch'
-import { useVersions, type VersionItem } from '../composables/useVersions'
-import { usePurchased } from '../composables/usePurchased'
-import { useConsoleLogs } from '../composables/useConsoleLogs'
-import { applyDemoData } from '../composables/useDemoData'
 
 const props = withDefaults(
   defineProps<{
@@ -208,252 +138,138 @@ const emit = defineEmits<{
 const effectiveTheme = computed<AppTheme>(() => props.currentTheme || (props.isDark ? 'minimal-dark' : 'minimal-light'))
 const isDarkTheme = computed(() => effectiveTheme.value.endsWith('-dark') || props.isDark)
 
-const message = useAppMessage()
-const { copy } = useClipboard({ legacy: true })
-
 const activeTab = ref('search')
 const isAnyOperationRunning = ref(false)
 const statusText = ref('就绪')
 
-function onBusyChange(busy: boolean, text?: string) {
+// 各子视图组件引用
+const searchViewRef = ref<InstanceType<typeof SearchView> | null>(null)
+const versionsViewRef = ref<InstanceType<typeof VersionsView> | null>(null)
+const downloadViewRef = ref<InstanceType<typeof DownloadView> | null>(null)
+const purchasedViewRef = ref<InstanceType<typeof PurchasedView> | null>(null)
+const installerViewRef = ref<InstanceType<typeof InstallerView> | null>(null)
+const accountViewRef = ref<InstanceType<typeof AccountView> | null>(null)
+const settingsViewRef = ref<InstanceType<typeof SettingsView> | null>(null)
+const statusBarRef = ref<InstanceType<typeof MainStatusBar> | null>(null)
+
+// 共享的账号与配置信息（供 Sidebar 等外部组件展示）
+const currentAccount = ref<main.AccountInfo>({ name: '', email: '', success: false })
+const isLoggedIn = computed(() => currentAccount.value.success && !!currentAccount.value.email)
+const currentSettings = ref<main.Settings>({
+  keychainPassphrase: '123456',
+  defaultDownloadDir: 'data/downloads/default',
+  defaultPlatform: 'iphone',
+  enableProxy: true,
+  proxyUrl: 'http://127.0.0.1:10808',
+  ipaToolPath: ''
+})
+const activeTaskCount = ref(0)
+
+function handleBusyChange(busy: boolean, text?: string) {
   isAnyOperationRunning.value = busy
   if (text) {
     statusText.value = text
   }
 }
 
-// 1. Settings Composable
-const {
-  settings,
-  isTestingProxy,
-  platformOptions,
-  limitOptions,
-  loadSettings,
-  onProxyToggle,
-  handleTestProxy,
-  handleSaveSettings,
-  handleOpenDefaultDownloadDir
-} = useSettings({
-  onStatusChange: (status) => { statusText.value = status }
-})
+function onAccountChanged(acc: main.AccountInfo) {
+  currentAccount.value = acc
+}
 
-// 2. Account Composable
-const {
-  account,
-  isLoggedIn,
-  isAccountLoading,
-  isRevoking,
-  isClearing,
-  isLoggingIn,
-  loginForm,
-  show2FAModal,
-  twoFACode,
-  refreshAccount,
-  handleLogin,
-  confirm2FA,
-  cancel2FA,
-  handleRevoke,
-  handleClearKeychain
-} = useAccount({
-  onSuccessLogin: () => { activeTab.value = 'search' },
-  onNeedNavigate: (tab) => { activeTab.value = tab },
-  onSettingsReload: loadSettings,
-  onBusyChange
-})
+function onLoginSuccess(acc: main.AccountInfo) {
+  currentAccount.value = acc
+  activeTab.value = 'search'
+  void settingsViewRef.value?.loadSettings()
+}
 
-// 3. Downloads Composable
-const {
-  downloadTasks,
-  activeTaskCount,
-  completedTaskCount,
-  loadDownloadTasks,
-  addDownloadTask,
-  handleClearCompleted,
-  handleCancelTask,
-  handleDeleteTask,
-  handleRetryTask,
-  updateTask
-} = useDownloads({
-  onTaskAdded: () => { activeTab.value = 'download' }
-})
+function onSettingsChanged(s: main.Settings) {
+  currentSettings.value = s
+}
 
-// 4. Installer Composable
-const {
-  selectedIPAPath,
-  selectedIPAFileName,
-  devices,
-  selectedDeviceUDID,
-  selectedDevice,
-  deviceOptions,
-  isLoadingDevices,
-  isInstallingIPA,
-  useIPAPath,
-  handleSelectIPA,
-  loadConnectedDevices,
-  handleInstallIPA
-} = useInstaller({
-  onBusyChange,
-  onNavigateToInstaller: () => { activeTab.value = 'installer' }
-})
+function onProxyToggle(val: boolean) {
+  void settingsViewRef.value?.onProxyToggle(val)
+}
 
-function handleInstallFromTask(outputPath: string) {
-  if (!outputPath) {
-    message.warning('未找到下载的 IPA 文件路径')
-    return
-  }
-  selectedIPAPath.value = outputPath
+function onActiveCountChanged(count: number) {
+  activeTaskCount.value = count
+}
+
+function handleOpenDefaultDownloadDir() {
+  settingsViewRef.value?.handleOpenDefaultDownloadDir()
+}
+
+// 跨视图跳转联动
+function handleSelectAppForVersions(app: main.AppItem) {
+  activeTab.value = 'versions'
+  versionsViewRef.value?.selectAppForVersions(app)
+}
+
+function handleDownloadApp(app: main.AppItem) {
+  downloadViewRef.value?.addDownloadTask(app.name, app.bundleID, app.id, app.version || '最新版')
+  activeTab.value = 'download'
+}
+
+function handleDownloadVersion(row: VersionItem, form: { appName: string; bundleId: string; appId: number }) {
+  const appName = form.appName || form.bundleId
+  const ver = row.displayVersion !== '未查询' ? row.displayVersion : (row.versionId ? `Build ${row.versionId}` : '最新版')
+  downloadViewRef.value?.addDownloadTask(appName, form.bundleId, form.appId, ver, row.versionId, row.fileSize)
+  activeTab.value = 'download'
+}
+
+function handleInstallTask(outputPath: string) {
   activeTab.value = 'installer'
-  statusText.value = `已选定安装包: ${outputPath}`
-  if (devices.value.length === 0 && !isLoadingDevices.value) {
-    void loadConnectedDevices()
+  if (outputPath) {
+    installerViewRef.value?.useIPAPath([outputPath])
   }
-}
-
-// 5. Versions Composable
-const {
-  isListingVersions,
-  isBatchQuerying,
-  isTargetQuerying,
-  showTargetVersionModal,
-  targetVersionInput,
-  versionForm,
-  versionItems,
-  filteredVersions,
-  displayedVersionColumns,
-  handleListVersions,
-  handleBatchQueryClick,
-  handleTargetQueryClick,
-  confirmStartTargetQuery,
-  selectAppForVersions,
-  stopAllQueries
-} = useVersions({
-  effectiveTheme,
-  onDownloadVersion: (row: VersionItem, form) => {
-    const appName = form.appName || form.bundleId
-    const ver = row.displayVersion !== '未查询' ? row.displayVersion : (row.versionId ? `Build ${row.versionId}` : '最新版')
-    void addDownloadTask(appName, form.bundleId, form.appId, ver, row.versionId, row.fileSize)
-  },
-  onBusyChange,
-  onNavigateToVersions: () => { activeTab.value = 'versions' }
-})
-
-// 6. Search Composable
-const {
-  isSearching,
-  searchForm,
-  searchResults,
-  displayedSearchColumns,
-  handleSearch
-} = useSearch({
-  effectiveTheme,
-  onSelectAppForVersions: selectAppForVersions,
-  onDownloadApp: (app: main.AppItem) => {
-    void addDownloadTask(app.name, app.bundleID, app.id, app.version || '最新版')
-  },
-  onBusyChange
-})
-
-// 7. Purchased Composable
-const {
-  isPurchasedLoading,
-  purchasedLoadLoaded,
-  purchasedLoadTotal,
-  purchasedLoadProgress,
-  purchasedPage,
-  purchasedPageSize,
-  purchasedTotal,
-  purchasedApps,
-  purchasedSearchKeyword,
-  filteredPurchasedApps,
-  purchasedMatchTotal,
-  purchasedPageCount,
-  displayedPurchasedColumns,
-  purchasedPageSizeOptions,
-  loadPurchases,
-  onPurchasedPageSizeChange,
-  prevPurchasedPage,
-  nextPurchasedPage
-} = usePurchased({
-  effectiveTheme,
-  onSelectAppForVersions: selectAppForVersions,
-  onDownloadApp: (app: main.AppItem) => {
-    void addDownloadTask(app.name, app.bundleID, app.id, app.version || '最新版')
-  },
-  onBusyChange
-})
-
-// 8. Console Logs Composable
-const {
-  showLogs,
-  logLines,
-  toggleLogs,
-  appendLog,
-  clearLogs
-} = useConsoleLogs()
-
-function openGitHub() {
-  BrowserOpenURL('https://github.com/wnnz/AppleVault')
-}
-
-async function copyGitHubUrl() {
-  await copy('https://github.com/wnnz/AppleVault')
-  message.success('已复制仓库地址到剪贴板！')
+  if (!installerViewRef.value?.devices.length) {
+    void installerViewRef.value?.loadConnectedDevices()
+  }
 }
 
 function handleCancel() {
-  stopAllQueries()
+  versionsViewRef.value?.stopAllQueries()
   CancelRunningCommand()
   isAnyOperationRunning.value = false
   statusText.value = '已终止当前操作'
 }
 
-// Lifecycle
+// 生命周期与 Wails 系统事件
 onMounted(() => {
   const urlParams = new URLSearchParams(window.location.search)
   const tabParam = urlParams.get('tab')
   const isDemo = urlParams.get('demo') === '1'
 
   if (isDemo) {
-    applyDemoData({
-      tabParam,
-      account,
-      statusText,
-      searchForm,
-      settings,
-      searchResults,
-      versionForm,
-      versionItems,
-      downloadTasks,
-      purchasedApps,
-      purchasedTotal,
-      devices,
-      selectedDeviceUDID,
-      selectedIPAPath
-    })
+    currentAccount.value = { name: '果仓助手用户', email: 'applevault.user@icloud.com', success: true }
+    statusText.value = '就绪 (Demo 模式)'
   } else {
-    loadSettings()
-    refreshAccount(true)
-    loadDownloadTasks()
+    void settingsViewRef.value?.loadSettings()
+    void accountViewRef.value?.refreshAccount(true)
+    void downloadViewRef.value?.loadDownloadTasks()
   }
 
   if (tabParam) {
     activeTab.value = tabParam
   }
 
+  // 接收文件拖放
   OnFileDrop((_x: number, _y: number, paths: string[]) => {
-    useIPAPath(paths)
+    activeTab.value = 'installer'
+    installerViewRef.value?.useIPAPath(paths)
   }, true)
 
+  // 监听后端执行日志并投递到状态栏终端
   EventsOn('log', (msg: string) => {
-    appendLog(msg)
+    statusBarRef.value?.appendLog(msg)
   })
 
+  // 监听后端任务进度更新与重载
   EventsOn('download-task-updated', (updatedTask: main.DownloadTask) => {
-    updateTask(updatedTask)
+    downloadViewRef.value?.updateTask(updatedTask)
   })
 
   EventsOn('download-tasks-reload', () => {
-    loadDownloadTasks()
+    void downloadViewRef.value?.loadDownloadTasks()
   })
 })
 

@@ -12,7 +12,7 @@
         <div class="about-large-icon"><img class="about-logo-image" :src="logo" alt="AppleVault" /></div>
         <div class="about-hero-text">
           <div class="about-app-title">果仓助手 (AppleVault)</div>
-          <div class="about-version-line"><span class="about-version-badge">版本 v1.2.0</span><span class="about-badge-sub">基于 Wails & Go 构建</span></div>
+          <div class="about-version-line"><span class="about-version-badge">版本 v1.2</span><span class="about-badge-sub">基于 Wails & Go 构建</span></div>
           <p class="about-intro">现代优雅的 Apple App Store 正版应用与历史版本下载管理工具，支持 iOS 设备一键直装。</p>
         </div>
       </div>
@@ -21,8 +21,8 @@
         <div class="about-section-label">GitHub 官方开源仓库</div>
         <div class="repo-link-bar">
           <AppInput model-value="https://github.com/wnnz/AppleVault" readonly size="small" class="flex-1" />
-          <AppButton type="primary" size="small" @click="emit('openGitHub')">访问 GitHub</AppButton>
-          <AppButton secondary size="small" class="copy-address-btn" @click="emit('copyGitHubUrl')">复制地址</AppButton>
+          <AppButton type="primary" size="small" @click="openGitHub">访问 GitHub</AppButton>
+          <AppButton secondary size="small" class="copy-address-btn" @click="copyGitHubUrl">复制地址</AppButton>
         </div>
       </div>
 
@@ -39,13 +39,23 @@
 </template>
 
 <script setup lang="ts">
+import { useClipboard } from '@vueuse/core'
 import AppButton from '../../ui/components/AppButton.vue'
 import AppCard from '../../ui/components/AppCard.vue'
 import AppInput from '../../ui/components/AppInput.vue'
+import { useAppMessage } from '../../ui/feedback'
+import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
 import logo from '../../assets/applevault-logo.webp'
 
-const emit = defineEmits<{
-  openGitHub: []
-  copyGitHubUrl: []
-}>()
+const message = useAppMessage()
+const { copy } = useClipboard({ legacy: true })
+
+function openGitHub() {
+  BrowserOpenURL('https://github.com/wnnz/AppleVault')
+}
+
+async function copyGitHubUrl() {
+  await copy('https://github.com/wnnz/AppleVault')
+  message.success('已复制仓库地址到剪贴板！')
+}
 </script>
