@@ -54,13 +54,43 @@ func (localMachine) ReadPassword(int) ([]byte, error) {
 }
 
 func (a *App) newAppStore(ctx context.Context) (appstore.AppStore, error) {
+	accountID := a.activeAccountID()
+	if accountID == "" {
+		return nil, errors.New("尚未登录 Apple ID")
+	}
+	item, ok := a.accountByID(accountID)
+	if !ok {
+		return nil, errors.New("当前账号不存在")
+	}
+	return a.newAppStoreWithStorage(ctx, item.ID, item.Legacy)
+}
+
+func (a *App) newAppStoreForAccount(ctx context.Context, accountID string) (appstore.AppStore, error) {
+	item, ok := a.accountByID(accountID)
+	if !ok {
+		return nil, errors.New("下载任务所属账号不存在")
+	}
+	return a.newAppStoreWithStorage(ctx, item.ID, item.Legacy)
+}
+
+func (a *App) newAppStoreForLogin(ctx context.Context, email string) (appstore.AppStore, string, bool, error) {
+	if item, ok := a.accountForEmail(email); ok {
+		store, err := a.newAppStoreWithStorage(ctx, item.ID, item.Legacy)
+		return store, item.ID, item.Legacy, err
+	}
+	accountID := accountIDForEmail(email)
+	store, err := a.newAppStoreWithStorage(ctx, accountID, false)
+	return store, accountID, false, err
+}
+
+func (a *App) newAppStoreWithStorage(ctx context.Context, accountID string, legacy bool) (appstore.AppStore, error) {
 	a.settingsMu.RLock()
 	passphrase := a.settings.KeychainPassphrase
 	enableProxy := a.settings.EnableProxy
 	proxyAddress := strings.TrimSpace(a.settings.ProxyUrl)
 	a.settingsMu.RUnlock()
 
-	configDirectory := filepath.Join(a.getDataDir(), ipatoolConfigDirectory)
+	configDirectory, serviceName := a.accountStorage(accountID, legacy)
 	if err := os.MkdirAll(configDirectory, 0700); err != nil {
 		return nil, fmt.Errorf("创建 App Store 配置目录失败: %w", err)
 	}
@@ -78,7 +108,7 @@ func (a *App) newAppStore(ctx context.Context) (appstore.AppStore, error) {
 			keyring.SecretServiceBackend,
 			keyring.FileBackend,
 		},
-		ServiceName: ipatoolKeychainService,
+		ServiceName: serviceName,
 		FileDir:     configDirectory,
 		FilePasswordFunc: func(string) (string, error) {
 			if passphrase == "" {
@@ -106,7 +136,7 @@ func (a *App) newAppStore(ctx context.Context) (appstore.AppStore, error) {
 	osAdapter := operatingsystem.New()
 	return appstore.NewAppStore(appstore.Args{
 		CookieJar:       ipahttp.CookieJar(jar),
-		Keychain:        keychain.New(keychain.Args{Keyring: ring, Label: ipatoolKeychainService}),
+		Keychain:        keychain.New(keychain.Args{Keyring: ring, Label: serviceName}),
 		Machine:         localMachine{home: a.getDataDir()},
 		OperatingSystem: osAdapter,
 		Context:         ctx,
@@ -196,8 +226,8 @@ type downloadProgress struct {
 	Speed   int64
 }
 
-func (a *App) downloadFromStore(ctx context.Context, bundleID string, appID int64, versionID, outputPath, platformValue string, acquireLicense bool, onProgress func(downloadProgress)) (DownloadResult, error) {
-	store, err := a.newAppStore(ctx)
+func (a *App) downloadFromStore(ctx context.Context, accountID, bundleID string, appID int64, versionID, outputPath, platformValue string, acquireLicense bool, onProgress func(downloadProgress)) (DownloadResult, error) {
+	store, err := a.newAppStoreForAccount(ctx, accountID)
 	if err != nil {
 		return DownloadResult{}, err
 	}

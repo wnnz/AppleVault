@@ -1,8 +1,11 @@
 export namespace backend {
 	
 	export class AccountInfo {
+	    id: string;
 	    name: string;
 	    email: string;
+	    region: string;
+	    active: boolean;
 	    success: boolean;
 	
 	    static createFrom(source: any = {}) {
@@ -11,8 +14,11 @@ export namespace backend {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
 	        this.name = source["name"];
 	        this.email = source["email"];
+	        this.region = source["region"];
+	        this.active = source["active"];
 	        this.success = source["success"];
 	    }
 	}
@@ -78,6 +84,7 @@ export namespace backend {
 	}
 	export class DownloadTask {
 	    id: string;
+	    accountID?: string;
 	    appName: string;
 	    bundleID: string;
 	    appId: number;
@@ -100,6 +107,7 @@ export namespace backend {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
+	        this.accountID = source["accountID"];
 	        this.appName = source["appName"];
 	        this.bundleID = source["bundleID"];
 	        this.appId = source["appId"];

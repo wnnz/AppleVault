@@ -18,6 +18,8 @@ export function Download(arg1:string,arg2:number,arg3:string,arg4:string,arg5:st
 
 export function GetAccountInfo():Promise<main.AccountInfo>;
 
+export function GetAccounts():Promise<Array<main.AccountInfo>>;
+
 export function GetDownloadTasks():Promise<Array<main.DownloadTask>>;
 
 export function GetSettings():Promise<main.Settings>;
@@ -40,6 +42,8 @@ export function Purchase(arg1:string):Promise<main.PurchaseResult>;
 
 export function Revoke():Promise<boolean>;
 
+export function RemoveAccount(arg1:string):Promise<main.AccountInfo>;
+
 export function SaveSettings(arg1:main.Settings):Promise<void>;
 
 export function Search(arg1:string,arg2:number,arg3:string):Promise<main.SearchResult>;
@@ -47,5 +51,7 @@ export function Search(arg1:string,arg2:number,arg3:string):Promise<main.SearchR
 export function SelectDirectory(arg1:string,arg2:string):Promise<string>;
 
 export function SelectIPA():Promise<string>;
+
+export function SwitchAccount(arg1:string):Promise<main.AccountInfo>;
 
 export function TestProxy(arg1:string):Promise<main.ProxyTestResult>;

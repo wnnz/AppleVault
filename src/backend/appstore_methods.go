@@ -3,8 +3,6 @@ package backend
 import (
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -12,8 +10,16 @@ import (
 )
 
 func (a *App) GetAccountInfo() (AccountInfo, error) {
+	accountID := a.activeAccountID()
+	if accountID == "" {
+		return AccountInfo{}, nil
+	}
+	item, ok := a.accountByID(accountID)
+	if !ok {
+		return AccountInfo{}, nil
+	}
 	ctx := a.startCommandContext()
-	store, err := a.newAppStore(ctx)
+	store, err := a.newAppStoreForAccount(ctx, accountID)
 	if err != nil {
 		return AccountInfo{}, err
 	}
@@ -22,14 +28,12 @@ func (a *App) GetAccountInfo() (AccountInfo, error) {
 		return AccountInfo{}, err
 	}
 
-	account := AccountInfo{Name: result.Account.Name, Email: result.Account.Email, Success: true}
-	a.rememberAccount(account.Email)
-	return account, nil
+	return a.upsertAccount(result.Account, item.ID, item.Legacy)
 }
 
 func (a *App) Login(email, password, authCode string) (LoginResult, error) {
 	ctx := a.startCommandContext()
-	store, err := a.newAppStore(ctx)
+	store, storageID, legacy, err := a.newAppStoreForLogin(ctx, email)
 	if err != nil {
 		return LoginResult{ErrorMessage: err.Error()}, nil
 	}
@@ -44,47 +48,29 @@ func (a *App) Login(email, password, authCode string) (LoginResult, error) {
 		return LoginResult{ErrorMessage: err.Error()}, nil
 	}
 
-	account := AccountInfo{Name: result.Account.Name, Email: result.Account.Email, Success: true}
-	a.rememberAccount(account.Email)
+	account, err := a.upsertAccount(result.Account, storageID, legacy)
+	if err != nil {
+		return LoginResult{ErrorMessage: err.Error()}, nil
+	}
 	return LoginResult{Success: true, Account: account}, nil
 }
 
 func (a *App) Revoke() (bool, error) {
-	ctx := a.startCommandContext()
-	store, err := a.newAppStore(ctx)
-	if err != nil {
-		return false, err
+	accountID := a.activeAccountID()
+	if accountID == "" {
+		return false, nil
 	}
-	if err := store.Revoke(); err != nil {
-		return false, err
-	}
-	a.rememberAccount("")
-	return true, nil
+	_, err := a.RemoveAccount(accountID)
+	return err == nil, err
 }
 
 func (a *App) ClearKeychainCache() error {
-	configDirectory := filepath.Join(a.getDataDir(), ipatoolConfigDirectory)
-	if err := os.RemoveAll(configDirectory); err != nil {
-		return fmt.Errorf("清理凭据缓存失败: %w", err)
+	accountID := a.activeAccountID()
+	if accountID == "" {
+		return nil
 	}
-	if home, err := os.UserHomeDir(); err == nil {
-		legacyDirectory := filepath.Join(home, ipatoolConfigDirectory)
-		if legacyDirectory != configDirectory {
-			_ = os.RemoveAll(legacyDirectory)
-		}
-	}
-	a.rememberAccount("")
-	return nil
-}
-
-func (a *App) rememberAccount(email string) {
-	a.accountMu.Lock()
-	a.cachedAccountEmail = email
-	a.accountMu.Unlock()
-
-	a.settingsMu.Lock()
-	a.settings.DefaultDownloadDir = a.getDownloadsDir()
-	a.settingsMu.Unlock()
+	_, err := a.RemoveAccount(accountID)
+	return err
 }
 
 func (a *App) Search(term string, limit int, platformValue string) (SearchResult, error) {
@@ -182,10 +168,14 @@ func (a *App) GetVersionMetadata(bundleID, versionID string, appID int64) (Versi
 
 func (a *App) Download(bundleID string, appID int64, versionID, outputPath, platform string, purchase bool) (DownloadResult, error) {
 	ctx := a.startCommandContext()
-	if strings.TrimSpace(outputPath) == "" {
-		outputPath = a.getDownloadsDir()
+	accountID := a.activeAccountID()
+	if accountID == "" {
+		return DownloadResult{}, errors.New("尚未登录 Apple ID")
 	}
-	return a.downloadFromStore(ctx, bundleID, appID, versionID, outputPath, platform, purchase, nil)
+	if strings.TrimSpace(outputPath) == "" {
+		outputPath = a.getDownloadsDirForAccount(accountID)
+	}
+	return a.downloadFromStore(ctx, accountID, bundleID, appID, versionID, outputPath, platform, purchase, nil)
 }
 
 func (a *App) Purchase(bundleID string) (PurchaseResult, error) {

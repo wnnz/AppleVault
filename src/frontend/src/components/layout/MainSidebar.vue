@@ -79,6 +79,7 @@
       >
         <span class="nav-icon" aria-hidden="true"><SketchNavIcon name="account" /></span>
         <span class="nav-label">账号中心</span>
+        <span v-if="isLoggedIn && account.region" class="sidebar-region-tag">{{ account.region }}</span>
         <span class="account-dot" :class="isLoggedIn ? 'dot-online' : 'dot-offline'"></span>
       </button>
 
@@ -136,6 +137,14 @@
 
         <!-- Theme Switcher (靠右显示) -->
         <div class="theme-switcher-wrapper">
+          <button
+            v-if="showThemeHint"
+            type="button"
+            class="theme-first-use-hint"
+            @click="openThemePickerFromHint"
+          >
+            点击这里可以切换主题
+          </button>
           <AppPopover
             v-model="showThemePopover"
             placement="top-end"
@@ -145,6 +154,7 @@
                 class="icon-action-btn theme-action-btn"
                 :class="{ active: showThemePopover }"
                 title="选择外观主题"
+                @click="dismissThemeHint"
               >
                 <!-- 调色板/主题 图标 -->
                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -216,7 +226,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, h, defineComponent } from 'vue'
+import { ref, h, defineComponent, onMounted, onBeforeUnmount } from 'vue'
 import { backend as main } from '../../../wailsjs/go/models'
 import AppPopover from '../../ui/components/AppPopover.vue'
 import AppSwitch from '../../ui/components/AppSwitch.vue'
@@ -257,7 +267,7 @@ const SketchNavIcon = defineComponent({
   },
 })
 
-defineProps<{
+const props = defineProps<{
   activeTab: string
   effectiveTheme: AppTheme
   isDarkTheme: boolean
@@ -265,6 +275,7 @@ defineProps<{
   isLoggedIn: boolean
   enableProxy: boolean
   activeTaskCount: number
+  isDemoMode?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -274,10 +285,34 @@ const emit = defineEmits<{
 }>()
 
 const showThemePopover = ref(false)
+const showThemeHint = ref(false)
+let themeHintTimer: ReturnType<typeof setTimeout> | null = null
 const themeList = themeOptions
+
+function dismissThemeHint() {
+  showThemeHint.value = false
+  if (themeHintTimer) {
+    clearTimeout(themeHintTimer)
+    themeHintTimer = null
+  }
+}
+
+function openThemePickerFromHint() {
+  dismissThemeHint()
+  showThemePopover.value = true
+}
 
 function selectTheme(themeKey: AppTheme) {
   emit('update:currentTheme', themeKey)
   showThemePopover.value = false
 }
+
+onMounted(() => {
+  if (props.isDemoMode || localStorage.getItem('apple_vault_theme_hint_seen_v1') === 'true') return
+  localStorage.setItem('apple_vault_theme_hint_seen_v1', 'true')
+  showThemeHint.value = true
+  themeHintTimer = setTimeout(dismissThemeHint, 5000)
+})
+
+onBeforeUnmount(dismissThemeHint)
 </script>

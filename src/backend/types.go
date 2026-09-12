@@ -1,8 +1,11 @@
 package backend
 
 type AccountInfo struct {
+	ID      string `json:"id"`
 	Name    string `json:"name"`
 	Email   string `json:"email"`
+	Region  string `json:"region"`
+	Active  bool   `json:"active"`
 	Success bool   `json:"success"`
 }
 
@@ -84,6 +87,7 @@ type InstallResult struct {
 
 type DownloadTask struct {
 	ID           string `json:"id"`
+	AccountID    string `json:"accountID,omitempty"`
 	AppName      string `json:"appName"`
 	BundleID     string `json:"bundleID"`
 	AppID        int64  `json:"appId"`

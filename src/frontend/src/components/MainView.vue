@@ -17,6 +17,7 @@
       :is-logged-in="isLoggedIn"
       :enable-proxy="currentSettings.enableProxy"
       :active-task-count="activeTaskCount"
+      :is-demo-mode="isDemoMode"
       @update:current-theme="emit('update:currentTheme', $event)"
       @proxy-toggle="onProxyToggle"
     />
@@ -159,7 +160,7 @@ const settingsViewRef = ref<InstanceType<typeof SettingsView> | null>(null)
 const statusBarRef = ref<InstanceType<typeof MainStatusBar> | null>(null)
 
 // 共享的账号与配置信息（供 Sidebar 等外部组件展示）
-const currentAccount = ref<main.AccountInfo>({ name: '', email: '', success: false })
+const currentAccount = ref<main.AccountInfo>({ id: '', name: '', email: '', region: '', active: false, success: false })
 const isLoggedIn = computed(() => currentAccount.value.success && !!currentAccount.value.email)
 const currentSettings = ref<main.Settings>({
   keychainPassphrase: '123456',
@@ -184,6 +185,10 @@ function onAccountChanged(acc: main.AccountInfo) {
 
 function onLoginSuccess(acc: main.AccountInfo) {
   currentAccount.value = acc
+  searchViewRef.value?.searchResults.splice(0)
+  versionsViewRef.value?.versionItems.splice(0)
+  purchasedViewRef.value?.purchasedApps.splice(0)
+  if (purchasedViewRef.value) purchasedViewRef.value.purchasedTotal = 0
   activeTab.value = 'search'
   void settingsViewRef.value?.loadSettings()
 }
@@ -255,7 +260,7 @@ const demoStatusByTab: Record<string, string> = {
  * 填充演示与截图所需的 Mock 数据
  */
 function applyDemoMockData(tabParam: string | null) {
-  currentAccount.value = { name: '果仓助手用户', email: 'applevault.user@icloud.com', success: true }
+  currentAccount.value = { id: 'demo-cn', name: '果仓助手用户', email: 'applevault.user@icloud.com', region: 'CN', active: true, success: true }
   statusText.value = demoStatusByTab[tabParam || activeTab.value] || '就绪'
 
   if (searchViewRef.value) {
@@ -315,7 +320,11 @@ function applyDemoMockData(tabParam: string | null) {
   }
 
   if (accountViewRef.value) {
-    accountViewRef.value.account = { name: '果仓助手用户', email: 'applevault.user@icloud.com', success: true }
+    accountViewRef.value.account = { id: 'demo-cn', name: '果仓助手用户', email: 'applevault.user@icloud.com', region: 'CN', active: true, success: true }
+    accountViewRef.value.accounts = [
+      accountViewRef.value.account,
+      { id: 'demo-us', name: 'AppleVault US', email: 'applevault.us@icloud.com', region: 'US', active: false, success: true }
+    ]
   }
 
   if (settingsViewRef.value) {

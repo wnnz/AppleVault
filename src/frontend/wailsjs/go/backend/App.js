@@ -34,6 +34,10 @@ export function GetAccountInfo() {
   return window['go']['backend']['App']['GetAccountInfo']();
 }
 
+export function GetAccounts() {
+  return window['go']['backend']['App']['GetAccounts']();
+}
+
 export function GetDownloadTasks() {
   return window['go']['backend']['App']['GetDownloadTasks']();
 }
@@ -78,6 +82,10 @@ export function Revoke() {
   return window['go']['backend']['App']['Revoke']();
 }
 
+export function RemoveAccount(arg1) {
+  return window['go']['backend']['App']['RemoveAccount'](arg1);
+}
+
 export function SaveSettings(arg1) {
   return window['go']['backend']['App']['SaveSettings'](arg1);
 }
@@ -92,6 +100,10 @@ export function SelectDirectory(arg1, arg2) {
 
 export function SelectIPA() {
   return window['go']['backend']['App']['SelectIPA']();
+}
+
+export function SwitchAccount(arg1) {
+  return window['go']['backend']['App']['SwitchAccount'](arg1);
 }
 
 export function TestProxy(arg1) {

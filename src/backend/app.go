@@ -17,11 +17,12 @@ import (
 )
 
 type App struct {
-	ctx        context.Context
-	settings   Settings
-	settingsMu sync.RWMutex
-	cancelMu   sync.Mutex
-	cancelFn   context.CancelFunc
+	ctx             context.Context
+	dataDirOverride string
+	settings        Settings
+	settingsMu      sync.RWMutex
+	cancelMu        sync.Mutex
+	cancelFn        context.CancelFunc
 
 	purchaseCancelMu     sync.Mutex
 	purchaseCancelers    map[uint64]context.CancelFunc
@@ -32,6 +33,8 @@ type App struct {
 	taskCancels map[string]context.CancelFunc
 
 	accountMu          sync.RWMutex
+	accounts           accountRegistry
+	cachedAccountID    string
 	cachedAccountEmail string
 }
 
@@ -55,23 +58,18 @@ func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 	a.ensureDataMigration()
 	a.loadSettings()
+	a.initializeAccounts()
+	a.settingsMu.Lock()
+	a.settings.DefaultDownloadDir = a.getDownloadsDir()
+	a.settingsMu.Unlock()
 	a.loadTasks()
 	initWindowIcon()
-
-	go func() {
-		acc, err := a.GetAccountInfo()
-		if err == nil && acc.Success && acc.Email != "" {
-			a.accountMu.Lock()
-			a.cachedAccountEmail = acc.Email
-			a.accountMu.Unlock()
-			a.settingsMu.Lock()
-			a.settings.DefaultDownloadDir = a.getDownloadsDir()
-			a.settingsMu.Unlock()
-		}
-	}()
 }
 
 func (a *App) getDataDir() string {
+	if a.dataDirOverride != "" {
+		return a.dataDirOverride
+	}
 	// 1. 检查程序所在目录下的 data (release 模式)
 	if exe, err := os.Executable(); err == nil {
 		dir := filepath.Dir(exe)
@@ -127,6 +125,25 @@ func (a *App) getAccountIdentifier() string {
 		return sanitizeAccountDir(email)
 	}
 	return "default"
+}
+
+func (a *App) getDownloadsDirForAccount(accountID string) string {
+	a.accountMu.RLock()
+	email := ""
+	for _, item := range a.accounts.Accounts {
+		if item.ID == accountID {
+			email = item.Email
+			break
+		}
+	}
+	a.accountMu.RUnlock()
+	accountDir := sanitizeAccountDir(email)
+	if accountDir == "default" && accountID != "" {
+		accountDir = accountID
+	}
+	downloadsDir := filepath.Join(a.getDataDir(), "downloads", accountDir)
+	_ = os.MkdirAll(downloadsDir, 0755)
+	return downloadsDir
 }
 
 func (a *App) getDownloadsDir() string {

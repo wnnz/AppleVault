@@ -17,6 +17,12 @@ func countryCodeFromStoreFront(storeFront string) (string, error) {
 	return "", fmt.Errorf("country code mapping for store front (%s) was not found", storeFront)
 }
 
+// CountryCodeFromStoreFront returns the ISO country code represented by an
+// App Store storefront header.
+func CountryCodeFromStoreFront(storeFront string) (string, error) {
+	return countryCodeFromStoreFront(storeFront)
+}
+
 var storeFronts = map[string]string{
 	"AE": "143481",
 	"AG": "143540",

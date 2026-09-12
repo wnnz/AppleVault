@@ -12,6 +12,10 @@ import (
 // --- Download Task Manager ---
 
 func (a *App) AddDownloadTask(appName, bundleId string, appId int64, version, versionId, fileSize string) (*DownloadTask, error) {
+	accountID := a.activeAccountID()
+	if accountID == "" {
+		return nil, fmt.Errorf("尚未登录 Apple ID")
+	}
 	a.tasksMu.Lock()
 	defer a.tasksMu.Unlock()
 
@@ -23,25 +27,30 @@ func (a *App) AddDownloadTask(appName, bundleId string, appId int64, version, ve
 		version = "最新版"
 	}
 
-	task := &DownloadTask{
-		ID:        id,
-		AppName:   appName,
-		BundleID:  bundleId,
-		AppID:     appId,
-		Version:   version,
-		VersionID: versionId,
-		FileSize:  fileSize,
-		Status:    "pending",
-		Speed:     "等待下载",
-		Progress:  0,
-		CreatedAt: time.Now().Format("15:04:05"),
-	}
+	task := newDownloadTask(accountID, id, appName, bundleId, appId, version, versionId, fileSize)
 
 	a.tasks = append([]*DownloadTask{task}, a.tasks...)
 	a.saveTasksLocked()
 	go a.runDownloadTask(task)
 
 	return task, nil
+}
+
+func newDownloadTask(accountID, id, appName, bundleID string, appID int64, version, versionID, fileSize string) *DownloadTask {
+	return &DownloadTask{
+		ID:        id,
+		AccountID: accountID,
+		AppName:   appName,
+		BundleID:  bundleID,
+		AppID:     appID,
+		Version:   version,
+		VersionID: versionID,
+		FileSize:  fileSize,
+		Status:    "pending",
+		Speed:     "等待下载",
+		Progress:  0,
+		CreatedAt: time.Now().Format("15:04:05"),
+	}
 }
 
 func (a *App) runDownloadTask(task *DownloadTask) {
@@ -66,10 +75,11 @@ func (a *App) runDownloadTask(task *DownloadTask) {
 
 	result, err := a.downloadFromStore(
 		ctx,
+		task.AccountID,
 		task.BundleID,
 		task.AppID,
 		task.VersionID,
-		a.getDownloadsDir(),
+		a.getDownloadsDirForAccount(task.AccountID),
 		platform,
 		true,
 		func(progress downloadProgress) {

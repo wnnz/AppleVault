@@ -262,6 +262,30 @@
   margin-right: 18px;
 }
 
+.theme-handdrawn .sidebar-region-tag,
+.theme-handdrawn .account-region-pill {
+  border: 1px solid var(--sketch-blue, #2378c8);
+  background: transparent;
+  color: var(--sketch-blue, #2378c8);
+}
+
+.theme-handdrawn .nav-item.active .sidebar-region-tag {
+  border-color: currentColor;
+  color: currentColor;
+}
+
+.theme-handdrawn .theme-first-use-hint {
+  border: 2px solid var(--sketch-ink, #27364a);
+  border-radius: 5px 8px 6px 7px;
+  box-shadow: 3px 3px 0 rgba(35, 120, 200, 0.18);
+  font-family: var(--font-handdrawn, inherit);
+}
+
+.theme-handdrawn .account-list-item {
+  border-width: 1.5px;
+  border-radius: 7px 10px 6px 9px;
+}
+
 .theme-handdrawn .sidebar-footer {
   position: fixed;
   left: 12px;

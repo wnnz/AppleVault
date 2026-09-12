@@ -8,22 +8,35 @@
     </div>
 
     <div class="two-columns-layout">
-      <!-- 凭证卡片 -->
+      <!-- 已保存账号 -->
       <AppCard class="clean-card">
         <div class="card-headline">
-          <span class="headline-title">当前登录凭证</span>
+          <span class="headline-title">已保存账号</span>
           <span class="account-pill" :class="isLoggedIn ? 'pill-success' : 'pill-gray'">
-            {{ isLoggedIn ? '已授权' : '未登录' }}
+            {{ accounts.length }} 个账号
           </span>
         </div>
-        <div class="account-profile-box">
-          <div class="large-avatar" :class="{ 'avatar-active': isLoggedIn }">
-            {{ isLoggedIn ? (account.name ? account.name.charAt(0).toUpperCase() : '') : '' }}
-          </div>
-          <div class="large-profile-info">
-            <div class="profile-name">{{ account.name || '尚未登录 Apple ID' }}</div>
-            <div class="profile-email">{{ account.email || '请在右侧输入账号密码完成登录' }}</div>
-          </div>
+        <div v-if="accounts.length" class="account-list">
+          <button
+            v-for="item in accounts"
+            :key="item.id"
+            type="button"
+            class="account-list-item"
+            :class="{ active: item.active }"
+            :disabled="isSwitching"
+            @click="handleSwitchAccount(item)"
+          >
+            <span class="account-list-avatar">{{ item.name ? item.name.charAt(0).toUpperCase() : '' }}</span>
+            <span class="account-list-profile">
+              <span class="account-list-name">{{ item.name || 'Apple ID' }}</span>
+              <span class="account-list-email">{{ item.email }}</span>
+            </span>
+            <span v-if="item.region" class="account-region-pill">{{ item.region }}</span>
+            <span v-if="item.active" class="account-current-label">当前</span>
+          </button>
+        </div>
+        <div v-else class="account-empty-state">
+          尚未保存 Apple ID，请使用右侧表单登录。
         </div>
         <div class="sub-alert-box mt-4">
           <span>官方直接认证：所有凭据直接向 Apple 官方接口请求并保存在本地钥匙串，不经过任何第三方服务器。</span>
@@ -124,8 +137,10 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { backend as main } from '../../../wailsjs/go/models'
 import {
   GetAccountInfo,
+  GetAccounts,
   Login,
   Revoke,
+  SwitchAccount,
   ClearKeychainCache
 } from '../../../wailsjs/go/backend/App'
 import AppButton from '../../ui/components/AppButton.vue'
@@ -145,12 +160,14 @@ const message = useAppMessage()
 const dialog = useAppDialog()
 
 // 账号状态
-const account = ref<main.AccountInfo>({ name: '', email: '', success: false })
+const account = ref<main.AccountInfo>({ id: '', name: '', email: '', region: '', active: false, success: false })
+const accounts = ref<main.AccountInfo[]>([])
 const isLoggedIn = computed(() => account.value.success && !!account.value.email)
 const isAccountLoading = ref(false)
 const isRevoking = ref(false)
 const isClearing = ref(false)
 const isLoggingIn = ref(false)
+const isSwitching = ref(false)
 
 // 登录表单
 const loginForm = ref({
@@ -178,6 +195,7 @@ async function refreshAccount(autoNavigate = false) {
   emit('busyChange', false, '正在获取账号信息...')
   try {
     const res = await GetAccountInfo()
+    accounts.value = await GetAccounts()
     account.value = res
     emit('accountChanged', res)
     if (res.success && res.email) {
@@ -195,7 +213,8 @@ async function refreshAccount(autoNavigate = false) {
     }
   } catch {
     localStorage.setItem('apple_vault_logged_in', 'false')
-    account.value = { name: '', email: '', success: false }
+    account.value = { id: '', name: '', email: '', region: '', active: false, success: false }
+    accounts.value = await GetAccounts().catch(() => [])
     emit('accountChanged', account.value)
     emit('busyChange', false, '未登录')
     if (autoNavigate) {
@@ -203,6 +222,27 @@ async function refreshAccount(autoNavigate = false) {
     }
   } finally {
     isAccountLoading.value = false
+  }
+}
+
+async function handleSwitchAccount(item: main.AccountInfo) {
+  if (item.active || isSwitching.value) return
+  isSwitching.value = true
+  emit('busyChange', true, `正在切换至 ${item.email}...`)
+  try {
+    const res = await SwitchAccount(item.id)
+    account.value = res
+    accounts.value = await GetAccounts()
+    localStorage.setItem('apple_vault_logged_in', 'true')
+    emit('accountChanged', res)
+    emit('loginSuccess', res)
+    message.success(`已切换至 ${res.name || res.email}`)
+    emit('busyChange', false, `当前账号: ${res.email}`)
+  } catch (err: any) {
+    message.error(`切换账号失败: ${err}`)
+    emit('busyChange', false, '切换账号失败')
+  } finally {
+    isSwitching.value = false
   }
 }
 
@@ -230,6 +270,7 @@ async function handleLogin() {
     if (res.success) {
       localStorage.setItem('apple_vault_logged_in', 'true')
       account.value = res.account
+      accounts.value = await GetAccounts()
       emit('accountChanged', res.account)
       emit('loginSuccess', res.account)
       message.success(`登录成功: ${res.account.name}`)
@@ -237,7 +278,6 @@ async function handleLogin() {
       emit('busyChange', false, `登录成功: ${res.account.name}`)
       emit('navigate', 'search')
     } else {
-      localStorage.setItem('apple_vault_logged_in', 'false')
       message.error(`登录失败: ${res.errorMessage}`)
       emit('busyChange', false, `登录失败: ${res.errorMessage}`)
     }
@@ -269,6 +309,7 @@ async function confirm2FA() {
       localStorage.setItem('apple_vault_logged_in', 'true')
       show2FAModal.value = false
       account.value = res.account
+      accounts.value = await GetAccounts()
       emit('accountChanged', res.account)
       emit('loginSuccess', res.account)
       message.success(`登录成功: ${res.account.name}`)
@@ -277,7 +318,6 @@ async function confirm2FA() {
       emit('busyChange', false, `登录成功: ${res.account.name}`)
       emit('navigate', 'search')
     } else {
-      localStorage.setItem('apple_vault_logged_in', 'false')
       message.error(`验证失败: ${res.errorMessage}`)
       emit('busyChange', false, `验证失败: ${res.errorMessage}`)
     }
@@ -313,12 +353,18 @@ async function handleRevoke() {
       try {
         const ok = await Revoke()
         if (ok) {
-          localStorage.setItem('apple_vault_logged_in', 'false')
-          account.value = { name: '', email: '', success: false }
-          emit('accountChanged', account.value)
+          const next = await GetAccountInfo()
+          accounts.value = await GetAccounts()
+          account.value = next
+          localStorage.setItem('apple_vault_logged_in', next.success ? 'true' : 'false')
+          emit('accountChanged', next)
           message.success('已成功注销登录凭据')
-          emit('busyChange', false, '已退出登录')
-          emit('navigate', 'account')
+          emit('busyChange', false, next.success ? `已切换至: ${next.email}` : '已退出登录')
+          if (next.success) {
+            emit('loginSuccess', next)
+          } else {
+            emit('navigate', 'account')
+          }
         }
       } catch (err: any) {
         message.error(`注销失败: ${err}`)
@@ -336,7 +382,7 @@ async function handleRevoke() {
 async function handleClearKeychain() {
   dialog.warning({
     title: '清空本地密钥库缓存',
-    content: '此操作将删除本地存储的 .ipatool 密钥数据并重置缓存。确定清理吗？',
+    content: '此操作将删除当前 Apple ID 的本地凭据与 Cookie，并从账号列表中移除。确定清理吗？',
     positiveText: '确定清理',
     negativeText: '取消',
     onPositiveClick: async () => {
@@ -356,6 +402,7 @@ async function handleClearKeychain() {
 
 defineExpose({
   account,
+  accounts,
   isLoggedIn,
   refreshAccount
 })
