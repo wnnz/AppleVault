@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
 	"howett.net/plist"
 
@@ -21,14 +20,8 @@ const (
 )
 
 type setupProtocol struct {
-	client           *http.Client
-	diagnosticLogger apphttp.DiagnosticLogger
-}
-
-func newSetupProtocol(config Config) setupProtocol {
-	return setupProtocol{
-		client:           &http.Client{Timeout: 30 * time.Second, Transport: config.Transport},
-		diagnosticLogger: config.DiagnosticLogger,
+	client interface {
+		Do(*http.Request) (*http.Response, error)
 	}
 }
 
@@ -70,31 +63,13 @@ func (p setupProtocol) exchange(ctx context.Context, endpoint string, input []by
 	return plistBytes(body, setupBufferKey)
 }
 
-func (p setupProtocol) send(request *http.Request) (body []byte, sendErr error) {
-	started := time.Now()
-	if p.diagnosticLogger != nil {
-		networkPolicy := "system_default"
-		if p.client.Transport != nil {
-			networkPolicy = "app_configured"
-		}
-		p.diagnosticLogger("sap.http_request", map[string]interface{}{"method": request.Method, "endpoint": apphttp.DiagnosticURL(request.URL.String()), "body_bytes": request.ContentLength, "network_policy": networkPolicy})
-		defer func() {
-			fields := map[string]interface{}{"endpoint": apphttp.DiagnosticURL(request.URL.String()), "elapsed_ms": time.Since(started).Milliseconds(), "body_bytes": len(body)}
-			if sendErr != nil {
-				fields["error"] = sendErr.Error()
-			}
-			p.diagnosticLogger("sap.http_complete", fields)
-		}()
-	}
+func (p setupProtocol) send(request *http.Request) ([]byte, error) {
 	response, err := p.client.Do(request)
 	if err != nil {
 		return nil, fmt.Errorf("send SAP request: %w", err)
 	}
 
 	defer response.Body.Close()
-	if p.diagnosticLogger != nil {
-		p.diagnosticLogger("sap.http_response", map[string]interface{}{"endpoint": apphttp.DiagnosticURL(request.URL.String()), "status": response.StatusCode, "content_type": response.Header.Get("Content-Type"), "server": response.Header.Get("Server")})
-	}
 
 	if response.StatusCode != http.StatusOK {
 		_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, maxSetupBody))
@@ -102,7 +77,7 @@ func (p setupProtocol) send(request *http.Request) (body []byte, sendErr error) 
 		return nil, fmt.Errorf("apple returned %s", response.Status)
 	}
 
-	body, err = io.ReadAll(io.LimitReader(response.Body, maxSetupBody+1))
+	body, err := io.ReadAll(io.LimitReader(response.Body, maxSetupBody+1))
 	if err != nil {
 		return nil, fmt.Errorf("read SAP response: %w", err)
 	}

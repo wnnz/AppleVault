@@ -126,15 +126,14 @@ func (a *App) newAppStoreWithStorage(ctx context.Context, accountID string, lega
 	}
 
 	osAdapter := operatingsystem.New()
-	a.writeDiagnostic("store.config", map[string]interface{}{"account_id": accountID, "proxy_enabled": enableProxy && proxyAddress != "", "proxy_endpoint": ipahttp.DiagnosticURL(proxyAddress), "identity_strategy": "ipatool-2.7.0"})
+	a.writeDiagnostic("store.config", map[string]interface{}{"account_id": accountID, "proxy_enabled": enableProxy && proxyAddress != "", "proxy_endpoint": ipahttp.DiagnosticURL(proxyAddress), "identity_strategy": "ipatool-2.8.1"})
 	store := appstore.NewAppStore(appstore.Args{
-		CookieJar:        ipahttp.CookieJar(jar),
-		Keychain:         keychain.New(keychain.Args{Keyring: ring, Label: serviceName}),
-		Machine:          localMachine{home: a.getDataDir(), identity: machine.New(machine.Args{OS: osAdapter})},
-		OperatingSystem:  osAdapter,
-		Context:          ctx,
-		Transport:        transport,
-		DiagnosticLogger: a.writeDiagnostic,
+		CookieJar:       ipahttp.CookieJar(jar),
+		Keychain:        keychain.New(keychain.Args{Keyring: ring, Label: serviceName}),
+		Machine:         localMachine{home: a.getDataDir(), identity: machine.New(machine.Args{OS: osAdapter})},
+		OperatingSystem: osAdapter,
+		Context:         ctx,
+		Transport:       transport,
 	})
 	if info, err := store.AccountInfo(); err == nil {
 		a.addDiagnosticSecrets(info.Account.Email, info.Account.Password, info.Account.PasswordToken, info.Account.DirectoryServicesID)
@@ -292,7 +291,7 @@ func (a *App) downloadFromStore(ctx context.Context, accountID, bundleID string,
 		}
 
 		output, err := store.Download(appstore.DownloadInput{
-			Account: account, App: item, OutputPath: outputPath,
+			Context: ctx, Account: account, App: item, OutputPath: outputPath,
 			Progress: bar, ExternalVersionID: versionID, Platform: platform,
 		})
 		if errors.Is(err, appstore.ErrLicenseRequired) && acquireLicense {
@@ -302,7 +301,7 @@ func (a *App) downloadFromStore(ctx context.Context, accountID, bundleID string,
 			}
 			purchased = !errors.Is(purchaseErr, appstore.ErrLicenseAlreadyExists)
 			output, err = store.Download(appstore.DownloadInput{
-				Account: account, App: item, OutputPath: outputPath,
+				Context: ctx, Account: account, App: item, OutputPath: outputPath,
 				Progress: bar, ExternalVersionID: versionID, Platform: platform,
 			})
 		}

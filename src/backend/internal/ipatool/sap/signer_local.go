@@ -33,16 +33,12 @@ func NewSigner(ctx context.Context, config Config) (ActionSigner, error) {
 		return nil, err
 	}
 
-	downloadClient := &http.Client{Transport: config.Transport, Timeout: 2 * time.Minute}
-	bundle, err := assets.LoadWithClient(ctx, downloadClient)
+	bundle, err := assets.Load(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("load Apple SAP assets: %w", err)
 	}
-	if config.DiagnosticLogger != nil {
-		config.DiagnosticLogger("sap.assets_loaded", map[string]interface{}{"profile": "macos-27-26A434-arm64-v1"})
-	}
 
-	guest, err := machine.OpenWithClient(ctx, bundle, downloadClient)
+	guest, err := machine.Open(ctx, bundle)
 	if err != nil {
 		return nil, fmt.Errorf("start Apple SAP runtime: %w", err)
 	}
@@ -64,7 +60,10 @@ func NewSigner(ctx context.Context, config Config) (ActionSigner, error) {
 		return nil, fmt.Errorf("initialize Apple SAP session: %w", err)
 	}
 
-	protocol := newSetupProtocol(config)
+	protocol := setupProtocol{client: &http.Client{Timeout: 30 * time.Second}}
+	if config.HTTPClient != nil {
+		protocol.client = config.HTTPClient
+	}
 
 	certificate, err := protocol.certificate(ctx, config.CertificateURL)
 	if err != nil {

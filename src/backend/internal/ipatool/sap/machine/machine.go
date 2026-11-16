@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"net/http"
 	"time"
 
 	"AppleVault/src/backend/internal/ipatool/sap/assets"
@@ -57,27 +56,22 @@ type Machine struct {
 }
 
 type imageSpec struct {
-	name      string
-	data      []byte
-	base      uint64
-	prelinked map[uint64]string
-	slots     map[uint64]string
-	functions map[uint64]string
+	name       string
+	data       []byte
+	base       uint64
+	prelinked  map[uint64]string
+	slots      map[uint64]string
+	functions  map[uint64]string
+	kernelBase uint64
 }
 
 type runtimeOptions struct {
 	extraImages []imageSpec
 	shims       shimOptions
-	httpClient  *http.Client
 }
 
 func Open(ctx context.Context, bundle assets.Bundle) (*Machine, error) {
-	return OpenWithClient(ctx, bundle, &http.Client{Timeout: 2 * time.Minute})
-}
-
-// OpenWithClient keeps native runtime downloads on the configured network route.
-func OpenWithClient(ctx context.Context, bundle assets.Bundle, client *http.Client) (*Machine, error) {
-	machine, exports, err := openRuntime(ctx, bundle, runtimeOptions{httpClient: client})
+	machine, exports, err := openRuntime(ctx, bundle, runtimeOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +112,7 @@ func openRuntime(ctx context.Context, bundle assets.Bundle, options runtimeOptio
 	images := make(map[string]*machimage.Image, len(imageSpecs))
 
 	for _, spec := range imageSpecs {
-		image, err := machimage.Open(spec.name, spec.data)
+		image, err := machimage.OpenShared(spec.name, spec.data)
 		if err != nil {
 			return nil, nil, fmt.Errorf("open %s image: %w", spec.name, err)
 		}
@@ -160,11 +154,7 @@ func openRuntime(ctx context.Context, bundle assets.Bundle, options runtimeOptio
 		return nil, nil, fmt.Errorf("open SAP runtime: %w", err)
 	}
 
-	client := options.httpClient
-	if client == nil {
-		client = &http.Client{Timeout: 2 * time.Minute}
-	}
-	engine, err := unicorn.NewWithClient(ctx, client)
+	engine, err := unicorn.New(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("create Unicorn engine: %w", err)
 	}
@@ -232,6 +222,12 @@ func openRuntime(ctx context.Context, bundle assets.Bundle, options runtimeOptio
 
 		if err != nil {
 			return nil, nil, fmt.Errorf("relocate SAP guest image: %w", err)
+		}
+
+		if spec.kernelBase != 0 {
+			if err := image.RelocateKernelCachePointers(spec.base, spec.kernelBase, resolver); err != nil {
+				return nil, nil, fmt.Errorf("relocate %s kernel-cache pointers: %w", spec.name, err)
+			}
 		}
 
 		if err := image.Load(engine); err != nil {

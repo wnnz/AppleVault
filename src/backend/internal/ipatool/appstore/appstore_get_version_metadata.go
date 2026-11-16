@@ -1,6 +1,7 @@
 package appstore
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -8,9 +9,11 @@ import (
 )
 
 type GetVersionMetadataInput struct {
+	Context   context.Context
 	Account   Account
 	App       App
 	VersionID string
+	Platform  Platform
 }
 
 type GetVersionMetadataOutput struct {
@@ -20,6 +23,17 @@ type GetVersionMetadataOutput struct {
 }
 
 func (t *appstore) GetVersionMetadata(input GetVersionMetadataInput) (GetVersionMetadataOutput, error) {
+	platform := input.Platform
+	if platform == "" {
+		platform = PlatformIPhone
+	}
+
+	switch platform {
+	case PlatformIPhone, PlatformIPad, PlatformAppleTV, PlatformWatchOS, PlatformVisionOS, PlatformMacOS:
+	default:
+		return GetVersionMetadataOutput{}, fmt.Errorf("invalid platform %q", platform)
+	}
+
 	macAddr, err := t.machine.MacAddress()
 	if err != nil {
 		return GetVersionMetadataOutput{}, fmt.Errorf("failed to get mac address: %w", err)
@@ -27,7 +41,7 @@ func (t *appstore) GetVersionMetadata(input GetVersionMetadataInput) (GetVersion
 
 	guid := strings.ReplaceAll(strings.ToUpper(macAddr), ":", "")
 
-	res, err := t.sendDownloadProduct(input.Account, input.App, guid, input.VersionID, PlatformIPhone)
+	res, _, err := t.sendDownloadProduct(input.Context, input.Account, input.App, guid, input.VersionID, platform)
 	if err != nil {
 		return GetVersionMetadataOutput{}, err
 	}
@@ -40,7 +54,7 @@ func (t *appstore) GetVersionMetadata(input GetVersionMetadataInput) (GetVersion
 		return GetVersionMetadataOutput{}, ErrLicenseRequired
 	}
 
-	if res.Data.FailureType != "" && res.Data.CustomerMessage != "" {
+	if res.Data.CustomerMessage != "" && (res.Data.FailureType != "" || len(res.Data.Items) == 0) {
 		return GetVersionMetadataOutput{}, NewErrorWithMetadata(fmt.Errorf("received error: %s", res.Data.CustomerMessage), res)
 	}
 
@@ -53,6 +67,39 @@ func (t *appstore) GetVersionMetadata(input GetVersionMetadataInput) (GetVersion
 	}
 
 	item := res.Data.Items[0]
+	// A pinned Mac version can be returned even when no platform was supplied.
+	// Use the response's package type instead of passing it to the IPA reader.
+	if input.Platform == "" {
+		softwarePlatform := downloadMetadataString(item.Metadata, "software-platform")
+		if strings.EqualFold(softwarePlatform, "macos") ||
+			(softwarePlatform == "" && strings.EqualFold(downloadMetadataString(item.Metadata, "product-type"), "mac-os-app")) {
+			platform = PlatformMacOS
+		}
+	}
+
+	if platform == PlatformMacOS {
+		packagePlatform, err := downloadPackagePlatform(platform, item)
+		if err != nil {
+			return GetVersionMetadataOutput{}, err
+		}
+
+		if packagePlatform == PlatformMacOS {
+			_, hardwareID, err := machineIdentity(macAddr)
+			if err != nil {
+				return GetVersionMetadataOutput{}, err
+			}
+
+			metadata, err := t.readVersionMetadataFromMacPackage(input.Context, item, hardwareID, input.App.BundleID)
+			if err != nil {
+				return GetVersionMetadataOutput{}, fmt.Errorf("failed to read macOS version metadata: %w", err)
+			}
+
+			return GetVersionMetadataOutput{
+				DisplayVersion: metadata.DisplayVersion,
+				ReleaseDate:    metadata.ReleaseDate,
+			}, nil
+		}
+	}
 
 	// Do not fall back to item.Metadata here. The App Store download API can
 	// return stale version and release date values, so the IPA Info.plist is the

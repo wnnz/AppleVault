@@ -5,13 +5,12 @@ package unicorn
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/ebitengine/purego"
 )
 
-func openLibrary(ctx context.Context, client *http.Client) (library, error) {
-	paths, err := cachedRuntimePaths(ctx, client)
+func openLibrary(ctx context.Context) (library, error) {
+	paths, err := cachedRuntimePaths(ctx)
 	if err != nil {
 		return library{}, err
 	}

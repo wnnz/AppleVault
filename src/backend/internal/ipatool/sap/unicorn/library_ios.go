@@ -3,14 +3,13 @@ package unicorn
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/ebitengine/purego"
 )
 
 // iOS builds statically link Unicorn because the desktop runtime artifacts
 // cannot be loaded on iOS. tools/build-ios.sh exports its symbols for purego.
-func openLibrary(ctx context.Context, _ *http.Client) (library, error) {
+func openLibrary(ctx context.Context) (library, error) {
 	if err := ctx.Err(); err != nil {
 		return library{}, fmt.Errorf("load Unicorn library: %w", err)
 	}

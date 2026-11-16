@@ -3,7 +3,11 @@ package appstore
 import (
 	"context"
 	gohttp "net/http"
+	"sync"
 	"time"
+
+	"AppleVault/src/backend/internal/ipatool/store"
+	"AppleVault/src/backend/internal/ipatool/storeauth"
 
 	"AppleVault/src/backend/internal/ipatool/http"
 	"AppleVault/src/backend/internal/ipatool/keychain"
@@ -18,7 +22,7 @@ type AppStore interface {
 	AccountInfo() (AccountInfoOutput, error)
 	// Revoke revokes the active credentials.
 	Revoke() error
-	// Lookup looks apps up based on the specified bundle identifier.
+	// Lookup looks apps up by bundle identifier or numeric app ID.
 	Lookup(input LookupInput) (LookupOutput, error)
 	// Search searches the App Store for apps matching the specified term.
 	Search(input SearchInput) (SearchOutput, error)
@@ -27,7 +31,7 @@ type AppStore interface {
 	// Purchase acquires a license for the desired app.
 	// Note: only free apps are supported.
 	Purchase(input PurchaseInput) error
-	// Download downloads the IPA package from the App Store to the desired location.
+	// Download downloads the app package from the App Store to the desired location.
 	Download(input DownloadInput) (DownloadOutput, error)
 	// ReplicateSinf replicates the sinf for the IPA package.
 	ReplicateSinf(input ReplicateSinfInput) error
@@ -40,22 +44,41 @@ type AppStore interface {
 }
 
 type appstore struct {
-	keychain            keychain.Keychain
-	loginClient         http.Client[loginResult]
-	searchClient        http.Client[searchResult]
-	purchaseClient      http.Client[purchaseResult]
-	downloadClient      http.Client[downloadResult]
-	platformClient      http.Client[platformVersionLookupResult]
-	storefrontClient    http.Client[[]byte]
-	bagClient           http.Client[bagResult]
-	ownedAppsClient     http.Client[[]byte]
-	httpClient          http.Client[interface{}]
-	actionSignerFactory ActionSignerFactory
-	authRetrySleep      func(time.Duration)
-	machine             machine.Machine
-	os                  operatingsystem.OperatingSystem
-	diagnosticLogger    http.DiagnosticLogger
-	context             context.Context
+	keychain               keychain.Keychain
+	loginClient            http.Client[loginResult]
+	searchClient           http.Client[searchResult]
+	purchaseClient         http.Client[purchaseResult]
+	downloadClient         http.Client[downloadResult]
+	kbsyncGenerator        kbsyncGenerator
+	kbsyncCache            kbsyncCache
+	platformClient         http.Client[platformVersionLookupResult]
+	storefrontClient       http.Client[[]byte]
+	storefrontsMu          sync.Mutex
+	storefrontCountryCodes map[string]string
+	bagClient              http.Client[bagResult]
+	ownedAppsClient        http.Client[[]byte]
+	httpClient             http.Client[interface{}]
+	macDecrypterFactory    macPackageDecrypterFactory
+	actionSignerFactory    ActionSignerFactory
+	authRetrySleep         func(time.Duration)
+	machine                machine.Machine
+	os                     operatingsystem.OperatingSystem
+	authBackend            *store.Backend
+	authHTTP               *gohttp.Client
+	authStateMu            sync.Mutex
+	anisetteState          []byte
+	authenticationHeaders  gohttp.Header
+	ctx                    context.Context
+}
+
+// requestContext returns the store's default context for request work whose
+// input did not carry one.
+func (t *appstore) requestContext() context.Context {
+	if t.ctx != nil {
+		return t.ctx
+	}
+
+	return context.Background()
 }
 
 type Args struct {
@@ -64,54 +87,63 @@ type Args struct {
 	OperatingSystem     operatingsystem.OperatingSystem
 	Machine             machine.Machine
 	ActionSignerFactory ActionSignerFactory
-	Context             context.Context
-	Transport           gohttp.RoundTripper
-	DiagnosticLogger    http.DiagnosticLogger
+	// Context is the default context for all requests made by this store
+	// instance; a non-nil context on an input struct still wins.
+	Context context.Context
+	// Transport, when non-nil, is cloned as the base transport for the
+	// store's HTTP clients instead of http.DefaultTransport.
+	Transport *gohttp.Transport
 }
 
+// NewAppStore creates a client using the compiled Store profile.
 func NewAppStore(args Args) AppStore {
-	if args.Context == nil {
-		args.Context = context.Background()
+	var macAddress func() (string, error)
+	if args.Machine != nil {
+		macAddress = args.Machine.MacAddress
 	}
+
+	ctx := args.Context
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	backend := store.New(args.CookieJar, macAddress, ctx, args.Transport)
+	authHTTP := storeauth.NewHTTPClient(args.CookieJar, args.Transport)
 	clientArgs := http.Args{
-		CookieJar:        args.CookieJar,
-		Context:          args.Context,
-		Transport:        args.Transport,
-		DiagnosticLogger: args.DiagnosticLogger,
+		CookieJar: args.CookieJar,
+		Executor:  backend.Client("request"),
 	}
 
 	actionSignerFactory := args.ActionSignerFactory
 	if actionSignerFactory == nil {
-		actionSignerFactory = defaultActionSignerFactory
-	}
-	configuredSignerFactory := func(config SAPConfig, machineID []byte) (ActionSigner, error) {
-		config.DiagnosticLogger = args.DiagnosticLogger
-		config.Context = args.Context
-		config.Transport = args.Transport
-		return actionSignerFactory(config, machineID)
+		actionSignerFactory = frameworkActionSignerFactory(backend.Client("sap"), ctx)
 	}
 
 	return &appstore{
 		keychain:            args.Keychain,
-		loginClient:         http.NewClient[loginResult](http.Args{CookieJar: args.CookieJar, Context: args.Context, Transport: args.Transport, DiagnosticLogger: args.DiagnosticLogger, Authentication: true}),
+		loginClient:         http.NewClient[loginResult](http.Args{CookieJar: args.CookieJar, Authentication: true, Executor: backend.Client("authenticate")}),
 		searchClient:        http.NewClient[searchResult](clientArgs),
-		purchaseClient:      http.NewClient[purchaseResult](clientArgs),
+		purchaseClient:      http.NewClient[purchaseResult](http.Args{CookieJar: args.CookieJar, Executor: backend.Client("purchase")}),
 		downloadClient:      http.NewClient[downloadResult](clientArgs),
+		kbsyncGenerator:     defaultKBSyncGenerator,
 		platformClient:      http.NewClient[platformVersionLookupResult](clientArgs),
 		storefrontClient:    http.NewClient[[]byte](clientArgs),
-		bagClient:           http.NewClient[bagResult](http.Args{CookieJar: args.CookieJar, Context: args.Context, Transport: args.Transport, DiagnosticLogger: args.DiagnosticLogger, Timeout: http.DefaultAuthenticationTimeout}),
+		bagClient:           http.NewClient[bagResult](http.Args{CookieJar: args.CookieJar, Timeout: http.DefaultAuthenticationTimeout, Executor: backend.Client("bag-direct")}),
 		ownedAppsClient:     http.NewClient[[]byte](clientArgs),
-		httpClient:          http.NewClient[interface{}](clientArgs),
-		actionSignerFactory: configuredSignerFactory,
-		context:             args.Context,
+		httpClient:          http.NewClient[interface{}](http.Args{CookieJar: args.CookieJar, Executor: backend.Client("transfer")}),
+		macDecrypterFactory: defaultMacPackageDecrypterFactory,
+		actionSignerFactory: actionSignerFactory,
+		authRetrySleep:      time.Sleep,
 		machine:             args.Machine,
 		os:                  args.OperatingSystem,
-		diagnosticLogger:    args.DiagnosticLogger,
+		authBackend:         backend,
+		authHTTP:            authHTTP,
+		ctx:                 ctx,
 	}
 }
 
-func (t *appstore) trace(event string, fields map[string]interface{}) {
-	if t.diagnosticLogger != nil {
-		t.diagnosticLogger(event, fields)
-	}
-}
+// NewAppStoreWithSetup is retained for source compatibility. The callback is no
+// longer invoked because Store profiles are precomputed.
+//
+// Deprecated: Use NewAppStore.
+func NewAppStoreWithSetup(args Args, _ func()) AppStore { return NewAppStore(args) }

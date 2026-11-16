@@ -9,14 +9,17 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"time"
 )
+
+var artifactHTTPClient = &http.Client{Timeout: 2 * time.Minute}
 
 type runtimePaths struct {
 	library      string
 	dependencies []string
 }
 
-func cachedRuntimePaths(ctx context.Context, client *http.Client) (runtimePaths, error) {
+func cachedRuntimePaths(ctx context.Context) (runtimePaths, error) {
 	goos := runtime.GOOS
 	if goos == "linux" && linuxUsesMusl() {
 		goos = "linux-musl"
@@ -36,7 +39,7 @@ func cachedRuntimePaths(ctx context.Context, client *http.Client) (runtimePaths,
 	paths := runtimePaths{dependencies: make([]string, 0, len(selected.dependencies))}
 
 	for _, dependency := range selected.dependencies {
-		path, err := ensureLibrary(ctx, root, dependency, client)
+		path, err := ensureLibrary(ctx, root, dependency, artifactHTTPClient)
 		if err != nil {
 			return runtimePaths{}, err
 		}
@@ -44,7 +47,7 @@ func cachedRuntimePaths(ctx context.Context, client *http.Client) (runtimePaths,
 		paths.dependencies = append(paths.dependencies, path)
 	}
 
-	paths.library, err = ensureLibrary(ctx, root, selected, client)
+	paths.library, err = ensureLibrary(ctx, root, selected, artifactHTTPClient)
 	if err != nil {
 		return runtimePaths{}, err
 	}

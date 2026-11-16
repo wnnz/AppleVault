@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -16,9 +17,25 @@ import (
 	"AppleVault/src/backend/internal/ipatool/util/operatingsystem"
 )
 
+// passthroughClient executes requests through the standard library client so
+// downloadFile can be exercised against a local test server.
+type passthroughClient struct{}
+
+func (passthroughClient) Send(apphttp.Request) (apphttp.Result[interface{}], error) {
+	return apphttp.Result[interface{}]{}, errors.New("unexpected send")
+}
+
+func (passthroughClient) Do(req *http.Request) (*http.Response, error) {
+	return http.DefaultClient.Do(req)
+}
+
+func (passthroughClient) NewRequest(method, url string, body io.Reader) (*http.Request, error) {
+	return http.NewRequest(method, url, body)
+}
+
 func downloadTestStore() *appstore {
 	return &appstore{
-		httpClient: apphttp.NewClient[interface{}](apphttp.Args{Context: context.Background()}),
+		httpClient: passthroughClient{},
 		os:         operatingsystem.New(),
 	}
 }
@@ -35,7 +52,7 @@ func TestDownloadFileRestartsWhenRangeIsIgnored(t *testing.T) {
 	if err := os.WriteFile(path, []byte("old"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := downloadTestStore().downloadFile(server.URL, path, nil); err != nil {
+	if err := downloadTestStore().downloadFile(context.Background(), server.URL, path, nil); err != nil {
 		t.Fatal(err)
 	}
 	data, _ := os.ReadFile(path)
@@ -53,7 +70,7 @@ func TestDownloadFileAppendsValidPartialResponse(t *testing.T) {
 	defer server.Close()
 	path := filepath.Join(t.TempDir(), "download.tmp")
 	_ = os.WriteFile(path, []byte("abc"), 0600)
-	if err := downloadTestStore().downloadFile(server.URL, path, nil); err != nil {
+	if err := downloadTestStore().downloadFile(context.Background(), server.URL, path, nil); err != nil {
 		t.Fatal(err)
 	}
 	data, _ := os.ReadFile(path)
@@ -70,7 +87,7 @@ func TestDownloadFileAcceptsAlreadyCompleteRange(t *testing.T) {
 	defer server.Close()
 	path := filepath.Join(t.TempDir(), "download.tmp")
 	_ = os.WriteFile(path, []byte("abcdef"), 0600)
-	if err := downloadTestStore().downloadFile(server.URL, path, nil); err != nil {
+	if err := downloadTestStore().downloadFile(context.Background(), server.URL, path, nil); err != nil {
 		t.Fatal(err)
 	}
 	data, _ := os.ReadFile(path)

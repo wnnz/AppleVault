@@ -6,12 +6,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"syscall"
 )
 
-func openLibrary(ctx context.Context, client *http.Client) (library, error) {
-	paths, err := cachedRuntimePaths(ctx, client)
+func openLibrary(ctx context.Context) (library, error) {
+	paths, err := cachedRuntimePaths(ctx)
 	if err != nil {
 		return library{}, err
 	}

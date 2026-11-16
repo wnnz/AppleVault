@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"runtime"
 	"sync"
 	"time"
@@ -67,29 +66,20 @@ type api struct {
 }
 
 type Engine struct {
-	api       api
-	handle    uintptr
-	library   library
-	hooks     hookState
-	stateMu   sync.Mutex
-	active    sync.WaitGroup
-	closing   bool
-	closeDone chan struct{}
-	closeErr  error
+	memoryGuard *memoryGuard
+	api         api
+	handle      uintptr
+	library     library
+	hooks       hookState
+	stateMu     sync.Mutex
+	active      sync.WaitGroup
+	closing     bool
+	closeDone   chan struct{}
+	closeErr    error
 }
 
 func New(ctx context.Context) (*Engine, error) {
-	return NewWithClient(ctx, &http.Client{Timeout: 2 * time.Minute})
-}
-
-// NewWithClient uses the caller's HTTP client when the native runtime is not cached.
-func NewWithClient(ctx context.Context, client *http.Client) (*Engine, error) {
-	if client == nil {
-		return nil, errors.New("unicorn HTTP client is nil")
-	}
-	return newEngine(ctx, func(ctx context.Context) (library, error) {
-		return openLibrary(ctx, client)
-	})
+	return newEngine(ctx, openLibrary)
 }
 
 func newEngine(ctx context.Context, loadLibrary func(context.Context) (library, error)) (*Engine, error) {
@@ -164,7 +154,20 @@ func (e *Engine) register(handle uintptr) {
 	purego.RegisterLibFunc(&e.api.open, handle, "uc_open")
 	purego.RegisterLibFunc(&e.api.close, handle, "uc_close")
 	purego.RegisterLibFunc(&e.api.query, handle, "uc_query")
-	purego.RegisterLibFunc(&e.api.ctl, handle, "uc_ctl")
+	// Darwin ARM64 passes C variadic arguments on the stack. Fill the six
+	// remaining integer registers so purego places uc_ctl's value there.
+	if (runtime.GOOS == "darwin" || runtime.GOOS == "ios") && runtime.GOARCH == "arm64" {
+		var control func(uintptr, uint32, uintptr, uintptr, uintptr, uintptr, uintptr, uintptr, uint32) int32
+
+		purego.RegisterLibFunc(&control, handle, "uc_ctl")
+
+		e.api.ctl = func(engine uintptr, command, value uint32) int32 {
+			return control(engine, command, 0, 0, 0, 0, 0, 0, value)
+		}
+	} else {
+		purego.RegisterLibFunc(&e.api.ctl, handle, "uc_ctl")
+	}
+
 	purego.RegisterLibFunc(&e.api.strerror, handle, "uc_strerror")
 	purego.RegisterLibFunc(&e.api.memMap, handle, "uc_mem_map")
 	purego.RegisterLibFunc(&e.api.memUnmap, handle, "uc_mem_unmap")
@@ -207,6 +210,10 @@ func (e *Engine) MemRead(address, size uint64) ([]byte, error) {
 	}
 	defer done()
 
+	if err := e.checkMemory(address, size); err != nil {
+		return nil, err
+	}
+
 	data := make([]byte, size)
 	if len(data) == 0 {
 		return data, nil
@@ -228,6 +235,10 @@ func (e *Engine) MemReadInto(data []byte, address uint64) error {
 		return nil
 	}
 
+	if err := e.checkMemory(address, uint64(len(data))); err != nil {
+		return err
+	}
+
 	return e.err(e.api.memRead(handle, address, unsafe.Pointer(&data[0]), uint64(len(data))))
 }
 
@@ -240,6 +251,10 @@ func (e *Engine) MemWrite(address uint64, data []byte) error {
 
 	if len(data) == 0 {
 		return nil
+	}
+
+	if err := e.checkMemory(address, uint64(len(data))); err != nil {
+		return err
 	}
 
 	return e.err(e.api.memWrite(handle, address, unsafe.Pointer(&data[0]), uint64(len(data))))
@@ -300,7 +315,11 @@ func (e *Engine) Start(begin, end uint64) error {
 
 	defer done()
 
-	return e.err(e.api.emuStart(handle, begin, end, 0, 0))
+	if err := e.executionError(nil); err != nil {
+		return err
+	}
+
+	return e.executionError(e.err(e.api.emuStart(handle, begin, end, 0, 0)))
 }
 
 func (e *Engine) StartBounded(begin, end uint64, timeout time.Duration, instructionLimit uint64) error {
@@ -320,7 +339,11 @@ func (e *Engine) StartBounded(begin, end uint64, timeout time.Duration, instruct
 
 	defer done()
 
-	if err := e.err(e.api.emuStart(handle, begin, end, microseconds, instructionLimit)); err != nil {
+	if err := e.executionError(nil); err != nil {
+		return err
+	}
+
+	if err := e.executionError(e.err(e.api.emuStart(handle, begin, end, microseconds, instructionLimit))); err != nil {
 		return err
 	}
 

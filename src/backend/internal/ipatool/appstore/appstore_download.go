@@ -2,14 +2,16 @@ package appstore
 
 import (
 	"archive/zip"
+	"context"
 	"crypto/md5"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
+	gohttp "net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -22,6 +24,7 @@ var (
 )
 
 type DownloadInput struct {
+	Context           context.Context
 	Account           Account
 	App               App
 	OutputPath        string
@@ -43,15 +46,27 @@ func (t *appstore) Download(input DownloadInput) (DownloadOutput, error) {
 
 	guid := strings.ReplaceAll(strings.ToUpper(macAddr), ":", "")
 
-	externalVersionID := input.ExternalVersionID
-	if externalVersionID == "" && (input.Platform == PlatformAppleTV || input.Platform == PlatformVisionOS) {
-		externalVersionID, err = t.lookupLatestExternalVersionID(input.Account, input.App, input.Platform)
+	var machineGUID []byte
+	if input.Platform == PlatformMacOS {
+		guid, machineGUID, err = machineIdentity(macAddr)
 		if err != nil {
+			return DownloadOutput{}, fmt.Errorf("failed to resolve machine identity: %w", err)
+		}
+	}
+
+	externalVersionID := input.ExternalVersionID
+	if externalVersionID == "" && (input.Platform == PlatformAppleTV || input.Platform == PlatformWatchOS || input.Platform == PlatformVisionOS) {
+		externalVersionID, err = t.lookupLatestExternalVersionID(input.Account, input.App, input.Platform)
+		// Delisted tvOS apps may have no catalog offer but still be available
+		// for redownload. Validate the returned package's platform below.
+		missingTVOffer := input.Platform == PlatformAppleTV &&
+			(errors.Is(err, errPlatformAppNotFound) || errors.Is(err, errPlatformOffersNotFound))
+		if err != nil && !missingTVOffer {
 			return DownloadOutput{}, fmt.Errorf("failed to resolve platform version: %w", err)
 		}
 	}
 
-	res, err := t.sendDownloadProduct(input.Account, input.App, guid, externalVersionID, input.Platform)
+	res, resolvedPlatform, err := t.sendDownloadProduct(input.Context, input.Account, input.App, guid, externalVersionID, input.Platform)
 	if err != nil {
 		return DownloadOutput{}, err
 	}
@@ -67,7 +82,7 @@ func (t *appstore) Download(input DownloadInput) (DownloadOutput, error) {
 		return DownloadOutput{}, ErrLicenseRequired
 	}
 
-	if res.Data.FailureType != "" && res.Data.CustomerMessage != "" {
+	if res.Data.CustomerMessage != "" && (res.Data.FailureType != "" || len(res.Data.Items) == 0) {
 		return DownloadOutput{}, NewErrorWithMetadata(fmt.Errorf("received error: %s", res.Data.CustomerMessage), res)
 	}
 
@@ -88,38 +103,54 @@ func (t *appstore) Download(input DownloadInput) (DownloadOutput, error) {
 		version = fmt.Sprintf("%v", itemVersion)
 	}
 
-	destination, err := t.resolveDestinationPath(input.App, version, input.OutputPath)
+	packagePlatform, err := downloadPackagePlatform(input.Platform, item)
+	if err != nil {
+		return DownloadOutput{}, err
+	}
+
+	destination, err := t.resolveDestinationPath(input.App, version, input.OutputPath, packagePlatform)
 	if err != nil {
 		return DownloadOutput{}, fmt.Errorf("failed to resolve destination path: %w", err)
 	}
 
+	if packagePlatform == PlatformMacOS {
+		return t.downloadMacPackage(input.Context, item, destination, machineGUID, input.Progress)
+	}
+
 	tmpPath := fmt.Sprintf("%s.tmp", destination)
 
-	err = t.downloadFile(item.URL, tmpPath, input.Progress)
-	if err != nil {
+	if err := t.downloadFile(input.Context, item.URL, tmpPath, input.Progress); err != nil {
 		return DownloadOutput{}, fmt.Errorf("failed to download file: %w", err)
 	}
-	if err = validateFileMD5(tmpPath, item.HashMD5); err != nil {
+
+	if err := validateFileMD5(tmpPath, item.HashMD5); err != nil {
 		_ = t.os.Remove(tmpPath)
 		return DownloadOutput{}, fmt.Errorf("failed to verify download checksum: %w", err)
 	}
 
-	err = t.applyPatches(item, input.Account, tmpPath, destination)
+	if err := t.validatePackagePlatform(tmpPath, resolvedPlatform); err != nil {
+		if removeErr := t.os.Remove(tmpPath); removeErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to remove invalid package: %w", removeErr))
+		}
+
+		return DownloadOutput{}, fmt.Errorf("failed to validate package platform: %w", err)
+	}
+
+	artwork, err := t.downloadArtwork(input.Context, item.ArtworkURL)
 	if err != nil {
+		return DownloadOutput{}, fmt.Errorf("failed to download artwork: %w", err)
+	}
+
+	if err := t.applyPatches(item, input.Account, tmpPath, destination, artwork); err != nil {
 		return DownloadOutput{}, fmt.Errorf("failed to apply patches: %w", err)
 	}
-	if err = validateIPAZip(destination); err != nil {
+
+	if err := validateIPAZip(destination); err != nil {
 		_ = t.os.Remove(destination)
 		return DownloadOutput{}, fmt.Errorf("failed to validate IPA integrity: %w", err)
 	}
 
-	err = t.validatePackagePlatform(destination, input.Platform)
-	if err != nil {
-		return DownloadOutput{}, fmt.Errorf("failed to validate package platform: %w", err)
-	}
-
-	err = t.os.Remove(fmt.Sprintf("%s.tmp", destination))
-	if err != nil {
+	if err := t.os.Remove(tmpPath); err != nil {
 		return DownloadOutput{}, fmt.Errorf("failed to remove file: %w", err)
 	}
 
@@ -137,8 +168,12 @@ func (*appstore) validatePackagePlatform(path string, platform Platform) error {
 	var expectedPlatform string
 
 	switch platform {
+	case PlatformIPhone, PlatformIPad:
+		expectedPlatform = "iPhoneOS"
 	case PlatformAppleTV:
 		expectedPlatform = "AppleTVOS"
+	case PlatformWatchOS:
+		expectedPlatform = "WatchOS"
 	case PlatformVisionOS:
 		expectedPlatform = "XROS"
 	default:
@@ -179,6 +214,12 @@ func (*appstore) validatePackagePlatform(path string, platform Platform) error {
 			return fmt.Errorf("failed to decode info plist: %w", err)
 		}
 
+		// Legacy iOS apps may predate CFBundleSupportedPlatforms. Only a
+		// missing declaration qualifies; an empty or conflicting one does not.
+		if expectedPlatform == "iPhoneOS" && info.SupportedPlatforms == nil {
+			return nil
+		}
+
 		for _, supportedPlatform := range info.SupportedPlatforms {
 			if supportedPlatform == expectedPlatform {
 				return nil
@@ -196,22 +237,63 @@ func isTopLevelAppInfoPlist(path string) bool {
 }
 
 type downloadItemResult struct {
-	HashMD5  string                 `plist:"md5,omitempty"`
-	URL      string                 `plist:"URL,omitempty"`
-	Sinfs    []Sinf                 `plist:"sinfs,omitempty"`
-	Metadata map[string]interface{} `plist:"metadata,omitempty"`
+	PreflightPackageURL string                 `plist:"preflightPackageURL,omitempty"`
+	ArtworkURL          string                 `plist:"artworkURL,omitempty"`
+	HashMD5             string                 `plist:"md5,omitempty"`
+	URL                 string                 `plist:"URL,omitempty"`
+	Sinfs               []Sinf                 `plist:"sinfs,omitempty"`
+	Metadata            map[string]interface{} `plist:"metadata,omitempty"`
 }
 
 type downloadResult struct {
-	FailureType     string               `plist:"failureType,omitempty"`
-	CustomerMessage string               `plist:"customerMessage,omitempty"`
-	Items           []downloadItemResult `plist:"songList,omitempty"`
+	FailureType     string                 `plist:"failureType,omitempty"`
+	CustomerMessage string                 `plist:"customerMessage,omitempty"`
+	Dialog          map[string]interface{} `plist:"dialog,omitempty"`
+	Metrics         map[string]interface{} `plist:"metrics,omitempty"`
+	Items           []downloadItemResult   `plist:"songList,omitempty"`
 }
 
-func (t *appstore) downloadFile(src, dst string, progress *progressbar.ProgressBar) error {
+func (t *appstore) downloadFile(ctx context.Context, src, dst string, progress *progressbar.ProgressBar) error {
+	if ctx == nil {
+		ctx = t.requestContext()
+	}
+
+	err := t.downloadFileAttempt(ctx, src, dst, progress, true, "")
+
+	var parallelErr *parallelDownloadError
+	if !errors.As(err, &parallelErr) || ctx.Err() != nil {
+		return err
+	}
+
+	if fallbackErr := t.downloadFileAttempt(ctx, src, dst, progress, false, parallelErr.validator); fallbackErr != nil {
+		return errors.Join(err, fmt.Errorf("single-connection fallback failed: %w", fallbackErr))
+	}
+
+	return nil
+}
+
+//nolint:nonamedreturns // Deferred close errors must propagate to callers.
+func (t *appstore) downloadFileAttempt(ctx context.Context, src, dst string, progress *progressbar.ProgressBar, parallel bool, validator string) (err error) {
 	req, err := t.httpClient.NewRequest("GET", src, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Staged ranges are expendable; only the contiguous destination is resumed.
+	if err := os.RemoveAll(downloadPartsPath(dst)); err != nil {
+		return fmt.Errorf("failed to remove stale download parts: %w", err)
+	}
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	if req != nil {
+		req = req.WithContext(ctx)
+		req.Header.Set("Accept-Encoding", "identity")
+
+		if validator != "" {
+			req.Header.Set("If-Range", validator)
+		}
 	}
 
 	file, err := t.os.OpenFile(dst, os.O_CREATE|os.O_RDWR, 0644)
@@ -219,15 +301,18 @@ func (t *appstore) downloadFile(src, dst string, progress *progressbar.ProgressB
 		return fmt.Errorf("failed to open file: %w", err)
 	}
 
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			err = joinCleanupError(err, "failed to close downloaded file", closeErr)
+		}
+	}()
 
 	stat, err := t.os.Stat(dst)
 	if err != nil {
 		return fmt.Errorf("failed to get file info: %w", err)
 	}
 
-	resumeOffset := stat.Size()
-	if req != nil && resumeOffset > 0 {
+	if req != nil && stat != nil {
 		req.Header.Add("range", fmt.Sprintf("bytes=%d-", stat.Size()))
 	}
 
@@ -236,68 +321,64 @@ func (t *appstore) downloadFile(src, dst string, progress *progressbar.ProgressB
 		return fmt.Errorf("request failed: %w", err)
 	}
 	defer res.Body.Close()
-	if resumeOffset > 0 && res.StatusCode == http.StatusRequestedRangeNotSatisfiable && validContentRangeComplete(res.Header.Get("Content-Range"), resumeOffset) {
-		// A fully downloaded temporary file can remain after an interrupted post-processing step.
-		// Let the caller's checksum validation decide whether it is safe to reuse.
+
+	offset, remaining, total, complete, err := downloadResponseRange(res, stat.Size())
+	if err != nil {
+		return err
+	}
+
+	if complete {
 		return nil
 	}
-	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
-		return fmt.Errorf("download server returned HTTP %d", res.StatusCode)
-	}
-	if res.StatusCode == http.StatusPartialContent {
-		if !validContentRangeStart(res.Header.Get("Content-Range"), resumeOffset) {
-			return fmt.Errorf("download server returned an invalid Content-Range for offset %d", resumeOffset)
-		}
-	} else if resumeOffset > 0 {
-		switch res.StatusCode {
-		case http.StatusOK:
-			if err = file.Truncate(0); err != nil {
-				return fmt.Errorf("failed to restart download: %w", err)
-			}
-			resumeOffset = 0
-		default:
-			return fmt.Errorf("download server did not honor resume request (HTTP %d)", res.StatusCode)
+
+	if res.StatusCode == gohttp.StatusOK {
+		if err := file.Truncate(0); err != nil {
+			return fmt.Errorf("failed to restart download: %w", err)
 		}
 	}
-	if _, err = file.Seek(resumeOffset, io.SeekStart); err != nil {
-		return fmt.Errorf("failed to seek download file: %w", err)
+
+	if _, err := file.Seek(offset, io.SeekStart); err != nil {
+		return fmt.Errorf("can not seek file: %w", err)
 	}
+
+	var writer io.Writer = file
 
 	if progress != nil {
-		if res.ContentLength >= 0 {
-			progress.ChangeMax64(res.ContentLength + resumeOffset)
-		}
-		err = progress.Set64(resumeOffset)
+		progress.ChangeMax64(total)
 
-		if err != nil {
+		if err := progress.Set64(offset); err != nil {
 			return fmt.Errorf("can not set bar progress: %w", err)
 		}
 
-		_, err = io.Copy(io.MultiWriter(file, progress), res.Body)
-	} else {
-		_, err = io.Copy(file, res.Body)
+		writer = io.MultiWriter(file, progress)
 	}
 
+	// Combining responses requires a strong validator to keep all ranges on
+	// the same representation. Servers without one retain the single stream.
+	if parallel && res.StatusCode == gohttp.StatusPartialContent &&
+		remaining == total-offset && remaining >= parallelDownloadThreshold && downloadValidator(res) != "" {
+		if err := t.downloadFileParallel(ctx, cancel, src, dst, file, writer, res, offset, total, progress); err != nil {
+			return &parallelDownloadError{err: err, validator: downloadValidator(res)}
+		}
+
+		return nil
+	}
+
+	var body io.Reader = res.Body
+	if remaining >= 0 {
+		body = io.LimitReader(body, remaining)
+	}
+
+	written, err := io.Copy(writer, body)
 	if err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
-	return nil
-}
-
-func validContentRangeStart(value string, expected int64) bool {
-	prefix := fmt.Sprintf("bytes %d-", expected)
-	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(value)), prefix)
-}
-
-func validContentRangeComplete(value string, expected int64) bool {
-	value = strings.ToLower(strings.TrimSpace(value))
-	const prefix = "bytes */"
-	if !strings.HasPrefix(value, prefix) {
-		return false
+	if remaining >= 0 && written != remaining || total >= 0 && offset+written != total {
+		return fmt.Errorf("download is incomplete: %w", io.ErrUnexpectedEOF)
 	}
-	total, err := strconv.ParseInt(strings.TrimSpace(strings.TrimPrefix(value, prefix)), 10, 64)
-	return err == nil && total == expected
+
+	return nil
 }
 
 func validateFileMD5(path, expected string) error {
@@ -369,6 +450,10 @@ func validateIPAZip(path string) error {
 }
 
 func fileName(app App, version string) string {
+	return packageFileName(app, version, "")
+}
+
+func packageFileName(app App, version string, platform Platform) string {
 	var parts []string
 
 	if app.BundleID != "" {
@@ -383,11 +468,16 @@ func fileName(app App, version string) string {
 		parts = append(parts, version)
 	}
 
-	return fmt.Sprintf("%s.ipa", strings.Join(parts, "_"))
+	extension := "ipa"
+	if platform == PlatformMacOS {
+		extension = "pkg"
+	}
+
+	return fmt.Sprintf("%s.%s", strings.Join(parts, "_"), extension)
 }
 
-func (t *appstore) resolveDestinationPath(app App, version string, path string) (string, error) {
-	file := fileName(app, version)
+func (t *appstore) resolveDestinationPath(app App, version string, path string, platform Platform) (string, error) {
+	file := packageFileName(app, version, platform)
 
 	if path == "" {
 		workdir, err := t.os.Getwd()
@@ -404,7 +494,7 @@ func (t *appstore) resolveDestinationPath(app App, version string, path string) 
 	}
 
 	if isDir {
-		return fmt.Sprintf("%s/%s", path, file), nil
+		return filepath.Join(path, file), nil
 	}
 
 	return path, nil
@@ -423,7 +513,8 @@ func (t *appstore) isDirectory(path string) (bool, error) {
 	return info.IsDir(), nil
 }
 
-func (t *appstore) applyPatches(item downloadItemResult, acc Account, src, dst string) error {
+//nolint:nonamedreturns // Deferred close errors must propagate to callers.
+func (t *appstore) applyPatches(item downloadItemResult, acc Account, src, dst string, artwork []byte) (err error) {
 	srcZip, err := zip.OpenReader(src)
 	if err != nil {
 		return fmt.Errorf("failed to open zip reader: %w", err)
@@ -434,14 +525,34 @@ func (t *appstore) applyPatches(item downloadItemResult, acc Account, src, dst s
 	if err != nil {
 		return fmt.Errorf("failed to open file: %w", err)
 	}
-	defer dstFile.Close()
+
+	defer func() {
+		if closeErr := dstFile.Close(); closeErr != nil {
+			err = joinCleanupError(err, "failed to close patched file", closeErr)
+		}
+	}()
 
 	dstZip := zip.NewWriter(dstFile)
-	defer dstZip.Close()
+	defer func() {
+		if closeErr := dstZip.Close(); closeErr != nil {
+			err = joinCleanupError(err, "failed to close zip writer", closeErr)
+		}
+	}()
 
-	err = t.replicateZip(srcZip, dstZip)
+	err = t.replicateZip(srcZip, dstZip, src)
 	if err != nil {
 		return fmt.Errorf("failed to replicate zip: %w", err)
+	}
+
+	if len(artwork) != 0 {
+		file, err := dstZip.Create("iTunesArtwork")
+		if err != nil {
+			return fmt.Errorf("failed to create artwork: %w", err)
+		}
+
+		if _, err := file.Write(artwork); err != nil {
+			return fmt.Errorf("failed to write artwork: %w", err)
+		}
 	}
 
 	err = t.writeMetadata(item.Metadata, acc, dstZip)

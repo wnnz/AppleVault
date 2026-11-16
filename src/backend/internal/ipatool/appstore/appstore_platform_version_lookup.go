@@ -12,8 +12,14 @@ import (
 	"AppleVault/src/backend/internal/ipatool/http"
 )
 
+var (
+	errPlatformAppNotFound    = errors.New("platform version lookup returned no app")
+	errPlatformOffersNotFound = errors.New("platform version lookup returned no offers")
+)
+
 type platformVersionLookupResult struct {
 	Results map[string]platformVersionLookupItem `json:"results,omitempty"`
+	Data    []catalogVersionLookupItem           `json:"data,omitempty"`
 }
 
 type platformVersionLookupItem struct {
@@ -61,7 +67,7 @@ func (t *appstore) lookupLatestExternalVersionID(acc Account, app App, platform 
 		return "", errors.New("app ID is required for platform version lookup")
 	}
 
-	countryCode, err := countryCodeFromStoreFront(acc.StoreFront)
+	countryCode, err := t.countryCodeFromStoreFront(acc.StoreFront)
 	if err != nil {
 		return "", fmt.Errorf("failed to resolve the country code: %w", err)
 	}
@@ -70,63 +76,74 @@ func (t *appstore) lookupLatestExternalVersionID(acc Account, app App, platform 
 		return t.lookupLatestVisionOSExternalVersionID(app.ID, countryCode)
 	}
 
-	externalVersionID, err := t.lookupPlatformExternalVersionID(app.ID, countryCode, platform)
-	if err == nil {
-		return externalVersionID, nil
-	}
-
-	if platform != PlatformIPhone && platform != PlatformIPad {
-		return "", err
-	}
-
-	websiteVersionID, websiteErr := t.lookupWebsiteExternalVersionID(app, countryCode)
-	if websiteErr != nil {
-		return "", fmt.Errorf("platform lookup failed: %v; website fallback failed: %w", err, websiteErr)
-	}
-
-	return websiteVersionID, nil
-}
-
-func (t *appstore) lookupPlatformExternalVersionID(appID int64, countryCode string, platform Platform) (string, error) {
-
-	request, err := t.platformVersionLookupRequest(appID, countryCode, platform)
+	metadataPlatform, err := platform.metadataPlatform()
 	if err != nil {
 		return "", fmt.Errorf("failed to create platform version lookup request: %w", err)
 	}
 
-	res, err := t.platformClient.Send(request)
-	if err != nil {
-		return "", fmt.Errorf("platform version lookup request failed: %w", err)
+	catalogs := []string{metadataPlatform}
+	if platform == PlatformIPhone || platform == PlatformIPad || platform == PlatformWatchOS {
+		// Some storefronts have no enterprise listing even when the consumer
+		// catalogs contain the app. Keep the account's country for each lookup.
+		catalogs = append(catalogs, "iphone", "ipad")
 	}
 
-	if res.StatusCode != gohttp.StatusOK {
-		return "", NewErrorWithMetadata(errors.New("platform version lookup request failed"), res)
-	}
+	var lastErr error
 
-	item, ok := res.Data.Results[strconv.FormatInt(appID, 10)]
-	if !ok {
-		return "", NewErrorWithMetadata(errors.New("platform version lookup returned no app"), res)
-	}
+	for _, catalog := range catalogs {
+		request := t.platformVersionLookupRequest(app.ID, countryCode, catalog)
 
-	if len(item.Offers) == 0 {
-		return "", NewErrorWithMetadata(errors.New("platform version lookup returned no offers"), res)
-	}
-
-	offer := item.Offers[0]
-	externalVersionID := string(offer.Version.ExternalID)
-
-	if externalVersionID == "" {
-		externalVersionID, err = externalVersionIDFromBuyParams(offer.BuyParams)
+		res, err := t.platformClient.Send(request)
 		if err != nil {
-			return "", fmt.Errorf("failed to parse buy params: %w", err)
+			return "", fmt.Errorf("platform version lookup request failed: %w", err)
 		}
+
+		if res.StatusCode != gohttp.StatusOK {
+			return "", NewErrorWithMetadata(errors.New("platform version lookup request failed"), res)
+		}
+
+		item, ok := res.Data.Results[strconv.FormatInt(app.ID, 10)]
+		if !ok {
+			lastErr = NewErrorWithMetadata(errPlatformAppNotFound, res)
+
+			continue
+		}
+
+		if len(item.Offers) == 0 {
+			lastErr = NewErrorWithMetadata(errPlatformOffersNotFound, res)
+
+			continue
+		}
+
+		offer := item.Offers[0]
+		externalVersionID := string(offer.Version.ExternalID)
+
+		if externalVersionID == "" {
+			externalVersionID, err = externalVersionIDFromBuyParams(offer.BuyParams)
+			if err != nil {
+				return "", fmt.Errorf("failed to parse buy params: %w", err)
+			}
+		}
+
+		if externalVersionID == "" {
+			return "", NewErrorWithMetadata(errors.New("platform version lookup returned no external version id"), res)
+		}
+
+		return externalVersionID, nil
 	}
 
-	if externalVersionID == "" {
-		return "", NewErrorWithMetadata(errors.New("platform version lookup returned no external version id"), res)
+	if platform == PlatformIPhone || platform == PlatformIPad {
+		// Apple Arcade apps can be absent from every MDM catalog. The App
+		// Store's catalog API still exposes their current iOS version.
+		version, err := t.lookupLatestIOSExternalVersionID(app, countryCode, platform)
+		if err == nil {
+			return version, nil
+		}
+
+		lastErr = fmt.Errorf("%w; iOS catalog fallback failed: %w", lastErr, err)
 	}
 
-	return externalVersionID, nil
+	return "", fmt.Errorf("app %d in storefront %s (catalogs: %s): %w", app.ID, countryCode, strings.Join(catalogs, ", "), lastErr)
 }
 
 func (t *appstore) lookupLatestVisionOSExternalVersionID(appID int64, countryCode string) (string, error) {
@@ -153,12 +170,7 @@ func (t *appstore) lookupLatestVisionOSExternalVersionID(appID int64, countryCod
 	return externalVersionID, nil
 }
 
-func (*appstore) platformVersionLookupRequest(appID int64, countryCode string, platform Platform) (http.Request, error) {
-	metadataPlatform, err := platform.metadataPlatform()
-	if err != nil {
-		return http.Request{}, err
-	}
-
+func (*appstore) platformVersionLookupRequest(appID int64, countryCode, metadataPlatform string) http.Request {
 	params := url.Values{}
 	params.Add("version", "2")
 	params.Add("id", strconv.FormatInt(appID, 10))
@@ -172,7 +184,7 @@ func (*appstore) platformVersionLookupRequest(appID int64, countryCode string, p
 		URL:            fmt.Sprintf("https://uclient-api.itunes.apple.com/WebObjects/MZStorePlatform.woa/wa/lookup?%s", params.Encode()),
 		Method:         http.MethodGET,
 		ResponseFormat: http.ResponseFormatJSON,
-	}, nil
+	}
 }
 
 func externalVersionIDFromBuyParams(buyParams string) (string, error) {

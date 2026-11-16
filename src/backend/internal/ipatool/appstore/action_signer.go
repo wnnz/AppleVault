@@ -3,21 +3,16 @@ package appstore
 import (
 	"context"
 	"fmt"
-	gohttp "net/http"
-	"time"
 
-	"AppleVault/src/backend/internal/ipatool/http"
 	"AppleVault/src/backend/internal/ipatool/sap"
+	"AppleVault/src/backend/internal/ipatool/http"
 )
 
 type SAPConfig struct {
-	AuthEndpoint     string
-	SetupURL         string
-	CertificateURL   string
-	Version          uint32
-	DiagnosticLogger http.DiagnosticLogger
-	Context          context.Context
-	Transport        gohttp.RoundTripper
+	AuthEndpoint   string
+	SetupURL       string
+	CertificateURL string
+	Version        uint32
 }
 
 type ActionSigner interface {
@@ -27,33 +22,13 @@ type ActionSigner interface {
 
 type ActionSignerFactory func(config SAPConfig, machineID []byte) (ActionSigner, error)
 
-func defaultActionSignerFactory(config SAPConfig, machineID []byte) (output ActionSigner, signerErr error) {
-	started := time.Now()
-	if config.DiagnosticLogger != nil {
-		config.DiagnosticLogger("sap.start", map[string]interface{}{"version": config.Version})
-		defer func() {
-			fields := map[string]interface{}{"elapsed_ms": time.Since(started).Milliseconds(), "success": signerErr == nil}
-			if signerErr != nil {
-				fields["error"] = signerErr.Error()
-			}
-			config.DiagnosticLogger("sap.complete", fields)
-		}()
-	}
-	ctx := config.Context
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	signer, err := sap.NewSigner(ctx, sap.Config{
-		SetupURL:         config.SetupURL,
-		CertificateURL:   config.CertificateURL,
-		Version:          config.Version,
-		HardwareID:       machineID,
-		DiagnosticLogger: config.DiagnosticLogger,
-		Transport:        config.Transport,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("create SAP signer: %w", err)
-	}
+func frameworkActionSignerFactory(client http.Executor, ctx context.Context) ActionSignerFactory {
+	return func(config SAPConfig, machineID []byte) (ActionSigner, error) {
+		signer, err := sap.NewSigner(ctx, sap.Config{SetupURL: config.SetupURL, CertificateURL: config.CertificateURL, Version: config.Version, HardwareID: machineID, HTTPClient: client})
+		if err != nil {
+			return nil, fmt.Errorf("create SAP signer: %w", err)
+		}
 
-	return signer, nil
+		return signer, nil
+	}
 }

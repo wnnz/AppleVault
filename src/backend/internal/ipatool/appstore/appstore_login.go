@@ -9,6 +9,7 @@ import (
 	"net"
 	gohttp "net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -19,9 +20,20 @@ import (
 )
 
 var (
-	ErrAuthCodeRequired          = errors.New("auth code is required")
-	ErrAuthenticationUnavailable = errors.New("Apple returned no usable authentication response")
+	ErrAuthCodeRequired = errors.New("auth code is required")
+	// ErrAuthenticationUnavailable marks responses where Apple returned no
+	// usable authentication result (empty/HTML bodies, missing credentials).
+	ErrAuthenticationUnavailable = errors.New("apple returned no usable authentication response")
 )
+
+type authenticationMachineActionError struct {
+	action string
+	data   string
+}
+
+func (e *authenticationMachineActionError) Error() string {
+	return "apple requested an authentication machine action: " + e.action
+}
 
 const (
 	maxAuthenticationRequestAttempts = 3
@@ -43,18 +55,24 @@ type LoginOutput struct {
 	Account Account
 }
 
-func (t *appstore) Login(input LoginInput) (output LoginOutput, resultErr error) {
-	t.trace("auth.start", map[string]interface{}{"has_auth_code": strings.TrimSpace(input.AuthCode) != "", "upstream_version": "2.7.0", "upstream_ref": "b0fe32d8a1499c91969a490288cb32b30abd6072", "sap_profile": "macos-27-26A434-arm64-v1"})
-	defer func() {
-		fields := map[string]interface{}{"success": resultErr == nil, "requires_2fa": errors.Is(resultErr, ErrAuthCodeRequired)}
-		if resultErr != nil {
-			fields["error"] = resultErr.Error()
-		}
-		t.trace("auth.complete", fields)
-	}()
+func (t *appstore) Login(input LoginInput) (LoginOutput, error) {
+	if t.authBackend != nil {
+		return t.nativeLogin(input)
+	}
+
+	return t.legacyLogin(input)
+}
+
+func (t *appstore) legacyLogin(input LoginInput) (LoginOutput, error) {
 	authCode, err := normalizeAuthCode(input.AuthCode)
 	if err != nil {
 		return LoginOutput{}, err
+	}
+
+	if countryCode := phoneNumberStorefrontCountryCode(input.Email); countryCode != "" {
+		if _, err = t.discoverStorefrontID(countryCode); err != nil {
+			return LoginOutput{}, fmt.Errorf("failed to discover storefronts: %w", err)
+		}
 	}
 
 	macAddr, err := t.machine.MacAddress()
@@ -100,7 +118,7 @@ func (t *appstore) Login(input LoginInput) (output LoginOutput, resultErr error)
 		return LoginOutput{}, loginErr
 	}
 
-	output = LoginOutput{Account: acc}
+	output := LoginOutput{Account: acc}
 	if closeErr != nil {
 		return output, closeErr
 	}
@@ -144,13 +162,29 @@ type loginAccountResult struct {
 	Address loginAddressResult `plist:"address,omitempty"`
 }
 
+type loginDialogActionResult struct {
+	Kind string `plist:"kind,omitempty"`
+	URL  string `plist:"url,omitempty"`
+}
+
+type loginDialogResult struct {
+	Message            string                  `plist:"message,omitempty"`
+	Explanation        string                  `plist:"explanation,omitempty"`
+	OKButtonString     string                  `plist:"okButtonString,omitempty"`
+	OKButtonAction     loginDialogActionResult `plist:"okButtonAction,omitempty"`
+	CancelButtonString string                  `plist:"cancelButtonString,omitempty"`
+}
+
 type loginResult struct {
 	FailureType         string             `plist:"failureType,omitempty"`
 	CustomerMessage     string             `plist:"customerMessage,omitempty"`
 	Account             loginAccountResult `plist:"accountInfo,omitempty"`
+	Dialog              loginDialogResult  `plist:"dialog,omitempty"`
 	DirectoryServicesID string             `plist:"dsPersonId,omitempty"`
 	PasswordToken       string             `plist:"passwordToken,omitempty"`
 }
+
+var storeCookieDSIDPattern = regexp.MustCompile(`(?:^|[ ,])mz_at(?:0|_ssl)-([0-9]+)=`)
 
 func (t *appstore) login(email, password, authCode, guid, endpoint string, signer ActionSigner) (Account, error) {
 	request := t.loginRequest(email, password, authCode, guid, endpoint, 1, signer)
@@ -204,6 +238,10 @@ func (t *appstore) login(email, password, authCode, guid, endpoint string, signe
 	}
 
 	sf, err := res.GetHeader(HTTPHeaderStoreFront)
+	if errors.Is(err, http.ErrHeaderNotFound) {
+		sf, err = res.GetHeader(HTTPHeaderRequestStoreFront)
+	}
+
 	if err != nil {
 		return Account{}, NewErrorWithMetadata(fmt.Errorf("failed to get storefront header: %w", err), res)
 	}
@@ -214,11 +252,26 @@ func (t *appstore) login(email, password, authCode, guid, endpoint string, signe
 	}
 
 	addr := res.Data.Account.Address
+
+	directoryServicesID := res.Data.DirectoryServicesID
+	if directoryServicesID == "" {
+		directoryServicesID = authenticationResponseDSID(res.Headers)
+	}
+
+	if directoryServicesID == "" {
+		return Account{}, NewErrorWithMetadata(errors.New("apple returned no directory services identifier"), res)
+	}
+
+	accountEmail := res.Data.Account.Email
+	if accountEmail == "" {
+		accountEmail = email
+	}
+
 	acc := Account{
 		Name:                strings.Join([]string{addr.FirstName, addr.LastName}, " "),
-		Email:               res.Data.Account.Email,
+		Email:               accountEmail,
 		PasswordToken:       res.Data.PasswordToken,
-		DirectoryServicesID: res.Data.DirectoryServicesID,
+		DirectoryServicesID: directoryServicesID,
 		StoreFront:          sf,
 		Password:            password,
 		Pod:                 pod,
@@ -241,8 +294,12 @@ func (t *appstore) sendAuthenticationRequest(request http.Request) (http.Result[
 	statuses := make([]string, 0, maxAuthenticationRequestAttempts)
 	onlyHTTP := true
 
+	sleep := t.authRetrySleep
+	if sleep == nil {
+		sleep = time.Sleep
+	}
+
 	for attempt := 1; ; attempt++ {
-		t.trace("auth.request_attempt", map[string]interface{}{"attempt": attempt, "endpoint": http.DiagnosticURL(request.URL)})
 		result, err := t.loginClient.Send(request)
 
 		status, retry := retryableAuthenticationError(err)
@@ -261,7 +318,6 @@ func (t *appstore) sendAuthenticationRequest(request http.Request) (http.Result[
 		}
 
 		statuses = append(statuses, outcome)
-		t.trace("auth.retry", map[string]interface{}{"attempt": attempt, "status": status})
 
 		if attempt == maxAuthenticationRequestAttempts {
 			summary := strings.Join(statuses, ", ")
@@ -299,32 +355,7 @@ func (t *appstore) sendAuthenticationRequest(request http.Request) (http.Result[
 			delay = max(requested, time.Second)
 		}
 
-		t.trace("auth.retry_wait", map[string]interface{}{"attempt": attempt, "delay_ms": delay.Milliseconds()})
-		if err := t.waitAuthenticationRetry(delay); err != nil {
-			return result, fmt.Errorf("authentication retry canceled: %w", err)
-		}
-	}
-}
-
-func (t *appstore) waitAuthenticationRetry(delay time.Duration) error {
-	ctx := t.context
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-	if t.authRetrySleep != nil {
-		t.authRetrySleep(delay)
-		return ctx.Err()
-	}
-	timer := time.NewTimer(delay)
-	defer timer.Stop()
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-timer.C:
-		return nil
+		sleep(delay)
 	}
 }
 
@@ -337,7 +368,7 @@ func retryableAuthenticationError(err error) (int, bool) {
 		}
 
 		// A url.Error can report Timeout false when its cause is wrapped by
-		// AddHeaderTransport, so inspect each underlying error as well.
+		// the framework transport, so inspect each underlying error as well.
 		for cause := transportErr.Err; cause != nil; cause = errors.Unwrap(cause) {
 			if networkErr, ok := cause.(net.Error); ok && networkErr.Timeout() {
 				return 0, true
@@ -361,16 +392,19 @@ func retryableAuthenticationError(err error) (int, bool) {
 }
 
 func (t *appstore) parseLoginResponse(res *http.Result[loginResult], attempt int, authCode, endpoint string) (bool, string, error) {
-	t.trace("auth.parsed_response", map[string]interface{}{"status": res.StatusCode, "failure_type": res.Data.FailureType, "customer_message": res.Data.CustomerMessage, "has_token": res.Data.PasswordToken != "", "has_account_id": res.Data.DirectoryServicesID != ""})
 	var (
 		retry    bool
 		redirect string
 		err      error
 	)
 
-	if res.StatusCode >= gohttp.StatusMultipleChoices && res.StatusCode < gohttp.StatusBadRequest {
-		if redirect, err = res.GetHeader("location"); err != nil || strings.TrimSpace(redirect) == "" {
-			err = fmt.Errorf("%w: missing Location header", ErrAuthenticationUnavailable)
+	if action := authenticationMachineAction(res.Headers); action != nil {
+		err = action
+	} else if dialogErr := authenticationDialogError(res.Data); dialogErr != nil {
+		err = NewErrorWithMetadata(dialogErr, res)
+	} else if res.StatusCode >= gohttp.StatusMultipleChoices && res.StatusCode < gohttp.StatusBadRequest {
+		if redirect, err = res.GetHeader("location"); err != nil {
+			err = fmt.Errorf("failed to retrieve redirect location: %w", err)
 		} else if !http.IsAuthenticationRedirect(res.StatusCode) {
 			err = errors.New("unsupported authentication redirect status")
 		} else {
@@ -398,13 +432,117 @@ func (t *appstore) parseLoginResponse(res *http.Result[loginResult], attempt int
 		if res.Data.CustomerMessage != "" {
 			err = NewErrorWithMetadata(errors.New(res.Data.CustomerMessage), res)
 		} else {
-			err = NewErrorWithMetadata(fmt.Errorf("Apple authentication failed (HTTP %d, failureType %s)", res.StatusCode, res.Data.FailureType), res)
+			err = NewErrorWithMetadata(errors.New("something went wrong"), res)
 		}
-	} else if res.StatusCode != gohttp.StatusOK || res.Data.PasswordToken == "" || res.Data.DirectoryServicesID == "" {
-		err = fmt.Errorf("%w (HTTP %d): missing login credentials", ErrAuthenticationUnavailable, res.StatusCode)
+	} else if res.StatusCode != gohttp.StatusOK || res.Data.PasswordToken == "" {
+		err = fmt.Errorf("%w (HTTP %d): missing account credentials or unexpected status; try again later or from another network", ErrAuthenticationUnavailable, res.StatusCode)
 	}
 
 	return retry, redirect, err
+}
+
+func authenticationDialogError(result loginResult) error {
+	dialog := result.Dialog
+	if strings.TrimSpace(dialog.Message) == "" && strings.TrimSpace(dialog.Explanation) == "" &&
+		strings.TrimSpace(dialog.OKButtonString) == "" && strings.TrimSpace(dialog.CancelButtonString) == "" &&
+		strings.TrimSpace(dialog.OKButtonAction.Kind) == "" && strings.TrimSpace(dialog.OKButtonAction.URL) == "" {
+		return nil
+	}
+
+	message := strings.TrimSpace(dialog.Message)
+	explanation := strings.TrimSpace(dialog.Explanation)
+
+	if message == "" {
+		message = strings.TrimSpace(result.CustomerMessage)
+	}
+
+	actionURL := trustedAuthenticationDialogURL(dialog.OKButtonAction)
+	if message == "" && explanation == "" && actionURL == "" {
+		return nil
+	}
+
+	parts := make([]string, 0, 2)
+	if message != "" {
+		parts = append(parts, message)
+	}
+
+	if explanation != "" && explanation != message {
+		parts = append(parts, explanation)
+	}
+
+	detail := strings.Join(parts, ": ")
+	if detail == "" {
+		detail = "Apple requires action before sign-in can continue"
+	}
+
+	if actionURL != "" {
+		label := strings.TrimSpace(dialog.OKButtonString)
+		if label == "" {
+			label = "Continue"
+		}
+
+		detail += fmt.Sprintf(" (%s: %s)", label, actionURL)
+	}
+
+	return errors.New(detail)
+}
+
+func trustedAuthenticationDialogURL(action loginDialogActionResult) string {
+	if !strings.EqualFold(strings.TrimSpace(action.Kind), "OpenURL") {
+		return ""
+	}
+
+	value, err := url.Parse(strings.TrimSpace(action.URL))
+	if err != nil || value.Scheme != "https" || value.User != nil || value.Fragment != "" || value.Port() != "" && value.Port() != "443" {
+		return ""
+	}
+
+	host := strings.ToLower(value.Hostname())
+	if host != "apple.com" && !strings.HasSuffix(host, ".apple.com") {
+		return ""
+	}
+
+	return value.String()
+}
+
+func authenticationMachineAction(headers map[string]string) *authenticationMachineActionError {
+	var action, data string
+
+	for key, value := range headers {
+		switch {
+		case strings.EqualFold(key, "X-Apple-AMD-Action"):
+			action = strings.TrimSpace(value)
+		case strings.EqualFold(key, "X-Apple-AMD-Data"):
+			data = strings.TrimSpace(value)
+		}
+	}
+
+	if action == "" {
+		return nil
+	}
+
+	return &authenticationMachineActionError{action: action, data: data}
+}
+
+func authenticationResponseDSID(headers map[string]string) string {
+	for key, value := range headers {
+		if strings.EqualFold(key, "X-Dsid") {
+			return strings.TrimSpace(value)
+		}
+	}
+
+	for key, value := range headers {
+		if !strings.EqualFold(key, "Set-Cookie") {
+			continue
+		}
+
+		match := storeCookieDSIDPattern.FindStringSubmatch(value)
+		if len(match) == 2 {
+			return match[1]
+		}
+	}
+
+	return ""
 }
 
 func resolveAuthenticationRedirect(endpoint, location string) (string, error) {
@@ -441,14 +579,34 @@ func authenticationRedirectError(err error, status int, location string) error {
 }
 
 func (t *appstore) loginRequest(email, password, authCode, guid, endpoint string, attempt int, signer ActionSigner) http.Request {
+	headers := map[string]string{
+		"Content-Type": "application/x-apple-plist",
+		"User-Agent":   storeAuthenticationUserAgent,
+	}
+
+	for key, values := range t.authenticationHeaders {
+		if strings.EqualFold(key, "X-Apple-I-MD") || strings.EqualFold(key, "X-Apple-I-MD-M") {
+			continue
+		}
+
+		headers[key] = strings.Join(values, ", ")
+	}
+
+	if value := t.authenticationHeaders.Get("X-Apple-I-MD"); value != "" {
+		headers["X-Apple-AMD"] = value
+	}
+
+	if value := t.authenticationHeaders.Get("X-Apple-I-MD-M"); value != "" {
+		headers["X-Apple-AMD-M"] = value
+	}
+
 	request := http.Request{
 		Method:         http.MethodPOST,
 		URL:            endpoint,
 		ResponseFormat: http.ResponseFormatXML,
 		ActionSigner:   signer,
-		Headers: map[string]string{
-			"Content-Type": "application/x-www-form-urlencoded",
-		},
+		NoRedirects:    true,
+		Headers:        headers,
 		Payload: &http.XMLPayload{
 			Content: map[string]interface{}{
 				"appleId":  email,
@@ -460,7 +618,7 @@ func (t *appstore) loginRequest(email, password, authCode, guid, endpoint string
 			},
 		},
 	}
-	if storefront := phoneNumberStorefront(email); storefront != "" {
+	if storefront := t.storefrontID(phoneNumberStorefrontCountryCode(email)); storefront != "" {
 		request.Headers["X-Apple-Store-Front"] = storefront
 	}
 
@@ -474,10 +632,10 @@ func authenticationRequestError(err error) error {
 	}
 
 	if responseErr.StatusCode == gohttp.StatusTooManyRequests {
-		return fmt.Errorf("%w: apple rate limited authentication; try again later: %w", ErrAuthenticationUnavailable, err)
+		return fmt.Errorf("apple rate limited authentication; try again later: %w", err)
 	}
 
-	return fmt.Errorf("%w: %w", ErrAuthenticationUnavailable, err)
+	return fmt.Errorf("%w; try again later or from another network: %w", ErrAuthenticationUnavailable, err)
 }
 
 func authenticationRetryAfter(value string, now time.Time) (time.Duration, bool) {

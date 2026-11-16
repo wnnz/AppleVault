@@ -54,7 +54,10 @@ func (a *App) Login(email, password, authCode string) (output LoginResult, resul
 		Email: email, Password: password, AuthCode: strings.TrimSpace(authCode),
 	})
 	if errors.Is(err, appstore.ErrAuthCodeRequired) {
-		return LoginResult{Requires2FA: true, ErrorMessage: "需要 Apple ID 双重认证验证码"}, nil
+		return LoginResult{Requires2FA: true, ErrorMessage: "Apple ID 或密码错误。若账号已开启双重认证且受信任设备收到了验证码，请在“双重认证验证码”栏中填入后重新登录"}, nil
+	}
+	if err != nil && authCode != "" && strings.Contains(err.Error(), "apple did not complete verification") {
+		return LoginResult{ErrorMessage: "验证码错误或已过期，请在受信任设备上获取新的验证码后重新登录"}, nil
 	}
 	if err != nil {
 		return LoginResult{ErrorMessage: authenticationErrorMessage(err)}, nil
@@ -127,7 +130,7 @@ func (a *App) ListVersions(bundleID string, appID int64) (output VersionsResult,
 			if err != nil {
 				return appstore.ListVersionsOutput{}, err
 			}
-			return store.ListVersions(appstore.ListVersionsInput{Account: account, App: item})
+			return store.ListVersions(appstore.ListVersionsInput{Context: ctx, Account: account, App: item})
 		})
 		if err == nil {
 			identifiers := result.ExternalVersionIdentifiers
@@ -167,7 +170,7 @@ func (a *App) GetVersionMetadata(bundleID, versionID string, appID int64) (Versi
 		if err != nil {
 			return appstore.GetVersionMetadataOutput{}, err
 		}
-		return store.GetVersionMetadata(appstore.GetVersionMetadataInput{Account: account, App: item, VersionID: versionID})
+		return store.GetVersionMetadata(appstore.GetVersionMetadataInput{Context: ctx, Account: account, App: item, VersionID: versionID})
 	})
 	if err != nil {
 		return VersionMetadataResult{}, err

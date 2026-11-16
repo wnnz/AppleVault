@@ -127,6 +127,17 @@
             @keydown.enter="handleLogin"
           />
         </div>
+        <div class="form-item-clean mt-3">
+          <label class="clean-label">双重认证验证码（可选）</label>
+          <AppInput
+            ref="authCodeInputRef"
+            v-model="loginForm.authCode"
+            maxlength="6"
+            placeholder="如受信任设备收到 6 位验证码，请在此填写"
+            :disabled="isLoggingIn"
+            @keydown.enter="handleLogin"
+          />
+        </div>
         <div class="sub-alert-box mt-3">
           <span>安全声明：本软件完全开源，账号与密码仅在登录鉴权时直接发送给苹果官方服务器，绝不在本地或外部以任何形式上传明文。</span>
         </div>
@@ -137,35 +148,6 @@
       </div>
     </AppDialog>
 
-    <!-- 2FA 验证码输入弹窗 -->
-    <AppDialog v-model="show2FAModal" title="Apple ID 双重认证" style="width: 420px;">
-      <div class="modal-dialog-inner">
-        <p class="dialog-desc">
-          已向您的受信任受认证 Apple 设备发送了验证码，请输入 6 位验证码以完成登录。
-        </p>
-        <AppInput
-          ref="twoFAInputRef"
-          v-model="twoFACode"
-          placeholder="6 位数字验证码"
-          maxlength="6"
-          autofocus
-          class="dialog-code-input"
-          :disabled="isLoggingIn"
-          @keydown.enter="confirm2FA"
-        />
-        <div class="dialog-action-buttons mt-4">
-          <AppButton secondary :disabled="isLoggingIn" @click="cancel2FA">取消</AppButton>
-          <AppButton
-            type="primary"
-            :loading="isLoggingIn"
-            :disabled="twoFACode.length !== 6"
-            @click="confirm2FA"
-          >
-            确认登录
-          </AppButton>
-        </div>
-      </div>
-    </AppDialog>
   </div>
 </template>
 
@@ -219,25 +201,16 @@ const isSavingKeychainPassphrase = ref(false)
 const showLoginModal = ref(false)
 const loginForm = ref({
   email: '',
-  password: ''
+  password: '',
+  authCode: ''
 })
 const loginEmailInputRef = ref<InstanceType<typeof AppInput> | null>(null)
-
-// 2FA 弹窗
-const show2FAModal = ref(false)
-const twoFACode = ref('')
-const twoFAInputRef = ref<InstanceType<typeof AppInput> | null>(null)
+const authCodeInputRef = ref<InstanceType<typeof AppInput> | null>(null)
 
 watch(showLoginModal, async visible => {
   if (!visible) return
   await nextTick()
   loginEmailInputRef.value?.focus()
-})
-
-watch(show2FAModal, async visible => {
-  if (!visible) return
-  await nextTick()
-  twoFAInputRef.value?.focus()
 })
 
 /**
@@ -346,7 +319,7 @@ async function handleSwitchAccount(item: main.AccountInfo) {
 }
 
 function openLoginModal() {
-  loginForm.value = { email: '', password: '' }
+  loginForm.value = { email: '', password: '', authCode: '' }
   showLoginModal.value = true
 }
 
@@ -359,20 +332,17 @@ async function handleLogin() {
     message.warning('请输入 Apple ID 邮箱和密码！')
     return
   }
+  const authCode = loginForm.value.authCode.trim()
+  if (authCode && !/^\d{6}$/.test(authCode)) {
+    message.warning('验证码应为 6 位数字')
+    return
+  }
 
   isLoggingIn.value = true
-  emit('busyChange', true, '正在验证 Apple ID 账号与密码...')
+  emit('busyChange', true, '正在验证 Apple ID 账号与密码...（首次登录需要准备认证组件，可能需要几分钟）')
 
   try {
-    const res = await Login(loginForm.value.email, loginForm.value.password, '')
-    if (res.requires2FA) {
-      twoFACode.value = ''
-      showLoginModal.value = false
-      show2FAModal.value = true
-      emit('busyChange', true, '等待输入双重认证验证码...')
-      return
-    }
-
+    const res = await Login(loginForm.value.email, loginForm.value.password, authCode)
     if (res.success) {
       localStorage.setItem('apple_vault_logged_in', 'true')
       showLoginModal.value = false
@@ -382,69 +352,24 @@ async function handleLogin() {
       emit('loginSuccess', res.account)
       message.success(`登录成功: ${res.account.name}`)
       loginForm.value.password = ''
+      loginForm.value.authCode = ''
       emit('busyChange', false, `登录成功: ${res.account.name}`)
       emit('navigate', 'search')
     } else {
       message.error(`登录失败: ${res.errorMessage}`)
       emit('busyChange', false, `登录失败: ${res.errorMessage}`)
+      if (res.requires2FA) {
+        isLoggingIn.value = false
+        await nextTick()
+        authCodeInputRef.value?.focus()
+      }
     }
   } catch (err: any) {
     message.error(`执行异常: ${err}`)
   } finally {
     isLoggingIn.value = false
-    if (!show2FAModal.value) {
-      emit('busyChange', false)
-    }
-  }
-}
-
-/**
- * 确认提交 2FA 验证码完成登录
- */
-async function confirm2FA() {
-  if (isLoggingIn.value) return
-  if (twoFACode.value.length !== 6) {
-    message.warning('请输入正确的 6 位数字验证码！')
-    return
-  }
-
-  isLoggingIn.value = true
-  emit('busyChange', true, '正在提交验证码并完成登录...')
-
-  try {
-    const res = await Login(loginForm.value.email, loginForm.value.password, twoFACode.value)
-    if (res.success) {
-      localStorage.setItem('apple_vault_logged_in', 'true')
-      show2FAModal.value = false
-      account.value = res.account
-      accounts.value = await GetAccounts()
-      emit('accountChanged', res.account)
-      emit('loginSuccess', res.account)
-      message.success(`登录成功: ${res.account.name}`)
-      loginForm.value.password = ''
-      twoFACode.value = ''
-      emit('busyChange', false, `登录成功: ${res.account.name}`)
-      emit('navigate', 'search')
-    } else {
-      message.error(`验证失败: ${res.errorMessage}`)
-      emit('busyChange', false, `验证失败: ${res.errorMessage}`)
-    }
-  } catch (err: any) {
-    message.error(`验证异常: ${err}`)
-  } finally {
-    isLoggingIn.value = false
     emit('busyChange', false)
   }
-}
-
-/**
- * 取消 2FA 验证
- */
-function cancel2FA() {
-  show2FAModal.value = false
-  twoFACode.value = ''
-  showLoginModal.value = true
-  emit('busyChange', false, '用户取消了验证。')
 }
 
 /**

@@ -15,10 +15,8 @@ type BagInput struct{}
 
 type BagOutput struct {
 	// AuthEndpoint is retained for callers that inspect the bag directly.
-	AuthEndpoint       string
-	RedownloadEndpoint string
-	UpdateEndpoint     string
-	SAPConfig          SAPConfig
+	AuthEndpoint string
+	SAPConfig    SAPConfig
 }
 
 func (t *appstore) Bag(input BagInput) (BagOutput, error) {
@@ -36,58 +34,86 @@ func (t *appstore) Bag(input BagInput) (BagOutput, error) {
 }
 
 func (t *appstore) bag(guid string) (BagOutput, error) {
-	req := t.bagRequest(guid)
-
-	res, err := t.bagClient.Send(req)
+	bag, err := t.fetchURLBag(guid)
 	if err != nil {
-		return BagOutput{}, fmt.Errorf("failed to send http request: %w", err)
+		return BagOutput{}, err
 	}
 
-	if res.StatusCode != gohttp.StatusOK {
-		return BagOutput{}, fmt.Errorf("received unexpected status code: %d", res.StatusCode)
-	}
-
-	version, err := strconv.ParseUint(res.Data.URLBag.SAPVersion, 10, 32)
+	version, err := strconv.ParseUint(bag.SAPVersion, 10, 32)
 	if err != nil {
-		return BagOutput{}, fmt.Errorf("invalid SAP version %q in bag: %w", res.Data.URLBag.SAPVersion, err)
+		return BagOutput{}, fmt.Errorf("invalid SAP version %q in bag: %w", bag.SAPVersion, err)
 	}
 
 	config := SAPConfig{
-		AuthEndpoint:   res.Data.URLBag.AuthEndpoint,
-		SetupURL:       res.Data.URLBag.SAPSetupEndpoint,
-		CertificateURL: res.Data.URLBag.SAPSetupCertEndpoint,
+		AuthEndpoint:   bag.AuthEndpoint,
+		SetupURL:       bag.SAPSetupEndpoint,
+		CertificateURL: bag.SAPSetupCertEndpoint,
 		Version:        uint32(version),
 	}
 	if err := validateSAPConfig(config); err != nil {
 		return BagOutput{}, err
 	}
+
 	authURL, err := url.Parse(config.AuthEndpoint)
 	if err != nil {
 		return BagOutput{}, fmt.Errorf("failed to parse authentication endpoint: %w", err)
 	}
-	// Match ipatool's canonical route before the first signed POST. Apple's bare
-	// route can return an empty response or a 301 with no Location header.
-	authURL.Path = PrivateAppStoreAPIPathAuth + "/"
-	config.AuthEndpoint = authURL.String()
-	t.trace("bag.config", map[string]interface{}{
-		"auth_endpoint": http.DiagnosticURL(config.AuthEndpoint), "sap_setup_endpoint": http.DiagnosticURL(config.SetupURL),
-		"redownload_endpoint": http.DiagnosticURL(res.Data.URLBag.RedownloadEndpoint), "update_endpoint": http.DiagnosticURL(res.Data.URLBag.UpdateEndpoint), "sap_version": config.Version,
-	})
 
-	return BagOutput{
-		AuthEndpoint:       config.AuthEndpoint,
-		RedownloadEndpoint: res.Data.URLBag.RedownloadEndpoint,
-		UpdateEndpoint:     res.Data.URLBag.UpdateEndpoint,
-		SAPConfig:          config,
+	// The legacy bare path can return unusable responses, including a 301
+	// without Location. The native endpoint must retain its distinct path.
+	if strings.HasSuffix(strings.ToLower(authURL.Hostname()), "buy.itunes.apple.com") {
+		authURL.Path = PrivateAppStoreAPIPathAuth + "/"
+	}
+
+	config.AuthEndpoint = authURL.String()
+
+	return BagOutput{AuthEndpoint: config.AuthEndpoint, SAPConfig: config}, nil
+}
+
+// Download endpoints do not require the authentication-specific SAP configuration.
+func (t *appstore) fetchURLBag(guid string) (urlBag, error) {
+	res, err := t.bagClient.Send(t.bagRequest(guid))
+	if err != nil {
+		return urlBag{}, fmt.Errorf("failed to send http request: %w", err)
+	}
+
+	if res.StatusCode != gohttp.StatusOK {
+		return urlBag{}, fmt.Errorf("received unexpected status code: %d", res.StatusCode)
+	}
+
+	bag := res.Data.URLBag
+	if bag.AuthEndpoint != "" || bag.EntDownloadEndpoint != "" ||
+		bag.RedownloadEndpoint != "" || bag.UpdateEndpoint != "" ||
+		bag.SAPSetupEndpoint != "" || bag.SAPSetupCertEndpoint != "" ||
+		bag.SAPVersion != "" {
+		return res.Data.URLBag, nil
+	}
+
+	return urlBag{
+		AuthEndpoint:         res.Data.AuthEndpoint,
+		EntDownloadEndpoint:  res.Data.EntDownloadEndpoint,
+		RedownloadEndpoint:   res.Data.RedownloadEndpoint,
+		UpdateEndpoint:       res.Data.UpdateEndpoint,
+		SAPSetupEndpoint:     res.Data.SAPSetupEndpoint,
+		SAPSetupCertEndpoint: res.Data.SAPSetupCertEndpoint,
+		SAPVersion:           res.Data.SAPVersion,
 	}, nil
 }
 
 type bagResult struct {
-	URLBag urlBag `plist:"urlBag,omitempty"`
+	URLBag               urlBag `plist:"urlBag,omitempty"`
+	AuthEndpoint         string `plist:"authenticateAccount,omitempty"`
+	EntDownloadEndpoint  string `plist:"volumeStoreDownloadProduct,omitempty"`
+	RedownloadEndpoint   string `plist:"redownloadProduct,omitempty"`
+	UpdateEndpoint       string `plist:"updateProduct,omitempty"`
+	SAPSetupEndpoint     string `plist:"sign-sap-setup,omitempty"`
+	SAPSetupCertEndpoint string `plist:"sign-sap-setup-cert,omitempty"`
+	SAPVersion           string `plist:"sign-sap-version,omitempty"`
 }
 
 type urlBag struct {
 	AuthEndpoint         string `plist:"authenticateAccount,omitempty"`
+	EntDownloadEndpoint  string `plist:"volumeStoreDownloadProduct,omitempty"`
 	RedownloadEndpoint   string `plist:"redownloadProduct,omitempty"`
 	UpdateEndpoint       string `plist:"updateProduct,omitempty"`
 	SAPSetupEndpoint     string `plist:"sign-sap-setup,omitempty"`
@@ -130,6 +156,15 @@ func validateAuthenticationEndpoint(endpoint string) error {
 	}
 
 	host := strings.ToLower(parsed.Hostname())
+	if host == PrivateAppStoreNativeDomain {
+		switch parsed.Path {
+		case PrivateAppStoreNativePath, PrivateAppStoreNativePath + "/", PrivateAppStoreNativePath + "/fast", PrivateAppStoreNativePath + "/fast/":
+			return nil
+		default:
+			return errors.New("unsupported authentication endpoint")
+		}
+	}
+
 	if host != PrivateAppStoreAPIDomain && !strings.HasSuffix(host, "-buy.itunes.apple.com") {
 		return errors.New("unsupported authentication endpoint")
 	}
@@ -143,11 +178,12 @@ func validateAuthenticationEndpoint(endpoint string) error {
 
 func (*appstore) bagRequest(guid string) http.Request {
 	return http.Request{
-		URL:            fmt.Sprintf("https://%s%s?guid=%s", PrivateInitDomain, PrivateInitPath, guid),
+		URL:            fmt.Sprintf("https://%s%s?ix=6&guid=%s", PrivateInitDomain, PrivateInitPath, guid),
 		Method:         http.MethodGET,
 		ResponseFormat: http.ResponseFormatXML,
 		Headers: map[string]string{
-			"Accept": "application/xml",
+			"Accept":     "application/xml",
+			"User-Agent": storeAuthenticationUserAgent,
 		},
 	}
 }

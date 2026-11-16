@@ -5,12 +5,17 @@ import (
 	"fmt"
 	gohttp "net/http"
 	"net/url"
+	"slices"
+	"strconv"
 
 	"AppleVault/src/backend/internal/ipatool/http"
 )
 
+var ErrAppNotFound = errors.New("app not found")
+
 type LookupInput struct {
 	Account  Account
+	AppID    int64
 	BundleID string
 	Platform Platform
 }
@@ -20,12 +25,18 @@ type LookupOutput struct {
 }
 
 func (t *appstore) Lookup(input LookupInput) (LookupOutput, error) {
-	countryCode, err := countryCodeFromStoreFront(input.Account.StoreFront)
+	countryCode, err := t.countryCodeFromStoreFront(input.Account.StoreFront)
 	if err != nil {
 		return LookupOutput{}, fmt.Errorf("failed to resolve the country code: %w", err)
 	}
 
-	request, err := t.lookupRequest(input.BundleID, countryCode, input.Platform)
+	var request http.Request
+	if input.BundleID == "" && input.AppID > 0 {
+		request, err = t.lookupIDsRequest([]string{strconv.FormatInt(input.AppID, 10)}, countryCode, input.Platform)
+	} else {
+		request, err = t.lookupRequest(input.BundleID, countryCode, input.Platform)
+	}
+
 	if err != nil {
 		return LookupOutput{}, fmt.Errorf("failed to create lookup request: %w", err)
 	}
@@ -40,7 +51,11 @@ func (t *appstore) Lookup(input LookupInput) (LookupOutput, error) {
 	}
 
 	if len(res.Data.Results) == 0 {
-		return LookupOutput{}, errors.New("app not found")
+		return LookupOutput{}, ErrAppNotFound
+	}
+
+	if input.Platform == PlatformWatchOS && !slices.Contains(res.Data.Results[0].Platforms, PlatformWatchOS) {
+		return LookupOutput{}, ErrAppNotFound
 	}
 
 	return LookupOutput{
