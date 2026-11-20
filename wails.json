@@ -13,5 +13,8 @@
   "author": {
     "name": "wnnz",
     "email": ""
+  },
+  "info": {
+    "productVersion": "1.5.0"
   }
 }
