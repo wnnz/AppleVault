@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"archive/zip"
 	"bufio"
 	"context"
 	"encoding/json"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -91,9 +93,24 @@ func (a *App) InstallIPA(ipaPath, udid string) (InstallResult, error) {
 		return InstallResult{}, fmt.Errorf("请选择要安装的苹果设备")
 	}
 
-	a.emitLog(fmt.Sprintf("开始安装 IPA 到设备 %s: %s（请保持设备屏幕处于点亮解锁状态，切勿息屏休眠）", udid, absolutePath))
 	ctx, cleanup := a.startPurchaseCommandContext()
 	defer cleanup()
+
+	a.emitLog("正在校验 IPA 完整性...")
+	reader, err := zip.OpenReader(absolutePath)
+	if err != nil {
+		return InstallResult{}, fmt.Errorf("IPA 文件结构损坏: %w", err)
+	}
+	verifyErr := verifyZIPEntriesContext(ctx, reader.File)
+	_ = reader.Close()
+	if verifyErr != nil {
+		if ctx.Err() != nil {
+			return InstallResult{}, fmt.Errorf("已取消安装")
+		}
+		return InstallResult{}, fmt.Errorf("IPA 完整性校验失败: %w", verifyErr)
+	}
+
+	a.emitLog(fmt.Sprintf("开始安装 IPA 到设备 %s: %s（请保持设备屏幕处于点亮解锁状态，切勿息屏休眠）", udid, absolutePath))
 	output, err := a.runIOSTool(ctx, "install", "--path="+absolutePath, "--udid="+udid)
 	if err != nil {
 		return InstallResult{}, friendlyDeviceToolError(err)
@@ -423,6 +440,8 @@ func validateIPAPath(ipaPath string) (string, error) {
 	return absolutePath, nil
 }
 
+var lockedWordPattern = regexp.MustCompile(`\blocked\b`)
+
 // friendlyDeviceToolError 将常见的设备通信错误转换为可操作的中文提示。
 func friendlyDeviceToolError(err error) error {
 	message := strings.TrimSpace(err.Error())
@@ -434,14 +453,19 @@ func friendlyDeviceToolError(err error) error {
 		return fmt.Errorf("设备尚未信任此电脑或配对失效。请解锁手机屏幕，若弹出「要信任此电脑吗？」请点击「信任」并输入锁屏密码后重试；若未弹出提示，可尝试重新拔插数据线")
 	case strings.Contains(lowerMessage, "no device"), strings.Contains(lowerMessage, "device not found"):
 		return fmt.Errorf("未找到目标设备，请确认 USB 已连接，或设备与电脑处于同一 Wi-Fi 且已开启无线连接；同时保持设备解锁并信任此电脑")
-	case strings.Contains(lowerMessage, "password protected"), strings.Contains(lowerMessage, "locked"):
+	case strings.Contains(lowerMessage, "password protected") || lockedWordPattern.MatchString(lowerMessage):
 		return fmt.Errorf("设备处于锁屏或息屏休眠状态，请点亮并解锁设备屏幕后重试")
-	case strings.Contains(lowerMessage, "pair"), strings.Contains(lowerMessage, "trust"):
+	case strings.Contains(lowerMessage, "not paired"),
+		strings.Contains(lowerMessage, "pairing"),
+		strings.Contains(lowerMessage, "pair record"),
+		strings.Contains(lowerMessage, "pairrecord"),
+		strings.Contains(lowerMessage, "could not pair"),
+		strings.Contains(lowerMessage, "trust"):
 		return fmt.Errorf("设备尚未信任此电脑，请在设备上完成信任操作后重试")
 	case strings.Contains(lowerMessage, "invalid signature"), strings.Contains(lowerMessage, "applicationverificationfailed"):
 		return fmt.Errorf("IPA 签名无效或不适用于此设备: %s", message)
 	case strings.Contains(lowerMessage, "exit status 1"):
-		return fmt.Errorf("设备连接中断或已息屏锁屏。请点亮并解锁设备屏幕后重新刷新")
+		return fmt.Errorf("设备连接中断或已息屏锁屏。请点亮并解锁设备屏幕后重新刷新（原始错误: %s）", message)
 	default:
 		return fmt.Errorf("%s", message)
 	}

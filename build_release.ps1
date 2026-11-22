@@ -1,4 +1,4 @@
-# 果仓助手 (AppleVault) 增量发布构建脚本 (不会清空 build/bin 目录及依赖/数据)
+﻿# 果仓助手 (AppleVault) 增量发布构建脚本 (不会清空 build/bin 目录及依赖/数据)
 param (
     [switch]$SkipFrontend = $false
 )
@@ -12,11 +12,32 @@ Set-Location $ScriptDir
 
 # 确保 Go 与 go-winres 环境变量可用（支持便携式 Go）
 if (-not (Get-Command go -ErrorAction SilentlyContinue)) {
-    if (Test-Path "$env:TEMP\liveagent-go1.27.1\go\bin\go.exe") {
-        $env:GOROOT = "$env:TEMP\liveagent-go1.27.1\go"
-        $env:PATH = "$env:GOROOT\bin;$env:USERPROFILE\go\bin;$env:PATH"
+    $GoCandidates = @(
+        "D:\Development\MyDockerComposes\.vendor-deploy\sub-manager-20261107\tools\go",
+        "$env:TEMP\liveagent-go1.27.1\go"
+    )
+    foreach ($candidate in $GoCandidates) {
+        if (Test-Path "$candidate\bin\go.exe") {
+            $env:GOROOT = $candidate
+            $env:PATH = "$env:GOROOT\bin;$env:USERPROFILE\go\bin;$env:PATH"
+            break
+        }
     }
 }
+
+Write-Host "==> [0/4] 检查版本一致性..." -ForegroundColor Cyan
+$UpdateGoContent = Get-Content "$SourceDir/backend/update.go" -Raw
+if ($UpdateGoContent -notmatch 'AppVersion\s*=\s*"([^"]+)"') {
+    throw "无法从 src/backend/update.go 解析 AppVersion"
+}
+$UpdateGoVersion = $Matches[1]
+$PkgVersion = (Get-Content "$FrontendDir/package.json" -Raw | ConvertFrom-Json).version
+$WailsVersion = (Get-Content "$ScriptDir/wails.json" -Raw | ConvertFrom-Json).info.productVersion
+if (($UpdateGoVersion -ne $PkgVersion) -or ($UpdateGoVersion -ne $WailsVersion)) {
+    throw "版本号不一致: update.go=$UpdateGoVersion, package.json=$PkgVersion, wails.json=$WailsVersion，请运行 scripts/set-version.ps1 -Version x.y.z 统一"
+}
+$AppVersion = $UpdateGoVersion
+Write-Host "    当前版本: $AppVersion" -ForegroundColor DarkGray
 
 Write-Host "==> [1/4] 检查前端构建..." -ForegroundColor Cyan
 if (-not $SkipFrontend) {
@@ -37,14 +58,22 @@ if (-not (Test-Path $ToolsDir)) {
 
 # App Store 能力已编译进主程序，仅需同步设备管理工具。
 Get-ChildItem -LiteralPath $ToolsDir -Filter "ipatool*.exe" -File | Remove-Item -Force
-if ((Test-Path "$ExternalToolsDir/ios.exe") -and -not (Test-Path "$ToolsDir/ios.exe")) {
-    Copy-Item "$ExternalToolsDir/ios.exe" "$ToolsDir/" -Force
+if (Test-Path "$ExternalToolsDir/ios.exe") {
+    $TargetIos = "$ToolsDir/ios.exe"
+    $ShouldCopyIos = -not (Test-Path $TargetIos) -or `
+        ((Get-FileHash "$ExternalToolsDir/ios.exe" -Algorithm SHA256).Hash -ne (Get-FileHash $TargetIos -Algorithm SHA256).Hash)
+    if ($ShouldCopyIos) {
+        Copy-Item "$ExternalToolsDir/ios.exe" $TargetIos -Force
+    }
 }
 
 Write-Host "==> [3/4] 检查 Windows Logo 图标与应用资源嵌入..." -ForegroundColor Cyan
 $SysoFile = "$SourceDir/rsrc_windows_amd64.syso"
 $IconFile = "$ScriptDir/build/appicon.png"
+$WinresStamp = "$BinDir/.winres-version"
+$CurrentWinresVersion = if (Test-Path $WinresStamp) { (Get-Content $WinresStamp -Raw).Trim() } else { "" }
 $ShouldRegenerateResources = -not (Test-Path $SysoFile) -or `
+    ($CurrentWinresVersion -ne $AppVersion) -or `
     ((Test-Path $IconFile) -and ((Get-Item $IconFile).LastWriteTimeUtc -gt (Get-Item $SysoFile).LastWriteTimeUtc)) -or `
     ((Get-Item $MyInvocation.MyCommand.Definition).LastWriteTimeUtc -gt (Get-Item $SysoFile).LastWriteTimeUtc)
 if ($ShouldRegenerateResources) {
@@ -59,8 +88,8 @@ if ($ShouldRegenerateResources) {
             "--manifest", "gui",
             "--product-name", "果仓助手",
             "--file-description", "果仓助手 (AppleVault)",
-            "--product-version", "1.5.0",
-            "--file-version", "1.5.0",
+            "--product-version", $AppVersion,
+            "--file-version", $AppVersion,
             "--copyright", "AppleVault (果仓助手)",
             "--arch", "amd64"
         )
@@ -73,6 +102,10 @@ if ($ShouldRegenerateResources) {
         } finally {
             Pop-Location
         }
+        if (-not (Test-Path $BinDir)) {
+            New-Item -ItemType Directory -Force $BinDir | Out-Null
+        }
+        [IO.File]::WriteAllText($WinresStamp, $AppVersion, [System.Text.UTF8Encoding]::new($false))
     } else {
         throw "需要 go-winres 生成 Windows 应用资源"
     }

@@ -13,11 +13,16 @@ import (
 )
 
 const (
-	AppVersion        = "1.5.0"
-	AppDisplayVersion = "1.5"
-	latestReleaseAPI  = "https://api.github.com/repos/wnnz/AppleVault/releases/latest"
-	maxReleaseBody    = 1 << 20
+	AppVersion       = "1.5.0"
+	latestReleaseAPI = "https://api.github.com/repos/wnnz/AppleVault/releases/latest"
+	maxReleaseBody   = 1 << 20
 )
+
+var AppDisplayVersion = displayVersion(AppVersion)
+
+func displayVersion(v string) string {
+	return strings.TrimSuffix(strings.TrimSpace(v), ".0")
+}
 
 func (a *App) GetAppVersion() string { return AppDisplayVersion }
 

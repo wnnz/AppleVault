@@ -22,7 +22,7 @@
           <AppInput :model-value="selectedIPAPath" readonly size="small" class="flex-1 mr-2" placeholder="尚未选择文件" />
           <AppButton secondary size="small" @click="handleSelectIPA">浏览文件</AppButton>
         </div>
-        <div v-if="isInspectingIPA" class="ipa-inspection-state mt-3">正在校验 IPA 完整性与兼容性...</div>
+        <div v-if="isInspectingIPA" class="ipa-inspection-state mt-3">正在检查 IPA 结构与兼容性...</div>
         <div v-else-if="ipaInspection" class="ipa-inspection-box mt-3" :class="ipaInspection.compatible ? 'is-compatible' : 'is-incompatible'">
           <div class="ipa-inspection-title">
             <span>{{ ipaInspection.appName || selectedIPAFileName }}</span>
@@ -250,7 +250,7 @@ async function handleInstallIPA() {
 
   const inspection = await inspectSelectedIPA()
   if (!inspection) {
-    message.error(ipaInspectionError.value || 'IPA 完整性检查失败')
+    message.error(ipaInspectionError.value || 'IPA 检查失败')
     return
   }
   if (!inspection.compatible) {

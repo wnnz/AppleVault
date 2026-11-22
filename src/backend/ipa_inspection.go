@@ -2,6 +2,7 @@ package backend
 
 import (
 	"archive/zip"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -75,9 +76,6 @@ func (a *App) InspectIPA(ipaPath, deviceProductType, deviceVersion string) (IPAI
 	if !foundInfo || appRoot == "" {
 		return IPAInspectionResult{}, fmt.Errorf("IPA 中未找到 Payload/*.app/Info.plist")
 	}
-	if err = verifyZIPEntries(reader.File); err != nil {
-		return IPAInspectionResult{}, fmt.Errorf("IPA 完整性校验失败: %w", err)
-	}
 
 	deviceTypes := deviceFamilyNames(info.DeviceFamily)
 	compatible, message := evaluateIPACompatibility(info, signed, deviceProductType, deviceVersion)
@@ -98,8 +96,23 @@ func (a *App) InspectIPA(ipaPath, deviceProductType, deviceVersion string) (IPAI
 	}, nil
 }
 
-func verifyZIPEntries(entries []*zip.File) error {
+type ctxReader struct {
+	ctx context.Context
+	r   io.Reader
+}
+
+func (cr ctxReader) Read(p []byte) (int, error) {
+	if err := cr.ctx.Err(); err != nil {
+		return 0, err
+	}
+	return cr.r.Read(p)
+}
+
+func verifyZIPEntriesContext(ctx context.Context, entries []*zip.File) error {
 	for _, entry := range entries {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		if entry.FileInfo().IsDir() {
 			continue
 		}
@@ -107,7 +120,7 @@ func verifyZIPEntries(entries []*zip.File) error {
 		if err != nil {
 			return err
 		}
-		_, copyErr := io.Copy(io.Discard, stream)
+		_, copyErr := io.Copy(io.Discard, ctxReader{ctx: ctx, r: stream})
 		closeErr := stream.Close()
 		if copyErr != nil {
 			return fmt.Errorf("%s: %w", entry.Name, copyErr)
@@ -151,7 +164,7 @@ func evaluateIPACompatibility(info ipaBundleInfo, signed bool, productType, osVe
 		strings.Contains(productType, "ipad") || strings.Contains(productType, "appletv") ||
 		strings.Contains(productType, "reality") || strings.Contains(productType, "vision")
 	if !recognizedDevice {
-		return true, "IPA 完整性与签名结构检查通过；无法识别设备型号，未检查设备类型兼容性"
+		return true, "IPA 结构与签名检查通过；无法识别设备型号，未检查设备类型兼容性"
 	}
 	expectedPlatform := "iPhoneOS"
 	expectedFamily := 1
@@ -168,7 +181,7 @@ func evaluateIPACompatibility(info ipaBundleInfo, signed bool, productType, osVe
 	if len(info.DeviceFamily) > 0 && !containsInt(info.DeviceFamily, expectedFamily) {
 		return false, "IPA 不支持所选设备类型"
 	}
-	return true, "IPA 完整性、签名结构和设备兼容性检查通过"
+	return true, "IPA 结构、签名和设备兼容性检查通过（安装前将进行完整性校验）"
 }
 
 func isAppleVersion(value string) bool {

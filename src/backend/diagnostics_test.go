@@ -2,12 +2,15 @@ package backend
 
 import (
 	"encoding/json"
+	"fmt"
 	"html"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 func TestDiagnosticLogRedactsSecretsAndRemainsValidJSON(t *testing.T) {
@@ -61,5 +64,61 @@ func TestConcurrentDiagnosticWritesProduceCompleteLines(t *testing.T) {
 		if !json.Valid([]byte(line)) {
 			t.Fatal("concurrent writes interleaved JSON records")
 		}
+	}
+}
+
+func TestCleanupDiagnosticLogs(t *testing.T) {
+	a := &App{dataDirOverride: t.TempDir()}
+	logsDir := filepath.Join(a.getDataDir(), "logs")
+	if err := os.MkdirAll(logsDir, 0700); err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Now()
+	oldDate := now.AddDate(0, 0, -30).Format("2006-01-02")
+	todayDate := now.Format("2006-01-02")
+
+	oldFile := filepath.Join(logsDir, "appstore-"+oldDate+".jsonl")
+	oldRotated := filepath.Join(logsDir, "appstore-"+oldDate+".jsonl.1")
+	todayFile := filepath.Join(logsDir, "appstore-"+todayDate+".jsonl")
+	for _, p := range []string{oldFile, oldRotated, todayFile} {
+		if err := os.WriteFile(p, []byte("{}\n"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	a.cleanupDiagnosticLogs(14*24*time.Hour, now)
+
+	if _, err := os.Stat(oldFile); !os.IsNotExist(err) {
+		t.Fatalf("expected old log file to be removed, err=%v", err)
+	}
+	if _, err := os.Stat(oldRotated); !os.IsNotExist(err) {
+		t.Fatalf("expected old rotated log file to be removed, err=%v", err)
+	}
+	if _, err := os.Stat(todayFile); err != nil {
+		t.Fatalf("expected today's log file to be kept, err=%v", err)
+	}
+}
+
+func TestDiagnosticSecretsCapped(t *testing.T) {
+	a := &App{dataDirOverride: t.TempDir()}
+	for i := 0; i < 600; i++ {
+		a.addDiagnosticSecrets(fmt.Sprintf("secret-%d", i))
+	}
+
+	a.diagnosticMu.Lock()
+	defer a.diagnosticMu.Unlock()
+	if len(a.diagnosticSecrets) > maxDiagnosticSecrets {
+		t.Fatalf("expected at most %d diagnostic secrets, got %d", maxDiagnosticSecrets, len(a.diagnosticSecrets))
+	}
+	foundLast := false
+	for _, s := range a.diagnosticSecrets {
+		if s == "secret-599" {
+			foundLast = true
+			break
+		}
+	}
+	if !foundLast {
+		t.Fatal("expected latest secret-599 to be retained")
 	}
 }

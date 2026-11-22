@@ -19,3 +19,19 @@ func TestVersionComparison(t *testing.T) {
 		}
 	}
 }
+
+func TestDisplayVersion(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"1.5.0", "1.5"},
+		{"1.10.0", "1.10"},
+		{"1.5.2", "1.5.2"},
+	}
+	for _, tc := range tests {
+		if got := displayVersion(tc.input); got != tc.want {
+			t.Errorf("displayVersion(%q) = %q, want %q", tc.input, got, tc.want)
+		}
+	}
+}

@@ -14,7 +14,10 @@ import (
 	"time"
 )
 
-const maxDiagnosticLogBytes = 10 << 20
+const (
+	maxDiagnosticLogBytes = 10 << 20
+	maxDiagnosticSecrets  = 512
+)
 
 var diagnosticURLPattern = regexp.MustCompile(`https?://[^\s"'<>]+`)
 
@@ -43,6 +46,40 @@ func (a *App) addDiagnosticSecrets(values ...string) {
 			if !found {
 				a.diagnosticSecrets = append(a.diagnosticSecrets, variant)
 			}
+		}
+	}
+	if len(a.diagnosticSecrets) > maxDiagnosticSecrets {
+		trimmed := make([]string, maxDiagnosticSecrets)
+		copy(trimmed, a.diagnosticSecrets[len(a.diagnosticSecrets)-maxDiagnosticSecrets:])
+		a.diagnosticSecrets = trimmed
+	}
+}
+
+func (a *App) cleanupDiagnosticLogs(maxAge time.Duration, now time.Time) {
+	if maxAge <= 0 {
+		return
+	}
+	cutoff := now.Add(-maxAge)
+	matches, err := filepath.Glob(filepath.Join(a.getDataDir(), "logs", "appstore-*.jsonl*"))
+	if err != nil {
+		return
+	}
+	for _, path := range matches {
+		base := filepath.Base(path)
+		var logTime time.Time
+		trimmed := strings.TrimPrefix(base, "appstore-")
+		if len(trimmed) >= 10 {
+			if parsed, parseErr := time.ParseInLocation("2006-01-02", trimmed[:10], now.Location()); parseErr == nil {
+				logTime = parsed
+			}
+		}
+		if logTime.IsZero() {
+			if info, statErr := os.Stat(path); statErr == nil {
+				logTime = info.ModTime()
+			}
+		}
+		if !logTime.IsZero() && logTime.Before(cutoff) {
+			_ = os.Remove(path)
 		}
 	}
 }

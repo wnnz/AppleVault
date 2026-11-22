@@ -2,6 +2,8 @@ package backend
 
 import (
 	"archive/zip"
+	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -70,5 +72,25 @@ func TestAppleVersionComparison(t *testing.T) {
 	}
 	if isAppleVersion("已锁定") || !isAppleVersion("17.6.1") {
 		t.Fatal("unexpected Apple version validation")
+	}
+}
+
+func TestVerifyZIPEntriesContext(t *testing.T) {
+	path := createTestIPA(t, ipaBundleInfo{BundleID: "com.example.verify"}, true)
+	reader, err := zip.OpenReader(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reader.Close()
+
+	if err := verifyZIPEntriesContext(context.Background(), reader.File); err != nil {
+		t.Fatalf("expected valid IPA to verify, got %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	err = verifyZIPEntriesContext(ctx, reader.File)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context.Canceled, got %v", err)
 	}
 }

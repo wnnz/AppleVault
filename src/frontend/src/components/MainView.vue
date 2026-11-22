@@ -388,6 +388,8 @@ function applyDemoMockData(tabParam: string | null) {
 }
 
 // 生命周期与 Wails 系统事件
+const eventUnsubscribers: Array<() => void> = []
+
 onMounted(() => {
   const urlParams = new URLSearchParams(window.location.search)
   const tabParam = urlParams.get('tab')
@@ -414,22 +416,29 @@ onMounted(() => {
   }, true)
 
   // 监听后端执行日志并投递到状态栏终端
-  EventsOn('log', (msg: string) => {
-    statusBarRef.value?.appendLog(msg)
-  })
+  eventUnsubscribers.push(
+    EventsOn('log', (msg: string) => {
+      statusBarRef.value?.appendLog(msg)
+    })
+  )
 
   // 监听后端任务进度更新与重载
-  EventsOn('download-task-updated', (updatedTask: main.DownloadTask) => {
-    downloadViewRef.value?.updateTask(updatedTask)
-  })
+  eventUnsubscribers.push(
+    EventsOn('download-task-updated', (updatedTask: main.DownloadTask) => {
+      downloadViewRef.value?.updateTask(updatedTask)
+    })
+  )
 
-  EventsOn('download-tasks-reload', () => {
-    void downloadViewRef.value?.loadDownloadTasks()
-  })
+  eventUnsubscribers.push(
+    EventsOn('download-tasks-reload', () => {
+      void downloadViewRef.value?.loadDownloadTasks()
+    })
+  )
 })
 
 onBeforeUnmount(() => {
   OnFileDropOff()
+  eventUnsubscribers.splice(0).forEach(off => off())
 })
 </script>
 

@@ -147,3 +147,25 @@ func TestParseDeviceListNormalizesWiFiConnection(t *testing.T) {
 		t.Fatalf("unexpected Wi-Fi device: %#v", devices)
 	}
 }
+
+func TestFriendlyDeviceToolErrorMatching(t *testing.T) {
+	sigErr := friendlyDeviceToolError(fmt.Errorf("device unlocked but install failed: ApplicationVerificationFailed"))
+	if sigErr == nil || !strings.Contains(sigErr.Error(), "签名") {
+		t.Fatalf("expected signature error for unlocked device, got %v", sigErr)
+	}
+
+	lockedErr := friendlyDeviceToolError(fmt.Errorf("device is locked"))
+	if lockedErr == nil || !strings.Contains(lockedErr.Error(), "锁屏") {
+		t.Fatalf("expected locked error, got %v", lockedErr)
+	}
+
+	repairErr := friendlyDeviceToolError(fmt.Errorf("failed to repair cache"))
+	if repairErr == nil || repairErr.Error() != "failed to repair cache" {
+		t.Fatalf("expected raw message for repair error, got %v", repairErr)
+	}
+
+	exitErr := friendlyDeviceToolError(fmt.Errorf("exit status 1"))
+	if exitErr == nil || !strings.Contains(exitErr.Error(), "原始错误") {
+		t.Fatalf("expected original error suffix for exit status 1, got %v", exitErr)
+	}
+}

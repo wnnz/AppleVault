@@ -29,7 +29,13 @@ func main() {
 		DragAndDrop: &options.DragAndDrop{
 			EnableFileDrop: true,
 		},
-		OnStartup: app.Startup,
+		OnStartup:     app.Startup,
+		OnBeforeClose: backend.BeforeCloseHandler(app),
+		OnShutdown:    backend.ShutdownHandler(app),
+		SingleInstanceLock: &options.SingleInstanceLock{
+			UniqueId:               "com.wnnz.applevault.single-instance",
+			OnSecondInstanceLaunch: backend.SecondInstanceHandler(app),
+		},
 		Bind: []interface{}{
 			app,
 		},

@@ -18,12 +18,13 @@ import (
 )
 
 type App struct {
-	ctx             context.Context
-	dataDirOverride string
-	settings        Settings
-	settingsMu      sync.RWMutex
-	cancelMu        sync.Mutex
-	cancelFn        context.CancelFunc
+	ctx                     context.Context
+	dataDirOverride         string
+	settings                Settings
+	undecryptablePassphrase string
+	settingsMu              sync.RWMutex
+	cancelMu                sync.Mutex
+	cancelFn                context.CancelFunc
 
 	purchaseCancelMu     sync.Mutex
 	purchaseCancelers    map[uint64]context.CancelFunc
@@ -60,6 +61,7 @@ func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 	a.ensureDataMigration()
 	a.loadSettings()
+	a.cleanupDiagnosticLogs(14*24*time.Hour, time.Now())
 	a.initializeAccounts()
 	a.settingsMu.Lock()
 	a.settings.DefaultDownloadDir = a.getDownloadsDir()
@@ -77,8 +79,7 @@ func (a *App) getDataDir() string {
 	if exe, err := os.Executable(); err == nil {
 		dir := filepath.Dir(exe)
 		p := filepath.Join(dir, "data")
-		lowerDir := strings.ToLower(dir)
-		if !strings.Contains(lowerDir, "temp") && !strings.Contains(lowerDir, "tmp") {
+		if !isTemporaryExecutableDir(dir) {
 			if fi, err := os.Stat(p); err == nil && fi.IsDir() {
 				return p
 			}
@@ -105,6 +106,16 @@ func (a *App) getDataDir() string {
 	dataDir := filepath.Join(baseDir, "data")
 	_ = os.MkdirAll(dataDir, 0755)
 	return dataDir
+}
+
+func isTemporaryExecutableDir(dir string) bool {
+	for _, segment := range strings.Split(filepath.ToSlash(dir), "/") {
+		lower := strings.ToLower(segment)
+		if lower == "temp" || lower == "tmp" || strings.HasPrefix(lower, "go-build") {
+			return true
+		}
+	}
+	return false
 }
 
 func sanitizeAccountDir(email string) string {
@@ -211,14 +222,38 @@ func copyDir(src, dst string) {
 	}
 }
 
+type persistedSettings struct {
+	Settings
+	ProtectedKeychainPassphrase string `json:"protectedKeychainPassphrase,omitempty"`
+}
+
 func (a *App) loadSettings() {
 	a.settingsMu.Lock()
 	defer a.settingsMu.Unlock()
 
+	needsMigration := false
 	p := a.getSettingsFilePath()
 	if data, err := os.ReadFile(p); err == nil {
-		var s Settings
-		if unmarshalErr := json.Unmarshal(data, &s); unmarshalErr == nil {
+		var file persistedSettings
+		if unmarshalErr := json.Unmarshal(data, &file); unmarshalErr == nil {
+			s := file.Settings
+			if file.ProtectedKeychainPassphrase != "" {
+				plain, decryptErr := unprotectSecret(file.ProtectedKeychainPassphrase)
+				if decryptErr == nil {
+					s.KeychainPassphrase = plain
+					a.undecryptablePassphrase = ""
+				} else {
+					s.KeychainPassphrase = ""
+					a.undecryptablePassphrase = file.ProtectedKeychainPassphrase
+					a.writeDiagnostic("settings.passphrase_unprotect_failed", map[string]interface{}{"error": decryptErr.Error()})
+					a.emitLog("钥匙串密码无法在本机解密（数据目录可能来自其他电脑或用户），请在账号中心重新输入")
+				}
+			} else if s.KeychainPassphrase != "" {
+				needsMigration = true
+				a.undecryptablePassphrase = ""
+			} else {
+				a.undecryptablePassphrase = ""
+			}
 			a.settings = s
 		} else {
 			backupPath, backupErr := backupCorruptFile(p)
@@ -245,6 +280,9 @@ func (a *App) loadSettings() {
 	}
 
 	a.settings.IpaToolPath = "内置 App Store 服务"
+	if needsMigration {
+		_ = a.saveSettingsLocked()
+	}
 }
 
 func (a *App) loadTasks() {
@@ -295,7 +333,16 @@ func (a *App) saveTasksLocked() {
 }
 
 func (a *App) saveSettingsLocked() error {
-	data, err := json.MarshalIndent(a.settings, "", "  ")
+	file := persistedSettings{Settings: a.settings}
+	if a.settings.KeychainPassphrase != "" {
+		if protected, err := protectSecret(a.settings.KeychainPassphrase); err == nil {
+			file.KeychainPassphrase = ""
+			file.ProtectedKeychainPassphrase = protected
+		}
+	} else if a.undecryptablePassphrase != "" {
+		file.ProtectedKeychainPassphrase = a.undecryptablePassphrase
+	}
+	data, err := json.MarshalIndent(file, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -370,6 +417,7 @@ func (a *App) SetKeychainPassphrase(passphrase string) error {
 	a.settingsMu.Lock()
 	defer a.settingsMu.Unlock()
 	a.settings.KeychainPassphrase = passphrase
+	a.undecryptablePassphrase = ""
 	return a.saveSettingsLocked()
 }
 
