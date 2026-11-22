@@ -40,6 +40,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Resolve version and release state
         id: meta
@@ -86,11 +88,55 @@ jobs:
           fi
 
           if [[ "$TAG_EXISTS" == "true" || "$RELEASE_EXISTS" == "true" ]]; then
+            NOTES_SYNCED="unchanged"
+            if [[ "$RELEASE_EXISTS" == "true" ]]; then
+              NOTES_UPDATED_FILE="/tmp/release_notes_update.md"
+              export VERSION TAG GH_REPO
+              python3 - <<'PY' > "$NOTES_UPDATED_FILE"
+          import os, pathlib, subprocess
+
+          version = os.environ["VERSION"]
+          tag = os.environ["TAG"]
+          repo = os.environ["GH_REPO"]
+          short_ver = version[:-2] if version.endswith(".0") else version
+
+          notes_path = None
+          for cand in (pathlib.Path(f"docs/RELEASE_NOTES_v{version}.md"), pathlib.Path(f"docs/RELEASE_NOTES_v{short_ver}.md")):
+              if cand.is_file():
+                  notes_path = cand
+                  break
+
+          if notes_path is None:
+              raise SystemExit(0)
+
+          body = notes_path.read_text(encoding="utf-8").strip()
+          tags = subprocess.check_output(["git", "tag", "--list", "v*", "--merged", "HEAD", "--sort=-version:refname"], text=True).splitlines()
+          prev_tag = next((t for t in tags if t and t != tag), "")
+          if prev_tag and "/compare/" not in body:
+              body += f"\n\n---\n\n**Full Changelog**: https://github.com/{repo}/compare/{prev_tag}...{tag}"
+          print(body)
+          PY
+              if [[ -s "$NOTES_UPDATED_FILE" ]]; then
+                CURRENT_BODY="$(gh release view "${TAG}" --json body --jq .body || true)"
+                if python3 - "$CURRENT_BODY" "$NOTES_UPDATED_FILE" <<'PY'
+          import pathlib, sys
+          current = sys.argv[1].replace("\r\n", "\n").strip()
+          desired = pathlib.Path(sys.argv[2]).read_text(encoding="utf-8").replace("\r\n", "\n").strip()
+          raise SystemExit(0 if current != desired else 1)
+          PY
+                then
+                  gh release edit "${TAG}" --title "果仓助手 (AppleVault) ${TAG}" --notes-file "$NOTES_UPDATED_FILE"
+                  NOTES_SYNCED="updated"
+                fi
+              fi
+            fi
+
             echo "should_build=false" >> "$GITHUB_OUTPUT"
             echo "should_release=false" >> "$GITHUB_OUTPUT"
             cat <<EOF >> "$GITHUB_STEP_SUMMARY"
-          ### 已跳过自动构建与发布 (${TAG})
-          - 检测到版本 \`${TAG}\` 对应的 Git 标签或 GitHub Release 已存在（tag=${TAG_EXISTS}, release=${RELEASE_EXISTS}），为避免重复覆盖发布已自动跳过。
+          ### 已跳过自动编译构建 (${TAG})
+          - 检测到版本 \`${TAG}\` 对应的 Git 标签或 GitHub Release 已存在（tag=${TAG_EXISTS}, release=${RELEASE_EXISTS}），为避免重复耗时构建已跳过编译步骤。
+          - Release 更新日志状态：**${NOTES_SYNCED}**。
           - 如需发布新版本，请先运行 \`scripts/set-version.ps1 -Version x.y.z\` 升级版本号后再合入 \`main\`。
           EOF
           else
@@ -207,6 +253,11 @@ jobs:
     if: needs.prepare.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
@@ -217,13 +268,61 @@ jobs:
         working-directory: dist
         run: cat *.sha256 > SHA256SUMS.txt
 
+      - name: Prepare release notes
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, subprocess
+
+          version = os.environ["VERSION"]
+          tag = os.environ["TAG"]
+          repo = os.environ["GH_REPO"]
+          short_ver = version[:-2] if version.endswith(".0") else version
+
+          notes_path = None
+          for cand in (pathlib.Path(f"docs/RELEASE_NOTES_v{version}.md"), pathlib.Path(f"docs/RELEASE_NOTES_v{short_ver}.md")):
+              if cand.is_file():
+                  notes_path = cand
+                  break
+
+          tags = subprocess.check_output(["git", "tag", "--list", "v*", "--merged", "HEAD", "--sort=-version:refname"], text=True).splitlines()
+          prev_tag = next((t for t in tags if t and t != tag), "")
+
+          if notes_path is not None:
+              body = notes_path.read_text(encoding="utf-8").strip()
+              if prev_tag and "/compare/" not in body:
+                  body += f"\n\n---\n\n**Full Changelog**: https://github.com/{repo}/compare/{prev_tag}...{tag}"
+          else:
+              log_range = f"{prev_tag}..HEAD" if prev_tag else "HEAD"
+              commits = subprocess.check_output(
+                  ["git", "log", log_range, "--no-merges", "--pretty=format:- %s (%h)"],
+                  text=True,
+              ).strip()
+              parts = [f"# 果仓助手 (AppleVault) {tag} 更新说明", ""]
+              if commits:
+                  parts.append("## 更新内容")
+                  parts.append(commits)
+              else:
+                  parts.append("常规构建与版本发布。")
+              if prev_tag:
+                  parts.append("")
+                  parts.append(f"**Full Changelog**: https://github.com/{repo}/compare/{prev_tag}...{tag}")
+              body = "\n".join(parts)
+
+          pathlib.Path("dist/RELEASE_NOTES.md").write_text(body + "\n", encoding="utf-8")
+          PY
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare.outputs.tag }}
           name: 果仓助手 (AppleVault) ${{ needs.prepare.outputs.tag }}
           target_commitish: ${{ github.sha }}
-          generate_release_notes: true
+          body_path: dist/RELEASE_NOTES.md
+          generate_release_notes: false
           files: |
             dist/*.zip
             dist/*.dmg
