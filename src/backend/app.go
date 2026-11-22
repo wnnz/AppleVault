@@ -177,7 +177,8 @@ func (a *App) getDarwinDataDir() string {
 }
 
 func isTemporaryExecutableDir(dir string) bool {
-	for _, segment := range strings.Split(filepath.ToSlash(dir), "/") {
+	normalized := strings.ReplaceAll(dir, `\`, "/")
+	for _, segment := range strings.Split(normalized, "/") {
 		lower := strings.ToLower(segment)
 		if lower == "temp" || lower == "tmp" || lower == "apptranslocation" || strings.HasPrefix(lower, "go-build") {
 			return true

@@ -175,8 +175,8 @@ func TestIOSToolCandidatePathsSupportsMacBundleAndWindows(t *testing.T) {
 	if len(macCandidates) < 3 {
 		t.Fatalf("expected macOS candidates, got %v", macCandidates)
 	}
-	if filepath.ToSlash(macCandidates[0]) != "/Applications/AppleVault.app/Contents/Resources/tools/ios" {
-		t.Fatalf("macOS first candidate = %q, want Resources/tools/ios", filepath.ToSlash(macCandidates[0]))
+	if macCandidates[0] != "/Applications/AppleVault.app/Contents/Resources/tools/ios" {
+		t.Fatalf("macOS first candidate = %q, want Resources/tools/ios", macCandidates[0])
 	}
 	lastMac := macCandidates[len(macCandidates)-1]
 	if lastMac != "/usr/local/bin/ios" && macCandidates[len(macCandidates)-2] != "/opt/homebrew/bin/ios" {
@@ -184,7 +184,7 @@ func TestIOSToolCandidatePathsSupportsMacBundleAndWindows(t *testing.T) {
 	}
 
 	winCandidates := iosToolCandidatePaths(`C:\Apps\AppleVault\AppleVault.exe`, `D:\repo`, "windows")
-	if len(winCandidates) == 0 || filepath.ToSlash(winCandidates[0]) != "C:/Apps/AppleVault/tools/ios.exe" {
+	if len(winCandidates) == 0 || winCandidates[0] != `C:\Apps\AppleVault\tools\ios.exe` {
 		t.Fatalf("Windows first candidate = %v", winCandidates)
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	goruntime "runtime"
@@ -132,31 +133,47 @@ func iosToolBinaryNameForOS(goos string) string {
 	return "ios"
 }
 
+func slashCleanDir(p string) string {
+	return path.Dir(strings.ReplaceAll(p, `\`, "/"))
+}
+
+func joinOSPath(goos string, elems ...string) string {
+	cleaned := make([]string, len(elems))
+	for i, elem := range elems {
+		cleaned[i] = strings.ReplaceAll(elem, `\`, "/")
+	}
+	joined := path.Join(cleaned...)
+	if goos == "windows" {
+		return strings.ReplaceAll(joined, "/", `\`)
+	}
+	return joined
+}
+
 func iosToolCandidatePaths(exePath, cwd, goos string) []string {
 	binName := iosToolBinaryNameForOS(goos)
 	var candidates []string
 
 	if exePath != "" {
-		dir := filepath.Dir(exePath)
+		dir := slashCleanDir(exePath)
 		if goos == "darwin" {
-			contentsDir := filepath.Dir(dir)
+			contentsDir := slashCleanDir(dir)
 			candidates = append(candidates,
-				filepath.Join(contentsDir, "Resources", "tools", binName),
-				filepath.Join(contentsDir, "Resources", binName),
+				joinOSPath(goos, contentsDir, "Resources", "tools", binName),
+				joinOSPath(goos, contentsDir, "Resources", binName),
 			)
 		}
 		candidates = append(candidates,
-			filepath.Join(dir, "tools", binName),
-			filepath.Join(dir, "bin", binName),
-			filepath.Join(dir, binName),
+			joinOSPath(goos, dir, "tools", binName),
+			joinOSPath(goos, dir, "bin", binName),
+			joinOSPath(goos, dir, binName),
 		)
 	}
 
 	if cwd != "" {
 		candidates = append(candidates,
-			filepath.Join(cwd, "tools", binName),
-			filepath.Join(cwd, "bin", binName),
-			filepath.Join(cwd, binName),
+			joinOSPath(goos, cwd, "tools", binName),
+			joinOSPath(goos, cwd, "bin", binName),
+			joinOSPath(goos, cwd, binName),
 		)
 	}
 
