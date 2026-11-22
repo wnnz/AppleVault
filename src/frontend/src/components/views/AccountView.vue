@@ -79,16 +79,6 @@
               secondary
               size="tiny"
               :disabled="isAccountActionRunning"
-              :loading="clearingAccountID === item.id"
-              title="清理该账号的本地钥匙串凭据与 Cookie"
-              @click="handleClearKeychain(item)"
-            >
-              清理钥匙串缓存
-            </AppButton>
-            <AppButton
-              secondary
-              size="tiny"
-              :disabled="isAccountActionRunning"
               :loading="refreshingAccountID === item.id"
               @click="handleRefreshAccount(item)"
             >
@@ -188,10 +178,9 @@ const isAccountLoading = ref(false)
 const isLoggingIn = ref(false)
 const isSwitching = ref(false)
 const revokingAccountID = ref('')
-const clearingAccountID = ref('')
 const refreshingAccountID = ref('')
 const isAccountActionRunning = computed(() =>
-  isAccountLoading.value || !!revokingAccountID.value || !!clearingAccountID.value || !!refreshingAccountID.value
+  isAccountLoading.value || !!revokingAccountID.value || !!refreshingAccountID.value
 )
 const keychainPassphrase = ref('')
 const savedKeychainPassphrase = ref('')
@@ -307,7 +296,6 @@ async function handleSwitchAccount(item: main.AccountInfo) {
     accounts.value = await GetAccounts()
     localStorage.setItem('apple_vault_logged_in', 'true')
     emit('accountChanged', res)
-    emit('loginSuccess', res)
     message.success(`已切换至 ${res.name || res.email}`)
     emit('busyChange', false, `当前账号: ${res.email}`)
   } catch (err: any) {
@@ -354,7 +342,6 @@ async function handleLogin() {
       loginForm.value.password = ''
       loginForm.value.authCode = ''
       emit('busyChange', false, `登录成功: ${res.account.name}`)
-      emit('navigate', 'search')
     } else {
       message.error(`登录失败: ${res.errorMessage}`)
       emit('busyChange', false, `登录失败: ${res.errorMessage}`)
@@ -366,9 +353,9 @@ async function handleLogin() {
     }
   } catch (err: any) {
     message.error(`执行异常: ${err}`)
+    emit('busyChange', false, '登录执行异常')
   } finally {
     isLoggingIn.value = false
-    emit('busyChange', false)
   }
 }
 
@@ -381,22 +368,17 @@ async function applyRemovedAccount(item: main.AccountInfo, next: main.AccountInf
   account.value = next
   localStorage.setItem('apple_vault_logged_in', next.success ? 'true' : 'false')
   emit('accountChanged', next)
-  if (next.success) {
-    emit('loginSuccess', next)
-  } else {
-    emit('navigate', 'account')
-  }
 }
 
 async function handleRevoke(item: main.AccountInfo) {
   dialog.warning({
     title: '确认退出登录',
-    content: `确定要退出 ${item.email} 并清除该账号的本地授权凭证吗？`,
+    content: `确定要退出 ${item.email} 并清除该账号的本地授权凭据与缓存吗？`,
     positiveText: '确定退出',
     negativeText: '取消',
     onPositiveClick: async () => {
       revokingAccountID.value = item.id
-      emit('busyChange', true)
+      emit('busyChange', true, `正在退出 ${item.email}...`)
       try {
         const next = await RemoveAccount(item.id)
         await applyRemovedAccount(item, next)
@@ -404,33 +386,9 @@ async function handleRevoke(item: main.AccountInfo) {
         emit('busyChange', false, next.success ? `当前账号: ${next.email}` : '已退出登录')
       } catch (err: any) {
         message.error(`注销失败: ${err}`)
+        emit('busyChange', false, '退出账号失败')
       } finally {
         revokingAccountID.value = ''
-        emit('busyChange', false)
-      }
-    }
-  })
-}
-
-/**
- * 清空本地钥匙串缓存
- */
-async function handleClearKeychain(item: main.AccountInfo) {
-  dialog.warning({
-    title: '清空本地密钥库缓存',
-    content: `此操作将删除 ${item.email} 的本地凭据与 Cookie，并从账号列表中移除。确定清理吗？`,
-    positiveText: '确定清理',
-    negativeText: '取消',
-    onPositiveClick: async () => {
-      clearingAccountID.value = item.id
-      try {
-        const next = await RemoveAccount(item.id)
-        await applyRemovedAccount(item, next)
-        message.success(`已清除 ${item.email} 的本地密钥缓存`)
-      } catch (err: any) {
-        message.error(`清理失败: ${err}`)
-      } finally {
-        clearingAccountID.value = ''
       }
     }
   })

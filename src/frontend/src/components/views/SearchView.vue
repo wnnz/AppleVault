@@ -55,8 +55,6 @@
         :loading="isSearching"
         :pagination="{ pageSize: 10 }"
         :scroll-x="780"
-        size="small"
-        flex-height
         style="height: 100%;"
       >
         <template #empty>
@@ -71,7 +69,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, h } from 'vue'
+import { ref, computed, watch, h } from 'vue'
 import { backend as main } from '../../../wailsjs/go/models'
 import { Search, Purchase } from '../../../wailsjs/go/backend/App'
 import AppButton from '../../ui/components/AppButton.vue'
@@ -84,11 +82,12 @@ import type { AppTheme } from '../../ui/theme'
 
 const props = defineProps<{
   effectiveTheme?: AppTheme
+  defaultPlatform?: string
 }>()
 
 const emit = defineEmits<{
   (e: 'selectAppForVersions', app: main.AppItem): void
-  (e: 'downloadApp', app: main.AppItem): void
+  (e: 'downloadApp', app: main.AppItem, platform?: string): void
   (e: 'busyChange', busy: boolean, text?: string): void
 }>()
 
@@ -115,6 +114,14 @@ const searchForm = ref({
   platform: 'iphone'
 })
 const searchResults = ref<main.AppItem[]>([])
+
+watch(
+  () => props.defaultPlatform,
+  val => {
+    if (val) searchForm.value.platform = val
+  },
+  { immediate: true }
+)
 
 /**
  * 检索应用列表
@@ -146,16 +153,17 @@ async function handleSearch() {
 async function handlePurchaseApp(bundleId: string) {
   emit('busyChange', true, `正在获取应用授权: ${bundleId}...`)
   try {
-    const res = await Purchase(bundleId)
+    const res = await Purchase(bundleId, searchForm.value.platform)
     if (res.alreadyOwned) {
       message.info('你已经拥有该应用的正版许可，无需重复获取。')
+      emit('busyChange', false, '已拥有该应用正版许可')
     } else {
       message.success('获取许可成功')
+      emit('busyChange', false, '获取应用许可成功')
     }
   } catch (err: any) {
     message.error(`获取许可失败: ${err}`)
-  } finally {
-    emit('busyChange', false)
+    emit('busyChange', false, '获取许可失败')
   }
 }
 
@@ -173,7 +181,7 @@ const searchColumns = [
     render(row: main.AppItem) {
       return h('div', { class: 'app-button-group' }, [
         h(AppButton, { size: 'tiny', secondary: true, onClick: () => emit('selectAppForVersions', row) }, () => '历史版本'),
-        h(AppButton, { size: 'tiny', type: 'primary', onClick: () => emit('downloadApp', row) }, () => '下载'),
+        h(AppButton, { size: 'tiny', type: 'primary', onClick: () => emit('downloadApp', row, searchForm.value.platform) }, () => '下载'),
         h(AppButton, { size: 'tiny', secondary: true, onClick: () => handlePurchaseApp(row.bundleID) }, () => '获取许可')
       ])
     }

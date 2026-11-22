@@ -3,7 +3,6 @@
     :current-theme="currentTheme"
     :is-dark="isDark"
     @update:current-theme="setTheme"
-    @toggle-theme="toggleTheme"
   />
   <AppDialogHost />
   <AppToastHost />
@@ -15,5 +14,5 @@ import AppDialogHost from './ui/components/AppDialogHost.vue'
 import AppToastHost from './ui/components/AppToastHost.vue'
 import { useAppTheme } from './ui/theme'
 
-const { currentTheme, isDark, setTheme, toggleTheme } = useAppTheme()
+const { currentTheme, isDark, setTheme } = useAppTheme()
 </script>

@@ -34,7 +34,7 @@
             </div>
             <div class="task-actions-group">
               <AppButton
-                v-if="task.status === 'downloading'"
+                v-if="task.status === 'downloading' || task.status === 'pending'"
                 size="tiny"
                 type="error"
                 secondary
@@ -148,10 +148,11 @@ async function addDownloadTask(
   appId: number,
   version: string,
   versionId: string = '',
-  fileSize: string = ''
+  fileSize: string = '',
+  platform: string = ''
 ) {
   try {
-    await AddDownloadTask(appName, bundleID, appId, version, versionId, fileSize)
+    await AddDownloadTask(appName, bundleID, appId, version, versionId, fileSize, platform)
     message.success(`已添加任务「${appName}」到下载中心`)
     await loadDownloadTasks()
   } catch (err: any) {
@@ -241,8 +242,9 @@ function getStatusText(status: string) {
 
 function formatBytes(bytes: number): string {
   if (!bytes || bytes <= 0) return '0 B'
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const index = Math.floor(Math.log(bytes) / Math.log(1024))
+  if (bytes < 1024) return `${Math.round(bytes)} B`
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), sizes.length - 1)
   return (bytes / Math.pow(1024, index)).toFixed(2) + ' ' + sizes[index]
 }
 

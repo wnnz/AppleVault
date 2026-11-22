@@ -38,7 +38,7 @@
           </div>
           <div class="field-control">
             <AppSwitch
-              v-model="settings.enableProxy"
+              :model-value="settings.enableProxy"
               @update:model-value="onProxyToggle"
             />
           </div>
@@ -156,8 +156,7 @@ const settings = ref<main.Settings>({
   defaultDownloadDir: 'data/downloads/default',
   defaultPlatform: 'iphone',
   enableProxy: true,
-  proxyUrl: 'http://127.0.0.1:10808',
-  ipaToolPath: ''
+  proxyUrl: 'http://127.0.0.1:10808'
 })
 
 /**
@@ -177,10 +176,16 @@ async function loadSettings() {
  * 网络代理快速开关
  */
 async function onProxyToggle(val: boolean) {
+  const prev = settings.value.enableProxy
   settings.value.enableProxy = val
-  await SaveSettings(settings.value)
-  emit('settingsChanged', settings.value)
-  message.info(val ? '已开启网络代理' : '已关闭网络代理')
+  try {
+    await SaveSettings(settings.value)
+    emit('settingsChanged', settings.value)
+    message.info(val ? '已开启网络代理' : '已关闭网络代理')
+  } catch (err: any) {
+    settings.value.enableProxy = prev
+    message.error(`保存代理状态失败: ${err}`)
+  }
 }
 
 /**
@@ -200,6 +205,7 @@ async function handleTestProxy() {
     }
   } catch (err: any) {
     message.error(`测试异常: ${err}`)
+    emit('busyChange', false, '网络代理测试失败')
   } finally {
     isTestingProxy.value = false
   }
@@ -222,7 +228,9 @@ async function handleSaveSettings() {
  * 在系统文件管理器中打开默认下载目录
  */
 function handleOpenDefaultDownloadDir() {
-  OpenInExplorer(settings.value.defaultDownloadDir || '')
+  void OpenInExplorer(settings.value.defaultDownloadDir || '').catch((err: any) => {
+    message.error(`打开目录失败: ${err}`)
+  })
 }
 
 defineExpose({

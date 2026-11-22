@@ -31,6 +31,7 @@
           v-show="activeTab === 'search'"
           ref="searchViewRef"
           :effective-theme="effectiveTheme"
+          :default-platform="currentSettings.defaultPlatform"
           @select-app-for-versions="handleSelectAppForVersions"
           @download-app="handleDownloadApp"
           @busy-change="handleBusyChange"
@@ -136,7 +137,6 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (e: 'update:currentTheme', theme: AppTheme): void
-  (e: 'toggleTheme'): void
 }>()
 
 const effectiveTheme = computed<AppTheme>(() => props.currentTheme || (props.isDark ? 'minimal-dark' : 'minimal-light'))
@@ -175,8 +175,7 @@ const currentSettings = ref<main.Settings>({
   defaultDownloadDir: 'data/downloads/default',
   defaultPlatform: 'iphone',
   enableProxy: true,
-  proxyUrl: 'http://127.0.0.1:10808',
-  ipaToolPath: ''
+  proxyUrl: 'http://127.0.0.1:10808'
 })
 const activeTaskCount = ref(0)
 
@@ -187,18 +186,27 @@ function handleBusyChange(busy: boolean, text?: string) {
   }
 }
 
-function onAccountChanged(acc: main.AccountInfo) {
+function resetAccountScopedViews(acc: main.AccountInfo) {
   currentAccount.value = acc
-}
-
-function onLoginSuccess(acc: main.AccountInfo) {
-  currentAccount.value = acc
+  versionsViewRef.value?.stopAllQueries()
   searchViewRef.value?.searchResults.splice(0)
   versionsViewRef.value?.versionItems.splice(0)
   purchasedViewRef.value?.purchasedApps.splice(0)
   if (purchasedViewRef.value) purchasedViewRef.value.purchasedTotal = 0
-  activeTab.value = 'search'
   void settingsViewRef.value?.loadSettings()
+}
+
+function onAccountChanged(acc: main.AccountInfo) {
+  if (acc.id !== currentAccount.value.id) {
+    resetAccountScopedViews(acc)
+  } else {
+    currentAccount.value = acc
+  }
+}
+
+function onLoginSuccess(acc: main.AccountInfo) {
+  resetAccountScopedViews(acc)
+  activeTab.value = 'search'
 }
 
 function onSettingsChanged(s: main.Settings) {
@@ -223,8 +231,8 @@ function handleSelectAppForVersions(app: main.AppItem) {
   versionsViewRef.value?.selectAppForVersions(app)
 }
 
-function handleDownloadApp(app: main.AppItem) {
-  downloadViewRef.value?.addDownloadTask(app.name, app.bundleID, app.id, app.version || '最新版')
+function handleDownloadApp(app: main.AppItem, platform = '') {
+  downloadViewRef.value?.addDownloadTask(app.name, app.bundleID, app.id, app.version || '最新版', '', '', platform)
   activeTab.value = 'download'
 }
 

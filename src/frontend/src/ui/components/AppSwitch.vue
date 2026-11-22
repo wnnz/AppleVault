@@ -14,10 +14,9 @@
 <script setup lang="ts">
 import { SwitchRoot, SwitchThumb } from 'reka-ui'
 
-withDefaults(defineProps<{ modelValue?: boolean; disabled?: boolean; size?: 'small' | 'medium' }>(), {
+withDefaults(defineProps<{ modelValue?: boolean; disabled?: boolean }>(), {
   modelValue: false,
-  disabled: false,
-  size: 'medium'
+  disabled: false
 })
 const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
 </script>

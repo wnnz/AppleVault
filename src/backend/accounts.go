@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"AppleVault/src/backend/internal/ipatool/appstore"
+	"github.com/byteness/keyring"
 )
 
 const (
@@ -302,24 +303,46 @@ func (a *App) SwitchAccount(accountID string) (AccountInfo, error) {
 	return AccountInfo{}, errors.New("账号不存在")
 }
 
+func (a *App) cleanupAccountCredentials(accountID string, legacy bool) {
+	configDir, serviceName := a.accountStorage(accountID, legacy)
+	a.settingsMu.RLock()
+	passphrase := a.settings.KeychainPassphrase
+	a.settingsMu.RUnlock()
+
+	if ring, err := keyring.Open(keyring.Config{
+		AllowedBackends: []keyring.BackendType{
+			keyring.KeychainBackend,
+			keyring.SecretServiceBackend,
+			keyring.FileBackend,
+		},
+		ServiceName: serviceName,
+		FileDir:     configDir,
+		FilePasswordFunc: func(string) (string, error) {
+			if passphrase == "" {
+				return "", errors.New("empty passphrase")
+			}
+			return passphrase, nil
+		},
+	}); err == nil {
+		_ = ring.Remove("account")
+		_ = ring.Remove("kbsync_cache")
+	}
+
+	if legacy {
+		_ = os.Remove(filepath.Join(configDir, ipatoolCookieFile))
+		_ = os.Remove(filepath.Join(configDir, "account"))
+		_ = os.Remove(filepath.Join(configDir, "kbsync_cache"))
+	} else {
+		_ = os.RemoveAll(configDir)
+	}
+}
+
 func (a *App) RemoveAccount(accountID string) (AccountInfo, error) {
 	item, ok := a.accountByID(accountID)
 	if !ok {
 		return AccountInfo{}, errors.New("账号不存在")
 	}
-	store, err := a.newAppStoreWithStorage(context.Background(), item.ID, item.Legacy)
-	if err != nil {
-		return AccountInfo{}, err
-	}
-	if err = store.Revoke(); err != nil && !strings.Contains(strings.ToLower(err.Error()), "not found") {
-		return AccountInfo{}, err
-	}
-	configDir, _ := a.accountStorage(item.ID, item.Legacy)
-	if item.Legacy {
-		_ = os.Remove(filepath.Join(configDir, ipatoolCookieFile))
-	} else {
-		_ = os.RemoveAll(configDir)
-	}
+	a.cleanupAccountCredentials(item.ID, item.Legacy)
 
 	a.CancelRunningCommand()
 	a.accountMu.Lock()
@@ -334,7 +357,7 @@ func (a *App) RemoveAccount(accountID string) (AccountInfo, error) {
 		a.accounts.ActiveAccountID = mostRecentlyUsedAccountID(filtered)
 	}
 	a.syncCachedAccountLocked()
-	err = a.saveAccountsLocked()
+	err := a.saveAccountsLocked()
 	activeID := a.accounts.ActiveAccountID
 	var active storedAccount
 	for _, candidate := range a.accounts.Accounts {

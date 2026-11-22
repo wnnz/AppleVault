@@ -23,7 +23,10 @@
                 class="app-table__cell"
                 :style="columnStyle(cell.column.columnDef.meta as AppTableColumn<Row> | undefined)"
               >
-                <div :class="{ 'app-table__ellipsis': (cell.column.columnDef.meta as AppTableColumn<Row> | undefined)?.ellipsis }">
+                <div
+                  :class="{ 'app-table__ellipsis': (cell.column.columnDef.meta as AppTableColumn<Row> | undefined)?.ellipsis }"
+                  :title="cellTitle(cell.column.columnDef.meta as AppTableColumn<Row> | undefined, cell.getValue())"
+                >
                   <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
                 </div>
               </td>
@@ -71,13 +74,9 @@ const props = withDefaults(defineProps<{
   loading?: boolean
   pagination?: { pageSize: number } | false
   scrollX?: number
-  flexHeight?: boolean
-  size?: 'small' | 'medium'
 }>(), {
   loading: false,
-  pagination: false,
-  flexHeight: false,
-  size: 'medium'
+  pagination: false
 })
 
 const tanstackColumns = computed<ColumnDef<Row>[]>(() => props.columns.map((column, index) => ({
@@ -97,6 +96,12 @@ const table = useVueTable({
     pagination: { pageIndex: 0, pageSize: props.pagination ? props.pagination.pageSize : Number.MAX_SAFE_INTEGER }
   }
 })
+
+function cellTitle(column: AppTableColumn<Row> | undefined, value: unknown): string | undefined {
+  if (!column?.ellipsis || column.render || value === null || value === undefined) return undefined
+  const text = String(value).trim()
+  return text && text !== '-' ? text : undefined
+}
 
 function columnStyle(column?: AppTableColumn<Row>) {
   if (!column) return undefined

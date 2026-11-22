@@ -278,8 +278,6 @@ func (a *App) loadSettings() {
 	if a.settings.DefaultPlatform == "" {
 		a.settings.DefaultPlatform = "iphone"
 	}
-
-	a.settings.IpaToolPath = "内置 App Store 服务"
 	if needsMigration {
 		_ = a.saveSettingsLocked()
 	}
@@ -364,12 +362,12 @@ func formatBytes(b int64) string {
 	if b < 1024 {
 		return fmt.Sprintf("%d B", b)
 	}
+	units := []string{"KB", "MB", "GB", "TB"}
 	div, exp := int64(unit), 0
-	for n := b / unit; n >= unit; n /= unit {
+	for n := b / unit; n >= unit && exp < len(units)-1; n /= unit {
 		div *= int64(unit)
 		exp++
 	}
-	units := []string{"KB", "MB", "GB", "TB"}
 	return fmt.Sprintf("%.2f %s", float64(b)/float64(div), units[exp])
 }
 
@@ -380,7 +378,6 @@ func (a *App) GetSettings() Settings {
 	defer a.settingsMu.RUnlock()
 	s := a.settings
 	s.DefaultDownloadDir = a.getDownloadsDir()
-	s.IpaToolPath = "内置 App Store 服务"
 	return s
 }
 
@@ -393,7 +390,6 @@ func (a *App) SaveSettings(s Settings) error {
 	s.ThemeHintShown = a.settings.ThemeHintShown
 	s.DefaultDownloadDir = a.getDownloadsDir()
 	a.settings = s
-	a.settings.IpaToolPath = "内置 App Store 服务"
 	return a.saveSettingsLocked()
 }
 
@@ -419,13 +415,6 @@ func (a *App) SetKeychainPassphrase(passphrase string) error {
 	a.settings.KeychainPassphrase = passphrase
 	a.undecryptablePassphrase = ""
 	return a.saveSettingsLocked()
-}
-
-func (a *App) SelectDirectory(title, defaultDir string) (string, error) {
-	return runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
-		Title:            title,
-		DefaultDirectory: defaultDir,
-	})
 }
 
 func (a *App) TestProxy(proxyUrl string) ProxyTestResult {
@@ -462,7 +451,7 @@ func (a *App) OpenInExplorer(targetPath string) error {
 		if fi.IsDir() {
 			return exec.Command("explorer", targetPath).Start()
 		}
-		return exec.Command("explorer", "/select,", targetPath).Start()
+		return exec.Command("explorer", "/select,"+targetPath).Start()
 	}
 	dir := filepath.Dir(targetPath)
 	return exec.Command("explorer", dir).Start()

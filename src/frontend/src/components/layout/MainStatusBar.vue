@@ -40,7 +40,7 @@
           v-for="(log, idx) in logLines"
           :key="idx"
           class="console-row"
-          :class="{ 'row-err': log.includes('[ERR]') }"
+          :class="{ 'row-err': isErrorLog(log) }"
         >
           {{ log }}
         </div>
@@ -73,6 +73,10 @@ function toggleLogs() {
 
 function clearLogs() {
   logLines.value = []
+}
+
+function isErrorLog(log: string): boolean {
+  return log.includes('[ERR]') || log.includes('"level":"ERROR"') || log.includes('损坏') || log.includes('未找到设备安装工具')
 }
 
 function appendLog(line: string) {

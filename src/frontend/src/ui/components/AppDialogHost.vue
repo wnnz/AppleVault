@@ -6,8 +6,8 @@
         <DialogTitle class="app-dialog-title">{{ dialog?.title }}</DialogTitle>
         <DialogDescription class="app-dialog-description">{{ dialog?.content }}</DialogDescription>
         <div class="app-dialog-actions">
-          <AppButton variant="secondary" @click="cancel">{{ dialog?.negativeText || '取消' }}</AppButton>
-          <AppButton variant="primary" @click="confirm">{{ dialog?.positiveText || '确定' }}</AppButton>
+          <AppButton variant="secondary" :disabled="isSubmitting" @click="cancel">{{ dialog?.negativeText || '取消' }}</AppButton>
+          <AppButton variant="primary" :loading="isSubmitting" @click="confirm">{{ dialog?.positiveText || '确定' }}</AppButton>
         </div>
       </DialogContent>
     </DialogPortal>
@@ -15,15 +15,25 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
 import { appFeedbackState } from '../feedback'
 import AppButton from './AppButton.vue'
 const dialog = computed(() => appFeedbackState.dialog)
+const isSubmitting = ref(false)
 function close() { if (appFeedbackState.dialog) appFeedbackState.dialog.open = false }
 function cancel() { dialog.value?.onNegativeClick?.(); close() }
-async function confirm() { await dialog.value?.onPositiveClick?.(); close() }
-function onOpenChange(open: boolean) { if (!open) cancel() }
+async function confirm() {
+  if (isSubmitting.value) return
+  isSubmitting.value = true
+  try {
+    await dialog.value?.onPositiveClick?.()
+  } finally {
+    isSubmitting.value = false
+    close()
+  }
+}
+function onOpenChange(open: boolean) { if (!open && !isSubmitting.value) cancel() }
 </script>
 
 <style>

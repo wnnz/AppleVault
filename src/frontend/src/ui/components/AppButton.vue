@@ -56,7 +56,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{ click: [event: MouseEvent] }>()
 
 const resolvedVariant = computed<AppButtonVariant>(() =>
-  props.variant ?? (props.type === 'primary' ? 'primary' : 'secondary')
+  props.variant ?? (props.secondary ? 'secondary' : (props.type === 'primary' ? 'primary' : 'secondary'))
 )
 const resolvedType = computed<AppButtonType>(() =>
   props.type ?? (resolvedVariant.value === 'primary' ? 'primary' : 'default')

@@ -71,24 +71,6 @@ func (a *App) Login(email, password, authCode string) (output LoginResult, resul
 	return LoginResult{Success: true, Account: account}, nil
 }
 
-func (a *App) Revoke() (bool, error) {
-	accountID := a.activeAccountID()
-	if accountID == "" {
-		return false, nil
-	}
-	_, err := a.RemoveAccount(accountID)
-	return err == nil, err
-}
-
-func (a *App) ClearKeychainCache() error {
-	accountID := a.activeAccountID()
-	if accountID == "" {
-		return nil
-	}
-	_, err := a.RemoveAccount(accountID)
-	return err
-}
-
 func (a *App) Search(term string, limit int, platformValue string) (SearchResult, error) {
 	ctx := a.startCommandContext()
 	store, err := a.newAppStore(ctx)
@@ -192,19 +174,15 @@ func (a *App) GetVersionMetadata(bundleID, versionID string, appID int64) (Versi
 	}, nil
 }
 
-func (a *App) Download(bundleID string, appID int64, versionID, outputPath, platform string, purchase bool) (DownloadResult, error) {
-	ctx := a.startCommandContext()
-	accountID := a.activeAccountID()
-	if accountID == "" {
-		return DownloadResult{}, errors.New("尚未登录 Apple ID")
+func (a *App) Purchase(bundleID, platformValue string) (PurchaseResult, error) {
+	resolvedPlatform := strings.TrimSpace(platformValue)
+	if resolvedPlatform == "" {
+		resolvedPlatform = a.currentDownloadPlatform()
 	}
-	if strings.TrimSpace(outputPath) == "" {
-		outputPath = a.getDownloadsDirForAccount(accountID)
+	platform, err := parseStorePlatform(resolvedPlatform)
+	if err != nil {
+		return PurchaseResult{}, err
 	}
-	return a.downloadFromStore(ctx, accountID, bundleID, appID, versionID, outputPath, platform, purchase, nil)
-}
-
-func (a *App) Purchase(bundleID string) (PurchaseResult, error) {
 	ctx := a.startCommandContext()
 	store, err := a.newAppStore(ctx)
 	if err != nil {
@@ -213,7 +191,7 @@ func (a *App) Purchase(bundleID string) (PurchaseResult, error) {
 
 	alreadyOwned := false
 	_, err = withAccountRetry(store, func(account appstore.Account) (struct{}, error) {
-		item, err := resolveStoreApp(store, account, bundleID, 0, "")
+		item, err := resolveStoreApp(store, account, bundleID, 0, platform)
 		if err != nil {
 			return struct{}{}, err
 		}
@@ -237,6 +215,9 @@ func (a *App) ListPurchases(page, limit int) (PurchasedResult, error) {
 	if limit <= 0 {
 		limit = 20
 	}
+	if limit > appstore.MaxOwnedAppsLimit {
+		limit = appstore.MaxOwnedAppsLimit
+	}
 	ctx, cleanup := a.startPurchaseCommandContext()
 	defer cleanup()
 	store, err := a.newAppStore(ctx)
@@ -244,27 +225,7 @@ func (a *App) ListPurchases(page, limit int) (PurchasedResult, error) {
 		return PurchasedResult{}, err
 	}
 
-	if limit <= appstore.MaxOwnedAppsLimit {
-		return listPurchasedPage(store, page, limit)
-	}
-
-	allApps := make([]AppItem, 0, limit)
-	totalCount := 0
-	for currentPage := 1; len(allApps) < limit; currentPage++ {
-		result, err := listPurchasedPage(store, currentPage, appstore.MaxOwnedAppsLimit)
-		if err != nil {
-			return PurchasedResult{}, err
-		}
-		totalCount = result.TotalCount
-		allApps = append(allApps, result.Apps...)
-		if len(result.Apps) < appstore.MaxOwnedAppsLimit || (totalCount > 0 && len(allApps) >= totalCount) {
-			break
-		}
-	}
-	if len(allApps) > limit {
-		allApps = allApps[:limit]
-	}
-	return PurchasedResult{Count: len(allApps), TotalCount: totalCount, Page: 1, Apps: allApps}, nil
+	return listPurchasedPage(store, page, limit)
 }
 
 func listPurchasedPage(store appstore.AppStore, page, limit int) (PurchasedResult, error) {

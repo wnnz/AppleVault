@@ -142,3 +142,37 @@ func TestRetryDownloadTaskKeepsOriginalAccount(t *testing.T) {
 		t.Fatalf("retry without platform should fall back to iphone, got %q", fallbackRetry.Platform)
 	}
 }
+
+func TestRemoveAccountSucceedsWhenCredentialsMissingOrProxyInvalid(t *testing.T) {
+	app := NewApp()
+	app.dataDirOverride = t.TempDir()
+	app.settings.EnableProxy = true
+	app.settings.ProxyUrl = "://bad-proxy"
+
+	app.accountMu.Lock()
+	app.accounts = accountRegistry{
+		ActiveAccountID: "one",
+		Accounts: []storedAccount{
+			{ID: "one", Email: "one@example.com", LastUsed: 20},
+			{ID: "two", Email: "two@example.com", LastUsed: 10},
+		},
+	}
+	app.syncCachedAccountLocked()
+	if err := app.saveAccountsLocked(); err != nil {
+		app.accountMu.Unlock()
+		t.Fatal(err)
+	}
+	app.accountMu.Unlock()
+
+	next, err := app.RemoveAccount("one")
+	if err != nil {
+		t.Fatalf("RemoveAccount failed: %v", err)
+	}
+	if next.ID != "two" || !next.Active {
+		t.Fatalf("expected account two to become active, got %#v", next)
+	}
+	accounts := app.GetAccounts()
+	if len(accounts) != 1 || accounts[0].ID != "two" {
+		t.Fatalf("expected only account two remaining, got %#v", accounts)
+	}
+}

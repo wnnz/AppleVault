@@ -66,22 +66,6 @@ export namespace backend {
 	        this.connectionType = source["connectionType"];
 	    }
 	}
-	export class DownloadResult {
-	    output: string;
-	    purchased: boolean;
-	    success: boolean;
-	
-	    static createFrom(source: any = {}) {
-	        return new DownloadResult(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.output = source["output"];
-	        this.purchased = source["purchased"];
-	        this.success = source["success"];
-	    }
-	}
 	export class DownloadTask {
 	    id: string;
 	    accountID?: string;
@@ -317,7 +301,6 @@ export namespace backend {
 	    defaultPlatform: string;
 	    enableProxy: boolean;
 	    proxyUrl: string;
-	    ipaToolPath: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -331,7 +314,6 @@ export namespace backend {
 	        this.defaultPlatform = source["defaultPlatform"];
 	        this.enableProxy = source["enableProxy"];
 	        this.proxyUrl = source["proxyUrl"];
-	        this.ipaToolPath = source["ipaToolPath"];
 	    }
 	}
 	export class VersionMetadataResult {

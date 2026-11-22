@@ -36,8 +36,6 @@
         :data="filteredPurchasedApps"
         :loading="isPurchasedLoading"
         :scroll-x="720"
-        size="small"
-        flex-height
         style="height: 100%;"
       >
         <template #empty>

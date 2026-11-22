@@ -221,3 +221,19 @@ func TestIsTemporaryExecutableDir(t *testing.T) {
 		}
 	}
 }
+
+func TestFormatBytesBounds(t *testing.T) {
+	if got := formatBytes(0); got != "-" {
+		t.Fatalf("formatBytes(0) = %q, want '-'", got)
+	}
+	if got := formatBytes(512); got != "512 B" {
+		t.Fatalf("formatBytes(512) = %q, want '512 B'", got)
+	}
+	if got := formatBytes(1024); got != "1.00 KB" {
+		t.Fatalf("formatBytes(1024) = %q, want '1.00 KB'", got)
+	}
+	large := formatBytes(1 << 50)
+	if !strings.Contains(large, "TB") {
+		t.Fatalf("formatBytes(1<<50) = %q, expected TB unit", large)
+	}
+}

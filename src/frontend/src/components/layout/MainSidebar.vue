@@ -129,7 +129,6 @@
         <div class="quick-tool" title="网络代理">
           <AppSwitch
             :model-value="enableProxy"
-            size="small"
             @update:model-value="emit('proxyToggle', $event)"
           />
           <span class="quick-tool-label">代理</span>

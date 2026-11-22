@@ -48,6 +48,5 @@ export function useAppTheme() {
     applyTheme(theme)
   })
   const setTheme = (theme: AppTheme) => { currentTheme.value = theme }
-  const toggleTheme = () => setTheme(currentTheme.value === 'minimal-light' ? 'minimal-dark' : 'minimal-light')
-  return { currentTheme, isDark, setTheme, toggleTheme }
+  return { currentTheme, isDark, setTheme }
 }

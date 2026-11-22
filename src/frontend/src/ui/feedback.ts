@@ -14,7 +14,7 @@ export interface AppDialogOptions {
 let nextToastId = 1
 export const appFeedbackState = reactive({
   toasts: [] as AppToastMessage[],
-  dialog: null as (AppDialogOptions & { open: boolean; type: 'warning' | 'info' }) | null
+  dialog: null as (AppDialogOptions & { open: boolean }) | null
 })
 
 function pushMessage(type: AppMessageType, content: unknown) {
@@ -41,13 +41,13 @@ export function useAppMessage() {
   }
 }
 
-function showDialog(type: 'warning' | 'info', options: AppDialogOptions) {
-  appFeedbackState.dialog = { ...options, type, open: true }
+function showDialog(options: AppDialogOptions) {
+  appFeedbackState.dialog = { ...options, open: true }
 }
 
 export function useAppDialog() {
   return {
-    warning: (options: AppDialogOptions) => showDialog('warning', options),
-    info: (options: AppDialogOptions) => showDialog('info', options)
+    warning: (options: AppDialogOptions) => showDialog(options),
+    info: (options: AppDialogOptions) => showDialog(options)
   }
 }

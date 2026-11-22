@@ -29,9 +29,7 @@ func (a *App) beforeClose(ctx context.Context) bool {
 		Type:          runtime.QuestionDialog,
 		Title:         "确认退出",
 		Message:       fmt.Sprintf("还有 %d 个下载任务正在进行，退出将中断下载。确定要退出吗？", count),
-		Buttons:       []string{"退出", "取消"},
-		DefaultButton: "取消",
-		CancelButton:  "取消",
+		DefaultButton: "No",
 	})
 	if err != nil {
 		return false

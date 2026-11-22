@@ -69,9 +69,7 @@
         :data="filteredVersions"
         :loading="isListingVersions"
         :scroll-x="720"
-        flex-height
         style="height: 100%;"
-        size="small"
       >
         <template #empty>
           <div class="table-empty-box">
@@ -105,7 +103,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, h } from 'vue'
+import { ref, computed, watch, nextTick, h } from 'vue'
 import { backend as main } from '../../../wailsjs/go/models'
 import { ListVersions, GetVersionMetadata } from '../../../wailsjs/go/backend/App'
 import AppButton from '../../ui/components/AppButton.vue'
@@ -144,6 +142,14 @@ const isTargetQuerying = ref(false)
 const shouldStopTargetQuery = ref(false)
 const showTargetVersionModal = ref(false)
 const targetVersionInput = ref('')
+const targetVersionInputRef = ref<InstanceType<typeof AppInput> | null>(null)
+const selectedBundleId = ref('')
+
+watch(showTargetVersionModal, async visible => {
+  if (!visible) return
+  await nextTick()
+  targetVersionInputRef.value?.focus()
+})
 
 const versionForm = ref({
   bundleId: '',
@@ -225,9 +231,9 @@ async function querySingleVersionMetadata(row: VersionItem) {
     emit('busyChange', false, `构建 ID ${row.versionId} 对应版本: ${res.displayVersion} (${res.displayFileSize})`)
   } catch (err: any) {
     message.error(`查询详情失败: ${err}`)
+    emit('busyChange', false, '查询版本详情失败')
   } finally {
     row.isQuerying = false
-    emit('busyChange', false)
   }
 }
 
@@ -235,10 +241,18 @@ async function querySingleVersionMetadata(row: VersionItem) {
  * 枚举所有历史版本构建 ID
  */
 async function handleListVersions() {
+  versionForm.value.bundleId = versionForm.value.bundleId.trim()
   if (!versionForm.value.bundleId) {
     message.warning('请输入 Bundle ID')
     return
   }
+  if (versionForm.value.bundleId !== selectedBundleId.value) {
+    versionForm.value.appName = ''
+    versionForm.value.appId = 0
+    selectedBundleId.value = ''
+  }
+  stopAllQueries()
+  versionItems.value = []
 
   isListingVersions.value = true
   emit('busyChange', true, `正在查询 ${versionForm.value.bundleId} 的历史版本列表...`)
@@ -260,11 +274,11 @@ async function handleListVersions() {
   }
 }
 
-async function fetchItemMetadata(index: number): Promise<string> {
-  if (index < 0 || index >= versionItems.value.length) return ''
+async function fetchItemMetadata(index: number): Promise<{ ok: boolean; version: string; error?: unknown }> {
+  if (index < 0 || index >= versionItems.value.length) return { ok: false, version: '' }
   const item = versionItems.value[index]
   if (item.displayVersion && item.displayVersion !== '未查询') {
-    return item.displayVersion
+    return { ok: true, version: item.displayVersion }
   }
   item.isQuerying = true
   try {
@@ -273,13 +287,20 @@ async function fetchItemMetadata(index: number): Promise<string> {
     item.fileSize = res.displayFileSize
     item.releaseDate = res.releaseDate ? res.releaseDate.replace(/T.*/, '') : '-'
     versionItems.value = [...versionItems.value]
-    return item.displayVersion
+    return { ok: true, version: item.displayVersion }
   } catch (err) {
     console.warn(`查询构建 ID ${item.versionId} 失败:`, err)
-    return ''
+    return { ok: false, version: '', error: err }
   } finally {
     item.isQuerying = false
   }
+}
+
+async function fetchItemMetadataWithRetry(index: number, stopRef: { value: boolean }) {
+  const first = await fetchItemMetadata(index)
+  if (first.ok || stopRef.value) return first
+  if (!await cancellableSleep(200, stopRef)) return first
+  return fetchItemMetadata(index)
 }
 
 /**
@@ -291,6 +312,7 @@ async function runBatchQuery(count: number) {
   emit('busyChange', true, `正在批量查询前 ${count} 个历史版本号...`)
 
   try {
+    let consecutiveFailures = 0
     for (let i = 0; i < count; i++) {
       if (shouldStopBatchQuery.value) {
         emit('busyChange', false, '批量查询已手动停止。')
@@ -302,7 +324,17 @@ async function runBatchQuery(count: number) {
       if (item.displayVersion !== '未查询') continue
 
       emit('busyChange', true, `正在查询 (${i + 1}/${count}): ${item.versionId}...`)
-      await fetchItemMetadata(i)
+      const res = await fetchItemMetadata(i)
+      if (res.ok) {
+        consecutiveFailures = 0
+      } else {
+        consecutiveFailures++
+        if (consecutiveFailures >= 3) {
+          emit('busyChange', false, '批量查询因连续错误中断')
+          message.error(`批量查询中断，连续请求失败: ${res.error}`)
+          return
+        }
+      }
 
       if (shouldStopBatchQuery.value) break
       if (!await cancellableSleep(120, shouldStopBatchQuery)) break
@@ -391,11 +423,17 @@ async function runTargetQuery(targetVersion: string) {
     let high = total - 1
 
     emit('busyChange', true, `正在核对最新版本 (1/${total})...`)
-    const v0 = await fetchItemMetadata(0)
+    const r0 = await fetchItemMetadataWithRetry(0, shouldStopTargetQuery)
     if (shouldStopTargetQuery.value) {
       emit('busyChange', false, `已停止查询指定版本 (${targetVersion})。`)
       return
     }
+    if (!r0.ok) {
+      emit('busyChange', false, '查询指定版本失败')
+      message.error(`查询构建详情失败，已中止检索: ${r0.error}`)
+      return
+    }
+    const v0 = r0.version
 
     if (v0 && isVersionMatch(v0, targetVersion)) {
       found = true
@@ -410,11 +448,17 @@ async function runTargetQuery(targetVersion: string) {
 
     if (!found && high >= low) {
       emit('busyChange', true, `正在核对早期版本 (${total}/${total})...`)
-      const vLast = await fetchItemMetadata(high)
+      const rLast = await fetchItemMetadataWithRetry(high, shouldStopTargetQuery)
       if (shouldStopTargetQuery.value) {
         emit('busyChange', false, `已停止查询指定版本 (${targetVersion})。`)
         return
       }
+      if (!rLast.ok) {
+        emit('busyChange', false, '查询指定版本失败')
+        message.error(`查询构建详情失败，已中止检索: ${rLast.error}`)
+        return
+      }
+      const vLast = rLast.version
 
       if (vLast && isVersionMatch(vLast, targetVersion)) {
         found = true
@@ -432,11 +476,17 @@ async function runTargetQuery(targetVersion: string) {
       while (low <= high && !shouldStopTargetQuery.value) {
         const mid = Math.floor((low + high) / 2)
         emit('busyChange', true, `正在核对版本 (构建 ID: ${versionItems.value[mid].versionId})...`)
-        const vMid = await fetchItemMetadata(mid)
+        const rMid = await fetchItemMetadataWithRetry(mid, shouldStopTargetQuery)
 
         if (shouldStopTargetQuery.value) break
+        if (!rMid.ok) {
+          emit('busyChange', false, '查询指定版本失败')
+          message.error(`查询构建详情失败，已中止检索: ${rMid.error}`)
+          return
+        }
         if (!await cancellableSleep(120, shouldStopTargetQuery)) break
 
+        const vMid = rMid.version
         if (vMid && isVersionMatch(vMid, targetVersion)) {
           found = true
           foundItem = versionItems.value[mid]
@@ -479,6 +529,7 @@ async function runTargetQuery(targetVersion: string) {
  * 供搜索或已购页面选中某应用后跳转并开始枚举
  */
 function selectAppForVersions(app: main.AppItem) {
+  selectedBundleId.value = app.bundleID
   versionForm.value.appName = app.name
   versionForm.value.bundleId = app.bundleID
   versionForm.value.appId = app.id

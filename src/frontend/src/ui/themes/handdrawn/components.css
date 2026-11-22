@@ -120,7 +120,6 @@
 .theme-handdrawn .view-title,
 .theme-handdrawn .headline-title,
 .theme-handdrawn .task-name,
-.theme-handdrawn .profile-name,
 .theme-handdrawn .field-title,
 .theme-handdrawn .action-banner-title,
 .theme-handdrawn .feature-title,
@@ -359,8 +358,7 @@
   background: rgba(215, 241, 255, 0.92);
 }
 
-.theme-handdrawn .user-avatar.avatar-logged,
-.theme-handdrawn .large-avatar.avatar-active {
+.theme-handdrawn .user-avatar.avatar-logged {
   background-color: transparent;
   background-image: url('./assets/sketch-avatar-badge.svg');
   background-size: 100% 100%;
@@ -717,11 +715,6 @@
 .theme-handdrawn.active-tab-account .account-list-card {
   margin-top: 6px;
   min-height: 0;
-}
-
-.theme-handdrawn.active-tab-account .large-avatar {
-  width: 58px;
-  height: 58px;
 }
 
 .theme-handdrawn .app-input {
@@ -1170,38 +1163,6 @@
 .theme-handdrawn .sidebar-footer {
   position: fixed;
   z-index: 12;
-}
-
-.theme-handdrawn .handdrawn-sidebar-art .doodle-dash,
-.theme-handdrawn .handdrawn-sidebar-art .doodle-plane,
-.theme-handdrawn .handdrawn-sidebar-art .doodle-leaf,
-.theme-handdrawn .handdrawn-sidebar-art .doodle-flower,
-.theme-handdrawn .handdrawn-sidebar-art .doodle-star {
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 2;
-}
-
-.theme-handdrawn .handdrawn-sidebar-art .doodle-dash {
-  stroke: #73c5f6;
-  stroke-dasharray: 7 8;
-}
-
-.theme-handdrawn .handdrawn-sidebar-art .doodle-plane {
-  stroke: #67b9f2;
-}
-
-.theme-handdrawn .handdrawn-sidebar-art .doodle-leaf {
-  stroke: #64cda4;
-  fill: rgba(100, 205, 164, 0.10);
-}
-
-.theme-handdrawn .handdrawn-sidebar-art .doodle-flower {
-  stroke: #f5c854;
-}
-
-.theme-handdrawn .handdrawn-sidebar-art .doodle-star {
-  stroke: #f5c854;
 }
 
 /* The shipped window is intentionally compact on high-DPI Windows displays.

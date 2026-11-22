@@ -5,10 +5,13 @@
     :max="100"
     :aria-label="`${percentage}%`"
   >
-    <div class="app-progress__rail">
+    <div class="app-progress__rail" :style="{ height: `${height}px` }">
       <ProgressIndicator
         class="app-progress__fill"
-        :class="status === 'success' ? 'app-progress__fill--success' : ''"
+        :class="{
+          'app-progress__fill--success': status === 'success',
+          'app-progress__fill--error': status === 'error'
+        }"
         :style="{ transform: `translateX(-${100 - clampedPercentage}%)`, backgroundColor: color }"
       />
     </div>
@@ -31,4 +34,5 @@ const clampedPercentage = computed(() => Math.min(100, Math.max(0, props.percent
 .app-progress__rail { width: 100%; height: 6px; overflow: hidden; border-radius: 999px; background: var(--ui-progress-track); }
 .app-progress__fill { width: 100%; height: 100%; border-radius: inherit; background: var(--ui-primary); transition: transform .25s ease; }
 .app-progress__fill--success { background: var(--ui-success); }
+.app-progress__fill--error { background: var(--ui-danger); }
 </style>

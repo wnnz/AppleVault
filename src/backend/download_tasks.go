@@ -21,12 +21,18 @@ func (a *App) currentDownloadPlatform() string {
 	return platform
 }
 
-func (a *App) AddDownloadTask(appName, bundleId string, appId int64, version, versionId, fileSize string) (DownloadTask, error) {
+func (a *App) AddDownloadTask(appName, bundleId string, appId int64, version, versionId, fileSize, platform string) (DownloadTask, error) {
 	accountID := a.activeAccountID()
 	if accountID == "" {
 		return DownloadTask{}, fmt.Errorf("尚未登录 Apple ID")
 	}
-	platform := a.currentDownloadPlatform()
+	resolvedPlatform := strings.TrimSpace(platform)
+	if resolvedPlatform == "" {
+		resolvedPlatform = a.currentDownloadPlatform()
+	}
+	if _, err := parseStorePlatform(resolvedPlatform); err != nil {
+		return DownloadTask{}, err
+	}
 
 	if strings.TrimSpace(appName) == "" {
 		appName = bundleId
@@ -39,7 +45,7 @@ func (a *App) AddDownloadTask(appName, bundleId string, appId int64, version, ve
 	defer a.tasksMu.Unlock()
 
 	id := fmt.Sprintf("%d", time.Now().UnixNano())
-	task := newDownloadTask(accountID, id, appName, bundleId, appId, version, versionId, fileSize, platform)
+	task := newDownloadTask(accountID, id, appName, bundleId, appId, version, versionId, fileSize, resolvedPlatform)
 	if a.hasActiveDuplicateLocked(task) {
 		return DownloadTask{}, fmt.Errorf("该应用版本已在下载队列中")
 	}
