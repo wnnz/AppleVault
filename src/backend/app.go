@@ -218,8 +218,20 @@ func (a *App) loadSettings() {
 	p := a.getSettingsFilePath()
 	if data, err := os.ReadFile(p); err == nil {
 		var s Settings
-		if err := json.Unmarshal(data, &s); err == nil {
+		if unmarshalErr := json.Unmarshal(data, &s); unmarshalErr == nil {
 			a.settings = s
+		} else {
+			backupPath, backupErr := backupCorruptFile(p)
+			fields := map[string]interface{}{"backup": backupPath, "error": unmarshalErr.Error()}
+			if backupErr != nil {
+				fields["backup_error"] = backupErr.Error()
+			}
+			a.writeDiagnostic("settings.corrupt", fields)
+			if backupErr == nil {
+				a.emitLog(fmt.Sprintf("设置文件损坏，已备份为 %s，已使用默认设置", filepath.Base(backupPath)))
+			} else {
+				a.emitLog("设置文件损坏，已使用默认设置")
+			}
 		}
 	}
 
@@ -246,14 +258,31 @@ func (a *App) loadTasks() {
 	}
 
 	var list []*DownloadTask
-	if err := json.Unmarshal(data, &list); err == nil {
+	if unmarshalErr := json.Unmarshal(data, &list); unmarshalErr == nil {
+		valid := make([]*DownloadTask, 0, len(list))
 		for _, t := range list {
+			if t == nil {
+				continue
+			}
 			if t.Status == "downloading" || t.Status == "pending" {
 				t.Status = "canceled"
 				t.Speed = "已中断"
 			}
+			valid = append(valid, t)
 		}
-		a.tasks = list
+		a.tasks = valid
+	} else {
+		backupPath, backupErr := backupCorruptFile(p)
+		fields := map[string]interface{}{"backup": backupPath, "error": unmarshalErr.Error()}
+		if backupErr != nil {
+			fields["backup_error"] = backupErr.Error()
+		}
+		a.writeDiagnostic("tasks.corrupt", fields)
+		if backupErr == nil {
+			a.emitLog(fmt.Sprintf("下载任务文件损坏，已备份为 %s", filepath.Base(backupPath)))
+		} else {
+			a.emitLog("下载任务文件损坏，已跳过加载")
+		}
 	}
 }
 
@@ -261,8 +290,16 @@ func (a *App) saveTasksLocked() {
 	p := a.getTasksFilePath()
 	data, err := json.MarshalIndent(a.tasks, "", "  ")
 	if err == nil {
-		_ = os.WriteFile(p, data, 0644)
+		_ = writeFileAtomic(p, data, 0600)
 	}
+}
+
+func (a *App) saveSettingsLocked() error {
+	data, err := json.MarshalIndent(a.settings, "", "  ")
+	if err != nil {
+		return err
+	}
+	return writeFileAtomic(a.getSettingsFilePath(), data, 0600)
 }
 
 func (a *App) emitLog(message string) {
@@ -310,11 +347,7 @@ func (a *App) SaveSettings(s Settings) error {
 	s.DefaultDownloadDir = a.getDownloadsDir()
 	a.settings = s
 	a.settings.IpaToolPath = "内置 App Store 服务"
-	data, err := json.MarshalIndent(a.settings, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(a.getSettingsFilePath(), data, 0644)
+	return a.saveSettingsLocked()
 }
 
 func (a *App) GetThemeHintShown() bool {
@@ -327,11 +360,7 @@ func (a *App) MarkThemeHintShown() error {
 	a.settingsMu.Lock()
 	defer a.settingsMu.Unlock()
 	a.settings.ThemeHintShown = true
-	data, err := json.MarshalIndent(a.settings, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(a.getSettingsFilePath(), data, 0644)
+	return a.saveSettingsLocked()
 }
 
 func (a *App) SetKeychainPassphrase(passphrase string) error {
@@ -341,11 +370,7 @@ func (a *App) SetKeychainPassphrase(passphrase string) error {
 	a.settingsMu.Lock()
 	defer a.settingsMu.Unlock()
 	a.settings.KeychainPassphrase = passphrase
-	data, err := json.MarshalIndent(a.settings, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(a.getSettingsFilePath(), data, 0644)
+	return a.saveSettingsLocked()
 }
 
 func (a *App) SelectDirectory(title, defaultDir string) (string, error) {

@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"AppleVault/src/backend/internal/ipatool/appstore"
@@ -241,6 +243,7 @@ func mapStoreApps(items []appstore.App) []AppItem {
 type downloadProgress struct {
 	Percent int
 	Current int64
+	Total   int64
 	Speed   int64
 }
 
@@ -260,17 +263,25 @@ func (a *App) downloadFromStore(ctx context.Context, accountID, bundleID string,
 		progressbar.OptionSetRenderBlankState(false),
 	)
 	done := make(chan struct{})
+	var wg sync.WaitGroup
 	if onProgress != nil {
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			ticker := time.NewTicker(250 * time.Millisecond)
 			defer ticker.Stop()
 			for {
 				select {
 				case <-ticker.C:
 					state := bar.State()
+					var total int64
+					if state.CurrentPercent > 0 && !math.IsInf(state.CurrentPercent, 0) && state.CurrentBytes > 0 {
+						total = int64(math.Round(state.CurrentBytes / state.CurrentPercent))
+					}
 					onProgress(downloadProgress{
 						Percent: int(state.CurrentPercent * 100),
 						Current: int64(state.CurrentBytes),
+						Total:   total,
 						Speed:   int64(state.KBsPerSecond * 1024),
 					})
 				case <-done:
@@ -281,7 +292,10 @@ func (a *App) downloadFromStore(ctx context.Context, accountID, bundleID string,
 			}
 		}()
 	}
-	defer close(done)
+	defer func() {
+		close(done)
+		wg.Wait()
+	}()
 
 	purchased := false
 	result, err := withAccountRetry(store, func(account appstore.Account) (appstore.DownloadOutput, error) {

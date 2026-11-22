@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -197,6 +198,7 @@ func (a *App) runIOSToolInternal(ctx context.Context, silent bool, args ...strin
 	go func() {
 		defer waitGroup.Done()
 		scanner := bufio.NewScanner(stdoutPipe)
+		scanner.Buffer(make([]byte, 0, 64*1024), 8*1024*1024)
 		for scanner.Scan() {
 			line := scanner.Text()
 			stdoutLines = append(stdoutLines, line)
@@ -204,10 +206,12 @@ func (a *App) runIOSToolInternal(ctx context.Context, silent bool, args ...strin
 				a.emitLog(line)
 			}
 		}
+		_, _ = io.Copy(io.Discard, stdoutPipe)
 	}()
 	go func() {
 		defer waitGroup.Done()
 		scanner := bufio.NewScanner(stderrPipe)
+		scanner.Buffer(make([]byte, 0, 64*1024), 8*1024*1024)
 		for scanner.Scan() {
 			line := scanner.Text()
 			stderrLines = append(stderrLines, line)
@@ -215,6 +219,7 @@ func (a *App) runIOSToolInternal(ctx context.Context, silent bool, args ...strin
 				a.emitLog("[go-ios] " + line)
 			}
 		}
+		_, _ = io.Copy(io.Discard, stderrPipe)
 	}()
 
 	waitGroup.Wait()

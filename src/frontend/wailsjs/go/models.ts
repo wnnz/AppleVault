@@ -91,6 +91,7 @@ export namespace backend {
 	    version: string;
 	    versionId: string;
 	    fileSize: string;
+	    platform?: string;
 	    totalBytes: number;
 	    currBytes: number;
 	    progress: number;
@@ -114,6 +115,7 @@ export namespace backend {
 	        this.version = source["version"];
 	        this.versionId = source["versionId"];
 	        this.fileSize = source["fileSize"];
+	        this.platform = source["platform"];
 	        this.totalBytes = source["totalBytes"];
 	        this.currBytes = source["currBytes"];
 	        this.progress = source["progress"];

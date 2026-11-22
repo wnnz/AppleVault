@@ -97,9 +97,12 @@ func TestAccountRegistryPersistenceAndStorageIsolation(t *testing.T) {
 }
 
 func TestDownloadTaskAccountIDIsBackwardCompatible(t *testing.T) {
-	created := newDownloadTask("account-one", "new", "Example", "com.example", 1, "1.0", "100", "1 MB")
+	created := newDownloadTask("account-one", "new", "Example", "com.example", 1, "1.0", "100", "1 MB", "iphone")
 	if created.AccountID != "account-one" {
 		t.Fatalf("new task should bind its account, got %q", created.AccountID)
+	}
+	if created.Platform != "iphone" {
+		t.Fatalf("new task should bind its platform, got %q", created.Platform)
 	}
 
 	var legacy DownloadTask
@@ -114,13 +117,28 @@ func TestDownloadTaskAccountIDIsBackwardCompatible(t *testing.T) {
 func TestRetryDownloadTaskKeepsOriginalAccount(t *testing.T) {
 	source := &DownloadTask{
 		ID: "old", AccountID: "original-account", AppName: "Example", BundleID: "com.example",
-		AppID: 1, Version: "1.0", VersionID: "100", FileSize: "1 MB", Status: "error",
+		AppID: 1, Version: "1.0", VersionID: "100", FileSize: "1 MB", Platform: "ipad", Status: "error",
 	}
-	retry, err := retryDownloadTaskFrom(source, "new", "current-account")
+	retry, err := retryDownloadTaskFrom(source, "new", "current-account", "iphone")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if retry.AccountID != "original-account" || retry.ID != "new" {
 		t.Fatalf("retry lost original account: %#v", retry)
+	}
+	if retry.Platform != "ipad" {
+		t.Fatalf("retry should keep original platform ipad, got %q", retry.Platform)
+	}
+
+	legacySource := &DownloadTask{
+		ID: "old-legacy", AccountID: "original-account", AppName: "Example", BundleID: "com.example",
+		AppID: 1, Version: "1.0", VersionID: "100", FileSize: "1 MB", Status: "canceled",
+	}
+	fallbackRetry, err := retryDownloadTaskFrom(legacySource, "new-2", "current-account", "iphone")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fallbackRetry.Platform != "iphone" {
+		t.Fatalf("retry without platform should fall back to iphone, got %q", fallbackRetry.Platform)
 	}
 }

@@ -18,7 +18,8 @@ func (a *App) GetAccountInfo() (AccountInfo, error) {
 	if !ok {
 		return AccountInfo{}, nil
 	}
-	ctx := a.startCommandContext()
+	ctx, cleanup := a.startPurchaseCommandContext()
+	defer cleanup()
 	store, err := a.newAppStoreForAccount(ctx, accountID)
 	if err != nil {
 		return AccountInfo{}, err
@@ -159,7 +160,8 @@ func isRetryableAppleResponse(err error) bool {
 }
 
 func (a *App) GetVersionMetadata(bundleID, versionID string, appID int64) (VersionMetadataResult, error) {
-	ctx := a.startCommandContext()
+	ctx, cleanup := a.startPurchaseCommandContext()
+	defer cleanup()
 	store, err := a.newAppStore(ctx)
 	if err != nil {
 		return VersionMetadataResult{}, err

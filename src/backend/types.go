@@ -120,6 +120,7 @@ type DownloadTask struct {
 	Version      string `json:"version"`
 	VersionID    string `json:"versionId"`
 	FileSize     string `json:"fileSize"`
+	Platform     string `json:"platform,omitempty"`
 	TotalBytes   int64  `json:"totalBytes"`
 	CurrBytes    int64  `json:"currBytes"`
 	Progress     int    `json:"progress"`

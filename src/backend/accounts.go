@@ -85,12 +85,22 @@ func (a *App) initializeAccounts() {
 	path := a.accountsRegistryPath()
 	if data, err := os.ReadFile(path); err == nil {
 		var registry accountRegistry
-		if json.Unmarshal(data, &registry) == nil {
+		if unmarshalErr := json.Unmarshal(data, &registry); unmarshalErr == nil {
 			a.accountMu.Lock()
 			a.accounts = registry
 			a.syncCachedAccountLocked()
 			a.accountMu.Unlock()
 			return
+		} else {
+			backupPath, backupErr := backupCorruptFile(path)
+			fields := map[string]interface{}{"backup": backupPath, "error": unmarshalErr.Error()}
+			if backupErr != nil {
+				fields["backup_error"] = backupErr.Error()
+			}
+			a.writeDiagnostic("accounts.corrupt", fields)
+			if backupErr == nil {
+				a.emitLog(fmt.Sprintf("账号注册表损坏，已备份为 %s", filepath.Base(backupPath)))
+			}
 		}
 	}
 
@@ -114,39 +124,7 @@ func (a *App) saveAccountsLocked() error {
 	if err != nil {
 		return err
 	}
-	path := a.accountsRegistryPath()
-	tmp, err := os.CreateTemp(filepath.Dir(path), "accounts-*.tmp")
-	if err != nil {
-		return err
-	}
-	tmpPath := tmp.Name()
-	defer os.Remove(tmpPath)
-	if err = tmp.Chmod(0600); err == nil {
-		_, err = tmp.Write(data)
-	}
-	if closeErr := tmp.Close(); err == nil {
-		err = closeErr
-	}
-	if err != nil {
-		return err
-	}
-	if err = os.Rename(tmpPath, path); err == nil {
-		return nil
-	}
-	// Windows does not replace an existing destination with os.Rename.
-	backupPath := path + ".bak"
-	_ = os.Remove(backupPath)
-	if _, statErr := os.Stat(path); statErr == nil {
-		if renameErr := os.Rename(path, backupPath); renameErr != nil {
-			return err
-		}
-	}
-	if renameErr := os.Rename(tmpPath, path); renameErr != nil {
-		_ = os.Rename(backupPath, path)
-		return renameErr
-	}
-	_ = os.Remove(backupPath)
-	return nil
+	return writeFileAtomic(a.accountsRegistryPath(), data, 0600)
 }
 
 func (a *App) syncCachedAccountLocked() {
