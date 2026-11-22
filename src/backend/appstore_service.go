@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -28,7 +29,78 @@ const (
 	ipatoolConfigDirectory = ".ipatool"
 	ipatoolCookieFile      = "cookies"
 	ipatoolKeychainService = "ipatool-auth.service"
+	lookupCacheTTL         = 30 * time.Minute
+	maxLookupCacheItems    = 512
 )
+
+type storeSessionKey struct {
+	accountID    string
+	legacy       bool
+	dataDir      string
+	passphrase   string
+	enableProxy  bool
+	proxyAddress string
+}
+
+type cachedLookupEntry struct {
+	app       appstore.App
+	expiresAt time.Time
+}
+
+// cachingKeychain avoids repeated PBKDF2 decryption and redundant writes on file keyrings.
+type cachingKeychain struct {
+	inner keychain.Keychain
+	mu    sync.Mutex
+	items map[string][]byte
+}
+
+func newCachingKeychain(inner keychain.Keychain) *cachingKeychain {
+	return &cachingKeychain{
+		inner: inner,
+		items: make(map[string][]byte),
+	}
+}
+
+func (c *cachingKeychain) Get(key string) ([]byte, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if cached, ok := c.items[key]; ok {
+		return bytes.Clone(cached), nil
+	}
+
+	data, err := c.inner.Get(key)
+	if err != nil {
+		return nil, err
+	}
+
+	c.items[key] = bytes.Clone(data)
+	return data, nil
+}
+
+func (c *cachingKeychain) Set(key string, data []byte) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if existing, ok := c.items[key]; ok && bytes.Equal(existing, data) {
+		return nil
+	}
+
+	if err := c.inner.Set(key, data); err != nil {
+		return err
+	}
+
+	c.items[key] = bytes.Clone(data)
+	return nil
+}
+
+func (c *cachingKeychain) Remove(key string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	delete(c.items, key)
+	return c.inner.Remove(key)
+}
 
 // localMachine keeps credentials and cookies inside AppleVault's data directory
 // instead of depending on ipatool's command-line environment overrides.
@@ -45,6 +117,97 @@ func (m localMachine) HomeDirectory() string { return m.home }
 
 func (localMachine) ReadPassword(int) ([]byte, error) {
 	return nil, errors.New("AppleVault 不支持命令行密码输入")
+}
+
+func (a *App) currentStoreSessionKey(accountID string, legacy bool) storeSessionKey {
+	a.settingsMu.RLock()
+	passphrase := a.settings.KeychainPassphrase
+	enableProxy := a.settings.EnableProxy
+	proxyAddress := strings.TrimSpace(a.settings.ProxyUrl)
+	a.settingsMu.RUnlock()
+
+	return storeSessionKey{
+		accountID:    accountID,
+		legacy:       legacy,
+		dataDir:      a.getDataDir(),
+		passphrase:   passphrase,
+		enableProxy:  enableProxy,
+		proxyAddress: proxyAddress,
+	}
+}
+
+func (a *App) sharedAppStore() (appstore.AppStore, error) {
+	accountID := a.activeAccountID()
+	if accountID == "" {
+		return nil, errors.New("尚未登录 Apple ID")
+	}
+	return a.sharedAppStoreFor(accountID, "当前账号不存在")
+}
+
+func (a *App) sharedAppStoreForAccount(accountID string) (appstore.AppStore, error) {
+	return a.sharedAppStoreFor(accountID, "下载任务所属账号不存在")
+}
+
+func (a *App) sharedAppStoreFor(accountID, notFoundMessage string) (appstore.AppStore, error) {
+	item, ok := a.accountByID(accountID)
+	if !ok {
+		return nil, errors.New(notFoundMessage)
+	}
+
+	key := a.currentStoreSessionKey(item.ID, item.Legacy)
+	a.storeMu.Lock()
+	if cached, exists := a.storeSessions[key]; exists {
+		a.storeMu.Unlock()
+		return cached, nil
+	}
+	a.storeMu.Unlock()
+
+	store, err := a.newAppStoreWithStorage(context.Background(), item.ID, item.Legacy)
+	if err != nil {
+		return nil, err
+	}
+
+	a.storeMu.Lock()
+	if a.storeSessions == nil {
+		a.storeSessions = make(map[storeSessionKey]appstore.AppStore)
+	}
+	for existingKey, existingStore := range a.storeSessions {
+		if existingKey.accountID == item.ID && existingKey != key {
+			if closer, ok := existingStore.(interface{ CloseIdleConnections() }); ok {
+				closer.CloseIdleConnections()
+			}
+			delete(a.storeSessions, existingKey)
+		}
+	}
+	if existingStore, exists := a.storeSessions[key]; exists {
+		a.storeMu.Unlock()
+		if closer, ok := store.(interface{ CloseIdleConnections() }); ok {
+			closer.CloseIdleConnections()
+		}
+		return existingStore, nil
+	}
+	a.storeSessions[key] = store
+	a.storeMu.Unlock()
+	return store, nil
+}
+
+func (a *App) invalidateStoreSessions(accountID string) {
+	var evicted []appstore.AppStore
+
+	a.storeMu.Lock()
+	for key, store := range a.storeSessions {
+		if accountID == "" || key.accountID == accountID {
+			evicted = append(evicted, store)
+			delete(a.storeSessions, key)
+		}
+	}
+	a.storeMu.Unlock()
+
+	for _, store := range evicted {
+		if closer, ok := store.(interface{ CloseIdleConnections() }); ok {
+			closer.CloseIdleConnections()
+		}
+	}
 }
 
 func (a *App) newAppStore(ctx context.Context) (appstore.AppStore, error) {
@@ -131,7 +294,7 @@ func (a *App) newAppStoreWithStorage(ctx context.Context, accountID string, lega
 	a.writeDiagnostic("store.config", map[string]interface{}{"account_id": accountID, "proxy_enabled": enableProxy && proxyAddress != "", "proxy_endpoint": ipahttp.DiagnosticURL(proxyAddress), "identity_strategy": "ipatool-2.8.1"})
 	store := appstore.NewAppStore(appstore.Args{
 		CookieJar:       ipahttp.CookieJar(jar),
-		Keychain:        keychain.New(keychain.Args{Keyring: ring, Label: serviceName}),
+		Keychain:        newCachingKeychain(keychain.New(keychain.Args{Keyring: ring, Label: serviceName})),
 		Machine:         localMachine{home: a.getDataDir(), identity: machine.New(machine.Args{OS: osAdapter})},
 		OperatingSystem: osAdapter,
 		Context:         ctx,
@@ -194,17 +357,97 @@ func withAccountRetry[T any](store appstore.AppStore, operation func(appstore.Ac
 	return operation(account)
 }
 
-func resolveStoreApp(store appstore.AppStore, account appstore.Account, bundleID string, appID int64, platform appstore.Platform) (appstore.App, error) {
-	if bundleID == "" {
-		if appID <= 0 {
-			return appstore.App{}, errors.New("必须提供 Bundle ID 或 App ID")
+func lookupBundleCacheKey(storeFront string, platform appstore.Platform, bundleID string) string {
+	return fmt.Sprintf("b|%s|%s|%s", strings.ToLower(strings.TrimSpace(storeFront)), string(platform), strings.ToLower(strings.TrimSpace(bundleID)))
+}
+
+func lookupIDCacheKey(storeFront string, platform appstore.Platform, appID int64) string {
+	return fmt.Sprintf("i|%s|%s|%d", strings.ToLower(strings.TrimSpace(storeFront)), string(platform), appID)
+}
+
+func (a *App) rememberLookupApp(storeFront string, platform appstore.Platform, item appstore.App) {
+	if item.ID <= 0 {
+		return
+	}
+
+	now := time.Now()
+	expiresAt := now.Add(lookupCacheTTL)
+
+	a.lookupMu.Lock()
+	defer a.lookupMu.Unlock()
+
+	if a.lookupCache == nil {
+		a.lookupCache = make(map[string]cachedLookupEntry)
+	}
+	if len(a.lookupCache) > maxLookupCacheItems {
+		for k, entry := range a.lookupCache {
+			if !now.Before(entry.expiresAt) {
+				delete(a.lookupCache, k)
+			}
 		}
+		if len(a.lookupCache) > maxLookupCacheItems {
+			clear(a.lookupCache)
+		}
+	}
+
+	entry := cachedLookupEntry{app: item, expiresAt: expiresAt}
+	a.lookupCache[lookupIDCacheKey(storeFront, platform, item.ID)] = entry
+	if trimmedBundle := strings.TrimSpace(item.BundleID); trimmedBundle != "" {
+		a.lookupCache[lookupBundleCacheKey(storeFront, platform, trimmedBundle)] = entry
+	}
+}
+
+func (a *App) resolveStoreAppCached(
+	ctx context.Context,
+	store appstore.AppStore,
+	account appstore.Account,
+	bundleID string,
+	appID int64,
+	platform appstore.Platform,
+	requireFullMetadata bool,
+) (appstore.App, error) {
+	trimmedBundleID := strings.TrimSpace(bundleID)
+	if trimmedBundleID == "" && appID <= 0 {
+		return appstore.App{}, errors.New("必须提供 Bundle ID 或 App ID")
+	}
+
+	now := time.Now()
+	a.lookupMu.RLock()
+	if trimmedBundleID != "" {
+		if entry, ok := a.lookupCache[lookupBundleCacheKey(account.StoreFront, platform, trimmedBundleID)]; ok && now.Before(entry.expiresAt) {
+			if appID <= 0 || entry.app.ID == appID {
+				a.lookupMu.RUnlock()
+				return entry.app, nil
+			}
+		}
+	} else if appID > 0 {
+		if entry, ok := a.lookupCache[lookupIDCacheKey(account.StoreFront, platform, appID)]; ok && now.Before(entry.expiresAt) {
+			a.lookupMu.RUnlock()
+			return entry.app, nil
+		}
+	}
+	a.lookupMu.RUnlock()
+
+	if trimmedBundleID == "" {
 		return appstore.App{ID: appID}, nil
 	}
-	result, err := store.Lookup(appstore.LookupInput{Account: account, BundleID: bundleID, Platform: platform})
+
+	if !requireFullMetadata && appID > 0 {
+		return appstore.App{ID: appID, BundleID: trimmedBundleID}, nil
+	}
+
+	result, err := store.Lookup(appstore.LookupInput{
+		Context:  ctx,
+		Account:  account,
+		AppID:    appID,
+		BundleID: trimmedBundleID,
+		Platform: platform,
+	})
 	if err != nil {
 		return appstore.App{}, err
 	}
+
+	a.rememberLookupApp(account.StoreFront, platform, result.App)
 	return result.App, nil
 }
 
@@ -248,7 +491,7 @@ type downloadProgress struct {
 }
 
 func (a *App) downloadFromStore(ctx context.Context, accountID, bundleID string, appID int64, versionID, outputPath, platformValue string, acquireLicense bool, onProgress func(downloadProgress)) (DownloadResult, error) {
-	store, err := a.newAppStoreForAccount(ctx, accountID)
+	store, err := a.sharedAppStoreForAccount(accountID)
 	if err != nil {
 		return DownloadResult{}, err
 	}
@@ -299,7 +542,7 @@ func (a *App) downloadFromStore(ctx context.Context, accountID, bundleID string,
 
 	purchased := false
 	result, err := withAccountRetry(store, func(account appstore.Account) (appstore.DownloadOutput, error) {
-		item, err := resolveStoreApp(store, account, bundleID, appID, platform)
+		item, err := a.resolveStoreAppCached(ctx, store, account, bundleID, appID, platform, true)
 		if err != nil {
 			return appstore.DownloadOutput{}, err
 		}
@@ -309,7 +552,7 @@ func (a *App) downloadFromStore(ctx context.Context, accountID, bundleID string,
 			Progress: bar, ExternalVersionID: versionID, Platform: platform,
 		})
 		if errors.Is(err, appstore.ErrLicenseRequired) && acquireLicense {
-			purchaseErr := store.Purchase(appstore.PurchaseInput{Account: account, App: item})
+			purchaseErr := store.Purchase(appstore.PurchaseInput{Context: ctx, Account: account, App: item, Platform: platform})
 			if purchaseErr != nil && !errors.Is(purchaseErr, appstore.ErrLicenseAlreadyExists) {
 				return appstore.DownloadOutput{}, purchaseErr
 			}

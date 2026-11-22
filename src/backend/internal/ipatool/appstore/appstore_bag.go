@@ -1,15 +1,24 @@
 package appstore
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	gohttp "net/http"
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"AppleVault/src/backend/internal/ipatool/http"
 )
+
+const urlBagCacheTTL = 15 * time.Minute
+
+type cachedURLBag struct {
+	bag       urlBag
+	expiresAt time.Time
+}
 
 type BagInput struct{}
 
@@ -30,11 +39,11 @@ func (t *appstore) Bag(input BagInput) (BagOutput, error) {
 		return BagOutput{}, err
 	}
 
-	return t.bag(guid)
+	return t.bag(nil, guid)
 }
 
-func (t *appstore) bag(guid string) (BagOutput, error) {
-	bag, err := t.fetchURLBag(guid)
+func (t *appstore) bag(ctx context.Context, guid string) (BagOutput, error) {
+	bag, err := t.fetchURLBag(ctx, guid)
 	if err != nil {
 		return BagOutput{}, err
 	}
@@ -71,8 +80,24 @@ func (t *appstore) bag(guid string) (BagOutput, error) {
 }
 
 // Download endpoints do not require the authentication-specific SAP configuration.
-func (t *appstore) fetchURLBag(guid string) (urlBag, error) {
-	res, err := t.bagClient.Send(t.bagRequest(guid))
+func (t *appstore) fetchURLBag(ctx context.Context, guid string) (urlBag, error) {
+	if ctx == nil {
+		ctx = t.requestContext()
+	}
+
+	if err := ctx.Err(); err != nil {
+		return urlBag{}, err
+	}
+
+	t.bagCacheMu.Lock()
+	if cached, ok := t.bagCache[guid]; ok && time.Now().Before(cached.expiresAt) {
+		t.bagCacheMu.Unlock()
+
+		return cached.bag, nil
+	}
+	t.bagCacheMu.Unlock()
+
+	res, err := t.bagClient.Send(t.bagRequest(ctx, guid))
 	if err != nil {
 		return urlBag{}, fmt.Errorf("failed to send http request: %w", err)
 	}
@@ -81,23 +106,34 @@ func (t *appstore) fetchURLBag(guid string) (urlBag, error) {
 		return urlBag{}, fmt.Errorf("received unexpected status code: %d", res.StatusCode)
 	}
 
-	bag := res.Data.URLBag
-	if bag.AuthEndpoint != "" || bag.EntDownloadEndpoint != "" ||
-		bag.RedownloadEndpoint != "" || bag.UpdateEndpoint != "" ||
-		bag.SAPSetupEndpoint != "" || bag.SAPSetupCertEndpoint != "" ||
-		bag.SAPVersion != "" {
-		return res.Data.URLBag, nil
+	resolved := res.Data.URLBag
+	if resolved.AuthEndpoint == "" && resolved.EntDownloadEndpoint == "" &&
+		resolved.RedownloadEndpoint == "" && resolved.UpdateEndpoint == "" &&
+		resolved.SAPSetupEndpoint == "" && resolved.SAPSetupCertEndpoint == "" &&
+		resolved.SAPVersion == "" {
+		resolved = urlBag{
+			AuthEndpoint:         res.Data.AuthEndpoint,
+			EntDownloadEndpoint:  res.Data.EntDownloadEndpoint,
+			RedownloadEndpoint:   res.Data.RedownloadEndpoint,
+			UpdateEndpoint:       res.Data.UpdateEndpoint,
+			SAPSetupEndpoint:     res.Data.SAPSetupEndpoint,
+			SAPSetupCertEndpoint: res.Data.SAPSetupCertEndpoint,
+			SAPVersion:           res.Data.SAPVersion,
+		}
 	}
 
-	return urlBag{
-		AuthEndpoint:         res.Data.AuthEndpoint,
-		EntDownloadEndpoint:  res.Data.EntDownloadEndpoint,
-		RedownloadEndpoint:   res.Data.RedownloadEndpoint,
-		UpdateEndpoint:       res.Data.UpdateEndpoint,
-		SAPSetupEndpoint:     res.Data.SAPSetupEndpoint,
-		SAPSetupCertEndpoint: res.Data.SAPSetupCertEndpoint,
-		SAPVersion:           res.Data.SAPVersion,
-	}, nil
+	t.bagCacheMu.Lock()
+	if t.bagCache == nil {
+		t.bagCache = make(map[string]cachedURLBag)
+	}
+
+	t.bagCache[guid] = cachedURLBag{
+		bag:       resolved,
+		expiresAt: time.Now().Add(urlBagCacheTTL),
+	}
+	t.bagCacheMu.Unlock()
+
+	return resolved, nil
 }
 
 type bagResult struct {
@@ -176,8 +212,9 @@ func validateAuthenticationEndpoint(endpoint string) error {
 	return nil
 }
 
-func (*appstore) bagRequest(guid string) http.Request {
+func (*appstore) bagRequest(ctx context.Context, guid string) http.Request {
 	return http.Request{
+		Context:        ctx,
 		URL:            fmt.Sprintf("https://%s%s?ix=6&guid=%s", PrivateInitDomain, PrivateInitPath, guid),
 		Method:         http.MethodGET,
 		ResponseFormat: http.ResponseFormatXML,

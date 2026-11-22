@@ -83,7 +83,13 @@ func (a *App) Search(term string, limit int, platformValue string) (SearchResult
 	}
 
 	result, err := withAccountRetry(store, func(account appstore.Account) (appstore.SearchOutput, error) {
-		return store.Search(appstore.SearchInput{Account: account, Term: term, Limit: int64(limit), Platform: platform})
+		out, err := store.Search(appstore.SearchInput{Account: account, Term: term, Limit: int64(limit), Platform: platform})
+		if err == nil {
+			for _, item := range out.Results {
+				a.rememberLookupApp(account.StoreFront, platform, item)
+			}
+		}
+		return out, err
 	})
 	if err != nil {
 		return SearchResult{}, err
@@ -103,16 +109,18 @@ func (a *App) ListVersions(bundleID string, appID int64) (output VersionsResult,
 	var lastErr error
 	for attempt := 1; attempt <= 3; attempt++ {
 		ctx := a.startCommandContext()
-		store, err := a.newAppStore(ctx)
+		store, err := a.sharedAppStore()
 		if err != nil {
 			return VersionsResult{}, err
 		}
 
+		var resolvedApp appstore.App
 		result, err := withAccountRetry(store, func(account appstore.Account) (appstore.ListVersionsOutput, error) {
-			item, err := resolveStoreApp(store, account, bundleID, appID, "")
+			item, err := a.resolveStoreAppCached(ctx, store, account, bundleID, appID, "", false)
 			if err != nil {
 				return appstore.ListVersionsOutput{}, err
 			}
+			resolvedApp = item
 			return store.ListVersions(appstore.ListVersionsInput{Context: ctx, Account: account, App: item})
 		})
 		if err == nil {
@@ -120,7 +128,22 @@ func (a *App) ListVersions(bundleID string, appID int64) (output VersionsResult,
 			for left, right := 0, len(identifiers)-1; left < right; left, right = left+1, right-1 {
 				identifiers[left], identifiers[right] = identifiers[right], identifiers[left]
 			}
-			return VersionsResult{BundleID: bundleID, ExternalVersionIdentifiers: identifiers, Success: true}, nil
+			resolvedBundleID := strings.TrimSpace(bundleID)
+			if resolvedBundleID == "" {
+				resolvedBundleID = resolvedApp.BundleID
+			}
+			cacheBundleID := resolvedApp.BundleID
+			if cacheBundleID == "" {
+				cacheBundleID = resolvedBundleID
+			}
+			return VersionsResult{
+				BundleID:                   resolvedBundleID,
+				AppID:                      resolvedApp.ID,
+				AppName:                    resolvedApp.Name,
+				ExternalVersionIdentifiers: identifiers,
+				Metadata:                   a.getCachedVersionMetadataBatch(cacheBundleID, resolvedApp.ID, identifiers),
+				Success:                    true,
+			}, nil
 		}
 
 		lastErr = err
@@ -142,18 +165,24 @@ func isRetryableAppleResponse(err error) bool {
 }
 
 func (a *App) GetVersionMetadata(bundleID, versionID string, appID int64) (VersionMetadataResult, error) {
+	if cached, ok := a.getCachedVersionMetadata(bundleID, appID, versionID); ok {
+		return cached, nil
+	}
+
 	ctx, cleanup := a.startPurchaseCommandContext()
 	defer cleanup()
-	store, err := a.newAppStore(ctx)
+	store, err := a.sharedAppStore()
 	if err != nil {
 		return VersionMetadataResult{}, err
 	}
 
+	var resolvedApp appstore.App
 	result, err := withAccountRetry(store, func(account appstore.Account) (appstore.GetVersionMetadataOutput, error) {
-		item, err := resolveStoreApp(store, account, bundleID, appID, "")
+		item, err := a.resolveStoreAppCached(ctx, store, account, bundleID, appID, "", false)
 		if err != nil {
 			return appstore.GetVersionMetadataOutput{}, err
 		}
+		resolvedApp = item
 		return store.GetVersionMetadata(appstore.GetVersionMetadataInput{Context: ctx, Account: account, App: item, VersionID: versionID})
 	})
 	if err != nil {
@@ -164,14 +193,26 @@ func (a *App) GetVersionMetadata(bundleID, versionID string, appID int64) (Versi
 	if !result.ReleaseDate.IsZero() {
 		releaseDate = result.ReleaseDate.Format("2006-01-02")
 	}
-	return VersionMetadataResult{
+	output := VersionMetadataResult{
 		ExternalVersionID: versionID,
 		DisplayVersion:    result.DisplayVersion,
 		ReleaseDate:       releaseDate,
 		FileSize:          result.FileSize,
 		DisplayFileSize:   formatBytes(result.FileSize),
 		Success:           true,
-	}, nil
+	}
+
+	cacheBundleID := resolvedApp.BundleID
+	if cacheBundleID == "" {
+		cacheBundleID = strings.TrimSpace(bundleID)
+	}
+	cacheAppID := resolvedApp.ID
+	if cacheAppID <= 0 {
+		cacheAppID = appID
+	}
+	a.putCachedVersionMetadata(cacheBundleID, cacheAppID, output)
+
+	return output, nil
 }
 
 func (a *App) Purchase(bundleID, platformValue string) (PurchaseResult, error) {
@@ -184,18 +225,18 @@ func (a *App) Purchase(bundleID, platformValue string) (PurchaseResult, error) {
 		return PurchaseResult{}, err
 	}
 	ctx := a.startCommandContext()
-	store, err := a.newAppStore(ctx)
+	store, err := a.sharedAppStore()
 	if err != nil {
 		return PurchaseResult{}, err
 	}
 
 	alreadyOwned := false
 	_, err = withAccountRetry(store, func(account appstore.Account) (struct{}, error) {
-		item, err := resolveStoreApp(store, account, bundleID, 0, platform)
+		item, err := a.resolveStoreAppCached(ctx, store, account, bundleID, 0, platform, true)
 		if err != nil {
 			return struct{}{}, err
 		}
-		err = store.Purchase(appstore.PurchaseInput{Account: account, App: item})
+		err = store.Purchase(appstore.PurchaseInput{Context: ctx, Account: account, App: item, Platform: platform})
 		if errors.Is(err, appstore.ErrLicenseAlreadyExists) {
 			alreadyOwned = true
 			return struct{}{}, nil

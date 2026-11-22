@@ -104,7 +104,7 @@ func (t *appstore) GetVersionMetadata(input GetVersionMetadataInput) (GetVersion
 	// Do not fall back to item.Metadata here. The App Store download API can
 	// return stale version and release date values, so the IPA Info.plist is the
 	// source of truth and failures should be visible to callers.
-	metadata, fileSize, err := t.readVersionMetadataFromIPA(item.URL)
+	metadata, fileSize, err := t.readVersionMetadataFromIPA(input.Context, item.URL)
 	if err != nil {
 		return GetVersionMetadataOutput{}, fmt.Errorf("failed to read version metadata: %w", err)
 	}

@@ -85,7 +85,7 @@ func (t *appstore) legacyLogin(input LoginInput) (LoginOutput, error) {
 		return LoginOutput{}, err
 	}
 
-	bag, err := t.bag(guid)
+	bag, err := t.bag(nil, guid)
 	if err != nil {
 		return LoginOutput{}, fmt.Errorf("failed to get bag: %w", err)
 	}

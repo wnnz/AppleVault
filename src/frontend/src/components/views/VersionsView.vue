@@ -259,12 +259,30 @@ async function handleListVersions() {
 
   try {
     const res = await ListVersions(versionForm.value.bundleId, versionForm.value.appId)
-    versionItems.value = (res.externalVersionIdentifiers || []).map(id => ({
-      versionId: id,
-      displayVersion: '未查询',
-      fileSize: '-',
-      releaseDate: '-'
-    }))
+    if (res.appID && res.appID > 0) {
+      versionForm.value.appId = res.appID
+    }
+    if (res.appName && !versionForm.value.appName) {
+      versionForm.value.appName = res.appName
+    }
+    selectedBundleId.value = res.bundleID || versionForm.value.bundleId
+    versionItems.value = (res.externalVersionIdentifiers || []).map(id => {
+      const cached = res.metadata?.[id]
+      if (cached && cached.displayVersion) {
+        return {
+          versionId: id,
+          displayVersion: cached.displayVersion,
+          fileSize: cached.displayFileSize || '-',
+          releaseDate: cached.releaseDate ? cached.releaseDate.replace(/T.*/, '') : '-'
+        }
+      }
+      return {
+        versionId: id,
+        displayVersion: '未查询',
+        fileSize: '-',
+        releaseDate: '-'
+      }
+    })
     emit('busyChange', false, `共获取到 ${versionItems.value.length} 个历史版本记录。`)
   } catch (err: any) {
     message.error(`查询历史版本失败: ${err}`)
@@ -274,11 +292,11 @@ async function handleListVersions() {
   }
 }
 
-async function fetchItemMetadata(index: number): Promise<{ ok: boolean; version: string; error?: unknown }> {
+async function fetchItemMetadata(index: number): Promise<{ ok: boolean; version: string; cached?: boolean; error?: unknown }> {
   if (index < 0 || index >= versionItems.value.length) return { ok: false, version: '' }
   const item = versionItems.value[index]
   if (item.displayVersion && item.displayVersion !== '未查询') {
-    return { ok: true, version: item.displayVersion }
+    return { ok: true, version: item.displayVersion, cached: true }
   }
   item.isQuerying = true
   try {
@@ -484,7 +502,7 @@ async function runTargetQuery(targetVersion: string) {
           message.error(`查询构建详情失败，已中止检索: ${rMid.error}`)
           return
         }
-        if (!await cancellableSleep(120, shouldStopTargetQuery)) break
+        if (!rMid.cached && !await cancellableSleep(120, shouldStopTargetQuery)) break
 
         const vMid = rMid.version
         if (vMid && isVersionMatch(vMid, targetVersion)) {

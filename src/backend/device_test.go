@@ -169,3 +169,22 @@ func TestFriendlyDeviceToolErrorMatching(t *testing.T) {
 		t.Fatalf("expected original error suffix for exit status 1, got %v", exitErr)
 	}
 }
+
+func TestIOSToolCandidatePathsSupportsMacBundleAndWindows(t *testing.T) {
+	macCandidates := iosToolCandidatePaths("/Applications/AppleVault.app/Contents/MacOS/AppleVault", "/work", "darwin")
+	if len(macCandidates) < 3 {
+		t.Fatalf("expected macOS candidates, got %v", macCandidates)
+	}
+	if filepath.ToSlash(macCandidates[0]) != "/Applications/AppleVault.app/Contents/Resources/tools/ios" {
+		t.Fatalf("macOS first candidate = %q, want Resources/tools/ios", filepath.ToSlash(macCandidates[0]))
+	}
+	lastMac := macCandidates[len(macCandidates)-1]
+	if lastMac != "/usr/local/bin/ios" && macCandidates[len(macCandidates)-2] != "/opt/homebrew/bin/ios" {
+		t.Fatalf("expected Homebrew paths at tail of macOS candidates, got %v", macCandidates)
+	}
+
+	winCandidates := iosToolCandidatePaths(`C:\Apps\AppleVault\AppleVault.exe`, `D:\repo`, "windows")
+	if len(winCandidates) == 0 || filepath.ToSlash(winCandidates[0]) != "C:/Apps/AppleVault/tools/ios.exe" {
+		t.Fatalf("Windows first candidate = %v", winCandidates)
+	}
+}

@@ -1,6 +1,7 @@
 package appstore
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	gohttp "net/http"
@@ -17,6 +18,7 @@ var (
 )
 
 type PurchaseInput struct {
+	Context  context.Context
 	Account  Account
 	App      App
 	Platform Platform
@@ -34,10 +36,10 @@ func (t *appstore) Purchase(input PurchaseInput) error {
 		return errors.New("purchasing paid apps is not supported")
 	}
 
-	err = t.purchaseWithParams(input.Account, input.App, guid, PricingParameterAppStore)
+	err = t.purchaseWithParams(input.Context, input.Account, input.App, guid, PricingParameterAppStore)
 	if err != nil {
 		if input.Platform != PlatformMacOS && err == ErrTemporarilyUnavailable {
-			err = t.purchaseWithParams(input.Account, input.App, guid, PricingParameterAppleArcade)
+			err = t.purchaseWithParams(input.Context, input.Account, input.App, guid, PricingParameterAppleArcade)
 			if err != nil {
 				return fmt.Errorf("failed to purchase item with param '%s': %w", PricingParameterAppleArcade, err)
 			}
@@ -58,8 +60,9 @@ type purchaseResult struct {
 	Status          int    `plist:"status,omitempty"`
 }
 
-func (t *appstore) purchaseWithParams(acc Account, app App, guid string, pricingParameters string) error {
+func (t *appstore) purchaseWithParams(ctx context.Context, acc Account, app App, guid string, pricingParameters string) error {
 	req := t.purchaseRequest(acc, app, acc.StoreFront, guid, pricingParameters)
+	req.Context = ctx
 	res, err := t.purchaseClient.Send(req)
 
 	if err != nil {

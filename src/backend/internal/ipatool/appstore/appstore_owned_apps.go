@@ -54,7 +54,7 @@ func (t *appstore) OwnedApps(input OwnedAppsInput) (OwnedAppsOutput, error) {
 		return OwnedAppsOutput{}, err
 	}
 
-	bag, err := t.bag(guid)
+	bag, err := t.bag(nil, guid)
 	if err != nil {
 		return OwnedAppsOutput{}, fmt.Errorf("failed to get bag: %w", err)
 	}

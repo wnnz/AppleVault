@@ -214,6 +214,7 @@ func TestIsTemporaryExecutableDir(t *testing.T) {
 		{`D:\Templates\AppleVault`, false},
 		{`D:\Apps\AppleVault`, false},
 		{`/tmp/abc`, true},
+		{`/private/var/folders/xx/T/AppTranslocation/ABC/d/AppleVault.app/Contents/MacOS`, true},
 	}
 	for _, tc := range tests {
 		if got := isTemporaryExecutableDir(tc.dir); got != tc.want {

@@ -364,7 +364,10 @@ export namespace backend {
 	}
 	export class VersionsResult {
 	    bundleID: string;
+	    appID?: number;
+	    appName?: string;
 	    externalVersionIdentifiers: string[];
+	    metadata?: Record<string, VersionMetadataResult>;
 	    success: boolean;
 	
 	    static createFrom(source: any = {}) {
@@ -374,9 +377,30 @@ export namespace backend {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.bundleID = source["bundleID"];
+	        this.appID = source["appID"];
+	        this.appName = source["appName"];
 	        this.externalVersionIdentifiers = source["externalVersionIdentifiers"];
+	        this.metadata = this.convertValues(source["metadata"], VersionMetadataResult, true);
 	        this.success = source["success"];
 	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 
 }

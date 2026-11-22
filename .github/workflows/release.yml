@@ -1,0 +1,230 @@
+name: Release Build (Windows & macOS)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      macos_arch:
+        description: "macOS target architecture"
+        required: true
+        default: "universal"
+        type: choice
+        options:
+          - universal
+          - arm64
+          - amd64
+      publish_release:
+        description: "Also create/update GitHub Release when triggered manually"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Check Version & Release State
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      tag: ${{ steps.meta.outputs.tag }}
+      should_build: ${{ steps.meta.outputs.should_build }}
+      should_release: ${{ steps.meta.outputs.should_release }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Resolve version and release state
+        id: meta
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_PUBLISH_RELEASE: ${{ inputs.publish_release == true }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          VERSION="$(python3 - <<'PY'
+          import json, pathlib, re
+
+          root = pathlib.Path(".")
+          m = re.search(r'AppVersion\s*=\s*"([^"]+)"', (root / "src/backend/update.go").read_text(encoding="utf-8"))
+          if not m:
+              raise SystemExit("Failed to parse AppVersion from src/backend/update.go")
+          update_ver = m.group(1)
+          pkg_ver = json.loads((root / "src/frontend/package.json").read_text(encoding="utf-8"))["version"]
+          wails_ver = json.loads((root / "wails.json").read_text(encoding="utf-8"))["info"]["productVersion"]
+          if not (update_ver == pkg_ver == wails_ver):
+              raise SystemExit(f"Version mismatch: update.go={update_ver}, package.json={pkg_ver}, wails.json={wails_ver}")
+          print(update_ver)
+          PY
+          )"
+          TAG="v${VERSION}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            echo "should_release=${INPUT_PUBLISH_RELEASE}" >> "$GITHUB_OUTPUT"
+            echo "Manual trigger for ${TAG} (publish_release=${INPUT_PUBLISH_RELEASE})." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          TAG_EXISTS=false
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            TAG_EXISTS=true
+          fi
+
+          RELEASE_EXISTS=false
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            RELEASE_EXISTS=true
+          fi
+
+          if [[ "$TAG_EXISTS" == "true" || "$RELEASE_EXISTS" == "true" ]]; then
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            cat <<EOF >> "$GITHUB_STEP_SUMMARY"
+          ### 已跳过自动构建与发布 (${TAG})
+          - 检测到版本 \`${TAG}\` 对应的 Git 标签或 GitHub Release 已存在（tag=${TAG_EXISTS}, release=${RELEASE_EXISTS}），为避免重复覆盖发布已自动跳过。
+          - 如需发布新版本，请先运行 \`scripts/set-version.ps1 -Version x.y.z\` 升级版本号后再合入 \`main\`。
+          EOF
+          else
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            cat <<EOF >> "$GITHUB_STEP_SUMMARY"
+          ### 准备自动构建并发布 ${TAG}
+          - 检测到新版本 \`${TAG}\` 合入 \`main\`，即将并行构建 Windows (amd64) 与 macOS (universal) 产物并创建 Release。
+          EOF
+          fi
+
+  package-windows:
+    name: Windows (amd64)
+    needs: prepare
+    if: needs.prepare.outputs.should_build == 'true'
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: src/frontend/pnpm-lock.yaml
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install go-winres
+        run: go install github.com/tc-hib/go-winres@latest
+
+      - name: Install and build frontend
+        working-directory: src/frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+
+      - name: Run backend tests
+        run: go test -count=1 ./src/backend/...
+
+      - name: Build and package Windows release zip
+        shell: pwsh
+        run: ./scripts/package_windows.ps1 -SkipFrontend
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AppleVault-windows-amd64
+          path: build/release/AppleVault-*-windows-amd64.zip*
+          if-no-files-found: error
+
+  package-macos:
+    name: macOS (${{ inputs.macos_arch || 'universal' }})
+    needs: prepare
+    if: needs.prepare.outputs.should_build == 'true'
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: src/frontend/pnpm-lock.yaml
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install and build frontend
+        working-directory: src/frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+
+      - name: Run backend tests
+        run: go test -count=1 ./src/backend/...
+
+      - name: Build and package macOS app
+        run: bash ./scripts/build_macos.sh --skip-frontend --arch "${{ inputs.macos_arch || 'universal' }}"
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: AppleVault-macos
+          path: build/release/AppleVault-*-macos-*
+          if-no-files-found: error
+
+  publish-release:
+    name: Publish GitHub Release (${{ needs.prepare.outputs.tag }})
+    needs:
+      - prepare
+      - package-windows
+      - package-macos
+    if: needs.prepare.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Generate SHA256SUMS.txt
+        working-directory: dist
+        run: cat *.sha256 > SHA256SUMS.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          name: 果仓助手 (AppleVault) ${{ needs.prepare.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          files: |
+            dist/*.zip
+            dist/*.dmg
+            dist/SHA256SUMS.txt

@@ -7,6 +7,7 @@ import (
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/mac"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
 )
 
@@ -43,6 +44,15 @@ func main() {
 			WebviewIsTransparent: false,
 			WindowIsTranslucent:  false,
 			BackdropType:         windows.Mica,
+		},
+		Mac: &mac.Options{
+			TitleBar:             mac.TitleBarDefault(),
+			WebviewIsTransparent: false,
+			WindowIsTranslucent:  false,
+			About: &mac.AboutInfo{
+				Title:   "果仓助手 (AppleVault) v" + backend.AppDisplayVersion,
+				Message: "苹果 App Store 官方正版与历史版本 IPA 下载管理工具",
+			},
 		},
 	})
 

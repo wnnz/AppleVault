@@ -231,6 +231,7 @@ func (a *App) RefreshAccount(accountID string) (AccountInfo, error) {
 		if err := a.saveAccountsLocked(); err != nil {
 			return AccountInfo{}, err
 		}
+		a.invalidateStoreSessions(accountID)
 		return accountInfo(a.accounts.Accounts[index], a.accounts.ActiveAccountID), nil
 	}
 	return AccountInfo{}, errors.New("账号不存在")
@@ -265,6 +266,7 @@ func (a *App) upsertAccount(account appstore.Account, storageID string, legacy b
 	if err := a.saveAccountsLocked(); err != nil {
 		return AccountInfo{}, err
 	}
+	a.invalidateStoreSessions(storageID)
 	return accountInfo(storedAccount{ID: storageID, Name: account.Name, Email: account.Email, Region: region}, storageID), nil
 }
 
@@ -283,6 +285,7 @@ func (a *App) SwitchAccount(accountID string) (AccountInfo, error) {
 	}
 
 	a.CancelRunningCommand()
+	a.invalidateStoreSessions("")
 	a.accountMu.Lock()
 	defer a.accountMu.Unlock()
 	for index := range a.accounts.Accounts {
@@ -345,6 +348,7 @@ func (a *App) RemoveAccount(accountID string) (AccountInfo, error) {
 	a.cleanupAccountCredentials(item.ID, item.Legacy)
 
 	a.CancelRunningCommand()
+	a.invalidateStoreSessions(item.ID)
 	a.accountMu.Lock()
 	filtered := make([]storedAccount, 0, len(a.accounts.Accounts)-1)
 	for _, candidate := range a.accounts.Accounts {

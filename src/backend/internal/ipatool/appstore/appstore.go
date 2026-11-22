@@ -56,6 +56,8 @@ type appstore struct {
 	storefrontsMu          sync.Mutex
 	storefrontCountryCodes map[string]string
 	bagClient              http.Client[bagResult]
+	bagCacheMu             sync.Mutex
+	bagCache               map[string]cachedURLBag
 	ownedAppsClient        http.Client[[]byte]
 	httpClient             http.Client[interface{}]
 	macDecrypterFactory    macPackageDecrypterFactory
@@ -79,6 +81,13 @@ func (t *appstore) requestContext() context.Context {
 	}
 
 	return context.Background()
+}
+
+// CloseIdleConnections releases pooled HTTP connections held by this store instance.
+func (t *appstore) CloseIdleConnections() {
+	if t.authBackend != nil {
+		t.authBackend.CloseIdleConnections()
+	}
 }
 
 type Args struct {

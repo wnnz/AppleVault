@@ -11,14 +11,15 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
 
+	apphttp "AppleVault/src/backend/internal/ipatool/http"
 	"AppleVault/src/backend/internal/ipatool/sap/assets"
 	"AppleVault/src/backend/internal/ipatool/store/emulator"
 	"AppleVault/src/backend/internal/ipatool/store/profile"
-	apphttp "AppleVault/src/backend/internal/ipatool/http"
 )
 
 type Backend struct {
@@ -82,7 +83,7 @@ func (e *executor) Send(request apphttp.Request, body []byte) (*http.Response, e
 			direct.Header.Set("User-Agent", apphttp.DefaultUserAgent)
 		}
 
-		return e.backend.requestTransport(emulator.Request{Operation: "authenticate"})(direct)
+		return e.backend.requestTransport(emulator.Request{Operation: "bag"})(direct)
 	}
 
 	input := emulator.Request{URL: request.URL, Method: request.Method, Operation: e.operation, Format: string(request.ResponseFormat), Timeout: request.Timeout, Body: body, Headers: make(http.Header), NoRedirects: request.NoRedirects, Raw: request.ResponseFormat == apphttp.ResponseFormatRaw}
@@ -113,28 +114,46 @@ func (e *executor) Do(request *http.Request) (*http.Response, error) {
 		return e.backend.requestTransport(emulator.Request{Operation: "authenticate"})(request)
 	}
 
-	var body []byte
-
-	var err error
-	if request.Body != nil {
-		body, err = io.ReadAll(io.LimitReader(request.Body, (1<<20)+1))
-		_ = request.Body.Close()
-
-		if err != nil {
-			return nil, fmt.Errorf("read Store request: %w", err)
-		}
-
-		if len(body) > 1<<20 {
-			return nil, errors.New("store request body exceeds limit")
-		}
+	if e.operation == "transfer" {
+		return e.backend.transfer(request)
 	}
 
+	body, err := readStoreRequestBody(request)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx := e.backend.resolveContext(request)
+
+	return e.backend.execute(ctx, emulator.Request{URL: request.URL.String(), Method: request.Method, Headers: request.Header.Clone(), Body: body, Operation: e.operation})
+}
+
+func readStoreRequestBody(request *http.Request) ([]byte, error) {
+	if request.Body == nil {
+		return nil, nil
+	}
+
+	body, err := io.ReadAll(io.LimitReader(request.Body, (1<<20)+1))
+	_ = request.Body.Close()
+
+	if err != nil {
+		return nil, fmt.Errorf("read Store request: %w", err)
+	}
+
+	if len(body) > 1<<20 {
+		return nil, errors.New("store request body exceeds limit")
+	}
+
+	return body, nil
+}
+
+func (b *Backend) resolveContext(request *http.Request) context.Context {
 	ctx := request.Context()
-	if ctx == context.Background() {
-		ctx = e.backend.ctx
+	if ctx == context.Background() && b.ctx != nil {
+		return b.ctx
 	}
 
-	return e.backend.execute(ctx, emulator.Request{URL: request.URL.String(), Method: request.Method, Headers: request.Header.Clone(), Body: body, Operation: e.operation, Stream: e.operation == "transfer"})
+	return ctx
 }
 
 func (b *Backend) hardware(parameters map[string]any) ([]byte, error) {
@@ -336,5 +355,110 @@ func (b *Backend) requestTransport(input emulator.Request) func(*http.Request) (
 		}
 
 		return response, nil
+	}
+}
+
+func allowedTransferURL(value *url.URL) bool {
+	if value == nil || value.User != nil || value.Fragment != "" {
+		return false
+	}
+
+	return value.Hostname() != "" && (value.Scheme == "https" || value.Scheme == "http")
+}
+
+func isRedirectStatus(statusCode int) bool {
+	switch statusCode {
+	case http.StatusMovedPermanently, http.StatusFound, http.StatusSeeOther, http.StatusTemporaryRedirect, http.StatusPermanentRedirect:
+		return true
+	default:
+		return false
+	}
+}
+
+// transfer executes CDN/artwork streaming and range requests directly on the pooled
+// transport without spinning up a Unicorn ARM64 VM per HTTP request.
+func (b *Backend) transfer(request *http.Request) (*http.Response, error) {
+	ctx := b.resolveContext(request)
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("store request: %w", err)
+	}
+
+	if !allowedTransferURL(request.URL) {
+		return nil, errors.New("unsupported transfer URL")
+	}
+
+	body, err := readStoreRequestBody(request)
+	if err != nil {
+		return nil, err
+	}
+
+	send := b.requestTransport(emulator.Request{Operation: "transfer"})
+	currentURL := request.URL
+	method := request.Method
+	if method == "" {
+		method = http.MethodGet
+	}
+
+	headers := request.Header.Clone()
+	if headers == nil {
+		headers = make(http.Header)
+	}
+
+	if headers.Get("User-Agent") == "" {
+		headers.Set("User-Agent", apphttp.DefaultUserAgent)
+	}
+
+	for redirectCount := 0; ; redirectCount++ {
+		var bodyReader io.Reader
+		if body != nil {
+			bodyReader = bytes.NewReader(body)
+		}
+
+		req, err := http.NewRequestWithContext(ctx, method, currentURL.String(), bodyReader)
+		if err != nil {
+			return nil, fmt.Errorf("create transfer request: %w", err)
+		}
+
+		req.Header = headers.Clone()
+
+		response, err := send(req)
+		if err != nil {
+			return nil, err
+		}
+
+		if !isRedirectStatus(response.StatusCode) {
+			return response, nil
+		}
+
+		destination, locErr := response.Location()
+		if locErr != nil {
+			return response, nil
+		}
+
+		_ = response.Body.Close()
+
+		if redirectCount >= 4 {
+			return nil, errors.New("redirect limit exceeded")
+		}
+
+		if !allowedTransferURL(destination) {
+			return nil, errors.New("invalid Store redirect destination")
+		}
+
+		if !strings.EqualFold(destination.Hostname(), currentURL.Hostname()) {
+			for _, sensitive := range []string{"Authorization", "Cookie", "X-Token", "X-Dsid", "Icloud-Dsid"} {
+				headers.Del(sensitive)
+			}
+		}
+
+		if response.StatusCode == http.StatusSeeOther ||
+			((response.StatusCode == http.StatusMovedPermanently || response.StatusCode == http.StatusFound) && strings.EqualFold(method, http.MethodPost)) {
+			method = http.MethodGet
+			body = nil
+			headers.Del("Content-Length")
+			headers.Del("Content-Type")
+		}
+
+		currentURL = destination
 	}
 }

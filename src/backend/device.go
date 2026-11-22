@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	goruntime "runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -124,46 +125,62 @@ func (a *App) InstallIPA(ipaPath, udid string) (InstallResult, error) {
 	}, nil
 }
 
-// resolveIOSToolPath 查找随应用放置在 tools 目录、bin 目录、同目录或系统已安装的 go-ios 设备工具。
-func (a *App) resolveIOSToolPath() string {
-	// 1. 同程序目录下的 tools / bin / 同级目录
-	if exe, err := os.Executable(); err == nil {
-		dir := filepath.Dir(exe)
-		pTools := filepath.Join(dir, "tools", "ios.exe")
-		if _, err := os.Stat(pTools); err == nil {
-			return pTools
+func iosToolBinaryNameForOS(goos string) string {
+	if goos == "windows" {
+		return "ios.exe"
+	}
+	return "ios"
+}
+
+func iosToolCandidatePaths(exePath, cwd, goos string) []string {
+	binName := iosToolBinaryNameForOS(goos)
+	var candidates []string
+
+	if exePath != "" {
+		dir := filepath.Dir(exePath)
+		if goos == "darwin" {
+			contentsDir := filepath.Dir(dir)
+			candidates = append(candidates,
+				filepath.Join(contentsDir, "Resources", "tools", binName),
+				filepath.Join(contentsDir, "Resources", binName),
+			)
 		}
-		pBin := filepath.Join(dir, "bin", "ios.exe")
-		if _, err := os.Stat(pBin); err == nil {
-			return pBin
-		}
-		p := filepath.Join(dir, "ios.exe")
-		if _, err := os.Stat(p); err == nil {
-			return p
-		}
+		candidates = append(candidates,
+			filepath.Join(dir, "tools", binName),
+			filepath.Join(dir, "bin", binName),
+			filepath.Join(dir, binName),
+		)
 	}
 
-	// 2. 当前工作目录下的 tools / bin / 当前工作目录
-	if cwd, err := os.Getwd(); err == nil {
-		pTools := filepath.Join(cwd, "tools", "ios.exe")
-		if _, err := os.Stat(pTools); err == nil {
-			return pTools
-		}
-		pBin := filepath.Join(cwd, "bin", "ios.exe")
-		if _, err := os.Stat(pBin); err == nil {
-			return pBin
-		}
-		candidate := filepath.Join(cwd, "ios.exe")
-		if _, err := os.Stat(candidate); err == nil {
+	if cwd != "" {
+		candidates = append(candidates,
+			filepath.Join(cwd, "tools", binName),
+			filepath.Join(cwd, "bin", binName),
+			filepath.Join(cwd, binName),
+		)
+	}
+
+	if goos == "darwin" {
+		candidates = append(candidates, "/opt/homebrew/bin/ios", "/usr/local/bin/ios")
+	}
+	return candidates
+}
+
+// resolveIOSToolPath 查找随应用放置在 tools 目录、bin 目录、同目录或系统已安装的 go-ios 设备工具。
+func (a *App) resolveIOSToolPath() string {
+	exePath, _ := os.Executable()
+	cwd, _ := os.Getwd()
+	for _, candidate := range iosToolCandidatePaths(exePath, cwd, goruntime.GOOS) {
+		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
 			return candidate
 		}
 	}
 
-	// 3. 系统 PATH
-	if candidate, err := exec.LookPath("ios.exe"); err == nil {
+	binName := iosToolBinaryNameForOS(goruntime.GOOS)
+	if candidate, err := exec.LookPath(binName); err == nil {
 		return candidate
 	}
-	return "ios.exe"
+	return binName
 }
 
 // runIOSTool 执行 go-ios 命令，并将标准输出和错误输出转发到现有日志面板。
@@ -175,7 +192,7 @@ func (a *App) runIOSTool(ctx context.Context, args ...string) (string, error) {
 func (a *App) runIOSToolInternal(ctx context.Context, silent bool, args ...string) (string, error) {
 	executable := a.resolveIOSToolPath()
 	if _, err := os.Stat(executable); err != nil {
-		message := fmt.Sprintf("未找到设备安装工具 %s，请将 ios.exe 放在程序同目录下", executable)
+		message := fmt.Sprintf("未找到设备安装工具 %s，请确认程序目录中已包含 tools/%s", executable, iosToolBinaryNameForOS(goruntime.GOOS))
 		if !silent {
 			a.emitLog(message)
 		}

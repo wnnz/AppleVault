@@ -26,7 +26,7 @@ func (t *appstore) nativeLogin(input LoginInput) (LoginOutput, error) {
 	if err != nil {
 		return LoginOutput{}, err
 	}
-	bag, err := t.bag(guid)
+	bag, err := t.bag(ctx, guid)
 	if err != nil {
 		return LoginOutput{}, fmt.Errorf("get Store authentication bag: %w", err)
 	}

@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"AppleVault/src/backend/internal/ipatool/appstore"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -40,6 +41,15 @@ type App struct {
 	cachedAccountEmail string
 	diagnosticMu       sync.Mutex
 	diagnosticSecrets  []string
+
+	storeMu            sync.Mutex
+	storeSessions      map[storeSessionKey]appstore.AppStore
+	lookupMu           sync.RWMutex
+	lookupCache        map[string]cachedLookupEntry
+	versionMetaMu      sync.Mutex
+	versionMetaLoaded  bool
+	versionMetaDataDir string
+	versionMetaEntries map[string]cachedVersionMetadata
 }
 
 func NewApp() *App {
@@ -49,9 +59,12 @@ func NewApp() *App {
 			EnableProxy:     true,
 			ProxyUrl:        "http://127.0.0.1:10808",
 		},
-		tasks:             make([]*DownloadTask, 0),
-		taskCancels:       make(map[string]context.CancelFunc),
-		purchaseCancelers: make(map[uint64]context.CancelFunc),
+		tasks:              make([]*DownloadTask, 0),
+		taskCancels:        make(map[string]context.CancelFunc),
+		purchaseCancelers:  make(map[uint64]context.CancelFunc),
+		storeSessions:      make(map[storeSessionKey]appstore.AppStore),
+		lookupCache:        make(map[string]cachedLookupEntry),
+		versionMetaEntries: make(map[string]cachedVersionMetadata),
 	}
 	app.settings.DefaultDownloadDir = app.getDownloadsDir()
 	return app
@@ -67,6 +80,9 @@ func (a *App) Startup(ctx context.Context) {
 	a.settings.DefaultDownloadDir = a.getDownloadsDir()
 	a.settingsMu.Unlock()
 	a.loadTasks()
+	a.versionMetaMu.Lock()
+	a.ensureVersionMetadataCacheLoadedLocked()
+	a.versionMetaMu.Unlock()
 	a.writeDiagnostic("app.start", map[string]interface{}{"version": AppVersion, "go_version": goruntime.Version(), "http_proxy_environment": os.Getenv("HTTP_PROXY") != "", "https_proxy_environment": os.Getenv("HTTPS_PROXY") != ""})
 	initWindowIcon()
 }
@@ -74,6 +90,9 @@ func (a *App) Startup(ctx context.Context) {
 func (a *App) getDataDir() string {
 	if a.dataDirOverride != "" {
 		return a.dataDirOverride
+	}
+	if goruntime.GOOS == "darwin" {
+		return a.getDarwinDataDir()
 	}
 	// 1. 检查程序所在目录下的 data (release 模式)
 	if exe, err := os.Executable(); err == nil {
@@ -108,10 +127,59 @@ func (a *App) getDataDir() string {
 	return dataDir
 }
 
+func (a *App) getDarwinDataDir() string {
+	exe, exeErr := os.Executable()
+	inAppBundle := exeErr == nil && strings.Contains(filepath.ToSlash(exe), ".app/Contents/MacOS/")
+	if inAppBundle {
+		bundleParent := filepath.Dir(filepath.Dir(filepath.Dir(filepath.Dir(exe))))
+		if !isTemporaryExecutableDir(exe) && bundleParent != "/Applications" {
+			portableData := filepath.Join(bundleParent, "data")
+			if fi, err := os.Stat(portableData); err == nil && fi.IsDir() {
+				return portableData
+			}
+		}
+	} else if exeErr == nil && !isTemporaryExecutableDir(exe) {
+		exeData := filepath.Join(filepath.Dir(exe), "data")
+		if fi, err := os.Stat(exeData); err == nil && fi.IsDir() {
+			return exeData
+		}
+	}
+
+	if !inAppBundle {
+		if cwd, err := os.Getwd(); err == nil {
+			pBinData := filepath.Join(cwd, "build", "bin", "data")
+			if fi, err := os.Stat(pBinData); err == nil && fi.IsDir() {
+				return pBinData
+			}
+			pCwdData := filepath.Join(cwd, "data")
+			if fi, err := os.Stat(pCwdData); err == nil && fi.IsDir() {
+				return pCwdData
+			}
+		}
+	}
+
+	if configDir, err := os.UserConfigDir(); err == nil && strings.TrimSpace(configDir) != "" {
+		dataDir := filepath.Join(configDir, "AppleVault")
+		_ = os.MkdirAll(dataDir, 0700)
+		return dataDir
+	}
+
+	if home, err := os.UserHomeDir(); err == nil && strings.TrimSpace(home) != "" {
+		dataDir := filepath.Join(home, "Library", "Application Support", "AppleVault")
+		_ = os.MkdirAll(dataDir, 0700)
+		return dataDir
+	}
+
+	cwd, _ := os.Getwd()
+	dataDir := filepath.Join(cwd, "data")
+	_ = os.MkdirAll(dataDir, 0755)
+	return dataDir
+}
+
 func isTemporaryExecutableDir(dir string) bool {
 	for _, segment := range strings.Split(filepath.ToSlash(dir), "/") {
 		lower := strings.ToLower(segment)
-		if lower == "temp" || lower == "tmp" || strings.HasPrefix(lower, "go-build") {
+		if lower == "temp" || lower == "tmp" || lower == "apptranslocation" || strings.HasPrefix(lower, "go-build") {
 			return true
 		}
 	}
@@ -281,6 +349,7 @@ func (a *App) loadSettings() {
 	if needsMigration {
 		_ = a.saveSettingsLocked()
 	}
+	a.invalidateStoreSessions("")
 }
 
 func (a *App) loadTasks() {
@@ -383,14 +452,16 @@ func (a *App) GetSettings() Settings {
 
 func (a *App) SaveSettings(s Settings) error {
 	a.settingsMu.Lock()
-	defer a.settingsMu.Unlock()
 	// The keychain passphrase is managed explicitly from Account Center. Preserve it
 	// when other settings are saved so a stale frontend form cannot invalidate credentials.
 	s.KeychainPassphrase = a.settings.KeychainPassphrase
 	s.ThemeHintShown = a.settings.ThemeHintShown
 	s.DefaultDownloadDir = a.getDownloadsDir()
 	a.settings = s
-	return a.saveSettingsLocked()
+	err := a.saveSettingsLocked()
+	a.settingsMu.Unlock()
+	a.invalidateStoreSessions("")
+	return err
 }
 
 func (a *App) GetThemeHintShown() bool {
@@ -411,10 +482,12 @@ func (a *App) SetKeychainPassphrase(passphrase string) error {
 		return fmt.Errorf("钥匙串密码不能为空")
 	}
 	a.settingsMu.Lock()
-	defer a.settingsMu.Unlock()
 	a.settings.KeychainPassphrase = passphrase
 	a.undecryptablePassphrase = ""
-	return a.saveSettingsLocked()
+	err := a.saveSettingsLocked()
+	a.settingsMu.Unlock()
+	a.invalidateStoreSessions("")
+	return err
 }
 
 func (a *App) TestProxy(proxyUrl string) ProxyTestResult {
@@ -447,14 +520,32 @@ func (a *App) OpenInExplorer(targetPath string) error {
 	if strings.TrimSpace(targetPath) == "" {
 		targetPath = a.getDownloadsDir()
 	}
-	if fi, err := os.Stat(targetPath); err == nil {
-		if fi.IsDir() {
-			return exec.Command("explorer", targetPath).Start()
+
+	fi, statErr := os.Stat(targetPath)
+	switch goruntime.GOOS {
+	case "darwin":
+		if statErr == nil {
+			if fi.IsDir() {
+				return exec.Command("open", targetPath).Start()
+			}
+			return exec.Command("open", "-R", targetPath).Start()
 		}
-		return exec.Command("explorer", "/select,"+targetPath).Start()
+		return exec.Command("open", filepath.Dir(targetPath)).Start()
+	case "windows":
+		if statErr == nil {
+			if fi.IsDir() {
+				return exec.Command("explorer", targetPath).Start()
+			}
+			return exec.Command("explorer", "/select,"+targetPath).Start()
+		}
+		return exec.Command("explorer", filepath.Dir(targetPath)).Start()
+	default:
+		dir := targetPath
+		if statErr != nil || !fi.IsDir() {
+			dir = filepath.Dir(targetPath)
+		}
+		return exec.Command("xdg-open", dir).Start()
 	}
-	dir := filepath.Dir(targetPath)
-	return exec.Command("explorer", dir).Start()
 }
 
 func (a *App) CancelRunningCommand() {

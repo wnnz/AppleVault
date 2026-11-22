@@ -32,9 +32,12 @@ type PurchasedResult struct {
 }
 
 type VersionsResult struct {
-	BundleID                   string   `json:"bundleID"`
-	ExternalVersionIdentifiers []string `json:"externalVersionIdentifiers"`
-	Success                    bool     `json:"success"`
+	BundleID                   string                           `json:"bundleID"`
+	AppID                      int64                            `json:"appID,omitempty"`
+	AppName                    string                           `json:"appName,omitempty"`
+	ExternalVersionIdentifiers []string                         `json:"externalVersionIdentifiers"`
+	Metadata                   map[string]VersionMetadataResult `json:"metadata,omitempty"`
+	Success                    bool                             `json:"success"`
 }
 
 type VersionMetadataResult struct {

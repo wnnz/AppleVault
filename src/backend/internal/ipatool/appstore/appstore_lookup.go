@@ -1,6 +1,7 @@
 package appstore
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	gohttp "net/http"
@@ -14,6 +15,7 @@ import (
 var ErrAppNotFound = errors.New("app not found")
 
 type LookupInput struct {
+	Context  context.Context
 	Account  Account
 	AppID    int64
 	BundleID string
@@ -40,6 +42,8 @@ func (t *appstore) Lookup(input LookupInput) (LookupOutput, error) {
 	if err != nil {
 		return LookupOutput{}, fmt.Errorf("failed to create lookup request: %w", err)
 	}
+
+	request.Context = input.Context
 
 	res, err := t.searchClient.Send(request)
 	if err != nil {

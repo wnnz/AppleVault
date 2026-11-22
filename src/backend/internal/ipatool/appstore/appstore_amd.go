@@ -1,6 +1,7 @@
 package appstore
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -39,11 +40,13 @@ func (t *appstore) storeAMDProof(ctx context.Context, endpoint string, hardwareI
 		return nil, errors.New("keychain is not configured")
 	}
 
-	if err = t.keychain.Set(anisetteKeychainKey, state); err != nil {
-		return nil, fmt.Errorf("save Store AMD state: %w", err)
-	}
+	if !bytes.Equal(t.anisetteState, state) {
+		if err = t.keychain.Set(anisetteKeychainKey, state); err != nil {
+			return nil, fmt.Errorf("save Store AMD state: %w", err)
+		}
 
-	t.anisetteState = state
+		t.anisetteState = state
+	}
 
 	return proof, nil
 }

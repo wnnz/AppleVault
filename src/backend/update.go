@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	AppVersion       = "1.5.0"
+	AppVersion       = "1.6.0"
 	latestReleaseAPI = "https://api.github.com/repos/wnnz/AppleVault/releases/latest"
 	maxReleaseBody   = 1 << 20
 )

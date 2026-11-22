@@ -51,7 +51,7 @@ func (t *appstore) sendDownloadProduct(ctx context.Context, acc Account, app App
 	var bag *urlBag
 
 	if t.kbsyncGenerator != nil {
-		fetched, err := t.fetchURLBag(guid)
+		fetched, err := t.fetchURLBag(ctx, guid)
 		if err == nil {
 			bag = &fetched
 			if bag.EntDownloadEndpoint != "" {
@@ -81,7 +81,7 @@ func (t *appstore) sendDownloadProduct(ctx context.Context, acc Account, app App
 	// Try redownload when volumeStore returns no items, either silently or
 	// with the message-only "No Longer Available" response.
 	if bag == nil {
-		fetched, err := t.fetchURLBag(guid)
+		fetched, err := t.fetchURLBag(ctx, guid)
 		if err != nil {
 			return res, platform, fmt.Errorf("failed to get bag for redownload fallback: %w", err)
 		}

@@ -52,6 +52,7 @@ func (a *App) shutdown(ctx context.Context) {
 	}
 	a.saveTasksLocked()
 	a.tasksMu.Unlock()
+	a.invalidateStoreSessions("")
 }
 
 func (a *App) onSecondInstanceLaunch(_ options.SecondInstanceData) {
