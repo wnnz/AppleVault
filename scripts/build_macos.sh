@@ -4,6 +4,7 @@ set -euo pipefail
 ARCH="universal"
 SKIP_FRONTEND=false
 GO_IOS_VERSION="v1.3.2"
+GO_IOS_MAC_SHA256="100f225bfdd039081bcbdaf45029df3e67032673f3e0ca1fa3c050898c230c57"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -203,6 +204,7 @@ if [[ -f "$REPO_ROOT/tools/ios" ]]; then
 else
   GO_IOS_ZIP="$WORK_TMP/go-ios-mac.zip"
   curl -fSL --retry 3 "https://github.com/danielpaulus/go-ios/releases/download/${GO_IOS_VERSION}/go-ios-mac.zip" -o "$GO_IOS_ZIP"
+  echo "${GO_IOS_MAC_SHA256}  ${GO_IOS_ZIP}" | shasum -a 256 -c -
   unzip -q -o "$GO_IOS_ZIP" -d "$WORK_TMP/go-ios"
   IOS_SRC="$(find "$WORK_TMP/go-ios" -type f -name ios | head -n 1)"
   if [[ -z "$IOS_SRC" ]]; then
@@ -212,6 +214,15 @@ else
   cp "$IOS_SRC" "$IOS_DST"
 fi
 chmod 0755 "$IOS_DST"
+IOS_FILE_INFO="$(file "$IOS_DST")"
+echo "Bundled go-ios binary info: ${IOS_FILE_INFO}"
+if ! echo "$IOS_FILE_INFO" | grep -q "Mach-O"; then
+  echo "Bundled ios binary is not a valid Mach-O executable" >&2
+  exit 1
+fi
+if command -v lipo >/dev/null 2>&1; then
+  lipo -info "$IOS_DST" || true
+fi
 
 if [[ -f "$REPO_ROOT/third_party/ipatool-LICENSE.txt" ]]; then
   cp "$REPO_ROOT/third_party/ipatool-LICENSE.txt" "$RESOURCES_DIR/ipatool-LICENSE.txt"

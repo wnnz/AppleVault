@@ -2,9 +2,13 @@ package backend
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 	"sync"
 	"testing"
+	"time"
 
 	"AppleVault/src/backend/internal/ipatool/appstore"
 )
@@ -171,6 +175,9 @@ func TestVersionMetadataCachePersistsAcrossAppInstances(t *testing.T) {
 	if _, ok := app1.getCachedVersionMetadata("com.example.App", 987654, ""); ok {
 		t.Fatal("empty versionID must not be stored or returned from cache")
 	}
+	if err := app1.flushVersionMetadataCache(); err != nil {
+		t.Fatal(err)
+	}
 
 	app2 := NewApp()
 	app2.dataDirOverride = dir
@@ -189,4 +196,119 @@ func TestVersionMetadataCachePersistsAcrossAppInstances(t *testing.T) {
 	if len(batch) != 1 || batch["871234567"] != want {
 		t.Fatalf("unexpected batch lookup result: %+v", batch)
 	}
+}
+
+func TestVersionMetadataCacheSingleCanonicalEntryAndLegacyCompat(t *testing.T) {
+	dir := t.TempDir()
+	app := NewApp()
+	app.dataDirOverride = dir
+
+	res := VersionMetadataResult{
+		ExternalVersionID: "v1",
+		DisplayVersion:    "1.0.1",
+		ReleaseDate:       "2026-01-01",
+		FileSize:          4096,
+		DisplayFileSize:   formatBytes(4096),
+		Success:           true,
+	}
+	app.putCachedVersionMetadata("com.example.app", 12345, res)
+	if err := app.flushVersionMetadataCache(); err != nil {
+		t.Fatal(err)
+	}
+
+	app.versionMetaMu.Lock()
+	entryCount := len(app.versionMetaEntries)
+	mappedID := app.versionMetaBundleToAppID["com.example.app"]
+	app.versionMetaMu.Unlock()
+	if entryCount != 1 {
+		t.Fatalf("expected 1 canonical cache entry, got %d", entryCount)
+	}
+	if mappedID != 12345 {
+		t.Fatalf("expected bundleToAppID mapping 12345, got %d", mappedID)
+	}
+
+	if got, ok := app.getCachedVersionMetadata("com.example.app", 0, "v1"); !ok || got.DisplayVersion != "1.0.1" {
+		t.Fatalf("lookup by bundle failed: ok=%v got=%+v", ok, got)
+	}
+	if got, ok := app.getCachedVersionMetadata("", 12345, "v1"); !ok || got.DisplayVersion != "1.0.1" {
+		t.Fatalf("lookup by appID failed: ok=%v got=%+v", ok, got)
+	}
+
+	legacyDir := t.TempDir()
+	legacyPayload := versionMetadataCachePayload{
+		Entries: map[string]cachedVersionMetadata{
+			"bundle:com.legacy.app:v9": {
+				ExternalVersionID: "v9",
+				DisplayVersion:    "9.0.0",
+				ReleaseDate:       "2024-02-02",
+				FileSize:          1024,
+				UpdatedAt:         1,
+			},
+		},
+	}
+	legacyRaw, err := json.Marshal(legacyPayload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cachePath := filepath.Join(legacyDir, versionMetadataCacheFile)
+	if err := os.WriteFile(cachePath, legacyRaw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	legacyApp := NewApp()
+	legacyApp.dataDirOverride = legacyDir
+	if got, ok := legacyApp.getCachedVersionMetadata("com.legacy.app", 0, "v9"); !ok || got.DisplayVersion != "9.0.0" {
+		t.Fatalf("legacy bundle entry lookup failed: ok=%v got=%+v", ok, got)
+	}
+
+	corruptDir := t.TempDir()
+	corruptPath := filepath.Join(corruptDir, versionMetadataCacheFile)
+	if err := os.WriteFile(corruptPath, []byte("{corrupt"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	corruptApp := NewApp()
+	corruptApp.dataDirOverride = corruptDir
+	if _, ok := corruptApp.getCachedVersionMetadata("com.any.app", 1, "v1"); ok {
+		t.Fatal("expected corrupt cache lookup to return false")
+	}
+	backups, err := filepath.Glob(corruptPath + ".corrupt-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(backups) != 1 {
+		t.Fatalf("expected 1 corrupt cache backup file, got %d (%v)", len(backups), backups)
+	}
+}
+
+func TestVersionMetadataCacheDebounceFlush(t *testing.T) {
+	dir := t.TempDir()
+	app := NewApp()
+	app.dataDirOverride = dir
+	app.versionMetaFlushDelay = 30 * time.Millisecond
+
+	for i, verID := range []string{"101", "102", "103"} {
+		app.putCachedVersionMetadata("com.example.debounce", 777, VersionMetadataResult{
+			ExternalVersionID: verID,
+			DisplayVersion:    "1.0." + string(rune('0'+i)),
+			ReleaseDate:       "2026-03-01",
+			FileSize:          1024,
+			DisplayFileSize:   formatBytes(1024),
+			Success:           true,
+		})
+	}
+
+	cachePath := filepath.Join(dir, versionMetadataCacheFile)
+	deadline := time.Now().Add(2 * time.Second)
+	var data []byte
+	var readErr error
+	for time.Now().Before(deadline) {
+		data, readErr = os.ReadFile(cachePath)
+		if readErr == nil && len(data) > 0 {
+			var payload versionMetadataCachePayload
+			if json.Unmarshal(data, &payload) == nil && len(payload.Entries) == 3 {
+				return
+			}
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+	t.Fatalf("debounced flush did not persist all 3 entries in time; err=%v data=%s", readErr, string(data))
 }

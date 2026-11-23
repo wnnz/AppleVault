@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -12,6 +13,7 @@ import (
 	goruntime "runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"AppleVault/src/backend/internal/ipatool/appstore"
@@ -31,9 +33,20 @@ type App struct {
 	purchaseCancelers    map[uint64]context.CancelFunc
 	nextPurchaseCancelID uint64
 
-	tasksMu     sync.RWMutex
-	tasks       []*DownloadTask
-	taskCancels map[string]context.CancelFunc
+	installMu     sync.Mutex
+	installing    bool
+	installCancel context.CancelFunc
+
+	tokenRefreshMu  sync.Mutex
+	tokenRefreshing map[string]*tokenRefreshCall
+
+	tasksMu      sync.RWMutex
+	tasks        []*DownloadTask
+	taskCancels  map[string]context.CancelFunc
+	taskDone     map[string]chan struct{}
+	taskSeq      atomic.Uint64
+	downloadSem  chan struct{}
+	shuttingDown bool
 
 	accountMu          sync.RWMutex
 	accounts           accountRegistry
@@ -41,30 +54,42 @@ type App struct {
 	cachedAccountEmail string
 	diagnosticMu       sync.Mutex
 	diagnosticSecrets  []string
+	recentLogsMu       sync.Mutex
+	recentLogs         []string
 
-	storeMu            sync.Mutex
-	storeSessions      map[storeSessionKey]appstore.AppStore
-	lookupMu           sync.RWMutex
-	lookupCache        map[string]cachedLookupEntry
-	versionMetaMu      sync.Mutex
-	versionMetaLoaded  bool
-	versionMetaDataDir string
-	versionMetaEntries map[string]cachedVersionMetadata
+	storeMu                  sync.Mutex
+	storeSessions            map[storeSessionKey]appstore.AppStore
+	lookupMu                 sync.RWMutex
+	lookupCache              map[string]cachedLookupEntry
+	versionMetaMu            sync.Mutex
+	versionMetaLoaded        bool
+	versionMetaDataDir       string
+	versionMetaEntries       map[string]cachedVersionMetadata
+	versionMetaBundleToAppID map[string]int64
+	versionMetaDirty         bool
+	versionMetaFlushTimer    *time.Timer
+	versionMetaFlushDelay    time.Duration
+	versionMetaWriteMu       sync.Mutex
 }
 
 func NewApp() *App {
 	app := &App{
 		settings: Settings{
 			DefaultPlatform: "iphone",
-			EnableProxy:     true,
+			EnableProxy:     false,
 			ProxyUrl:        "http://127.0.0.1:10808",
 		},
-		tasks:              make([]*DownloadTask, 0),
-		taskCancels:        make(map[string]context.CancelFunc),
-		purchaseCancelers:  make(map[uint64]context.CancelFunc),
-		storeSessions:      make(map[storeSessionKey]appstore.AppStore),
-		lookupCache:        make(map[string]cachedLookupEntry),
-		versionMetaEntries: make(map[string]cachedVersionMetadata),
+		tasks:                    make([]*DownloadTask, 0),
+		taskCancels:              make(map[string]context.CancelFunc),
+		taskDone:                 make(map[string]chan struct{}),
+		downloadSem:              make(chan struct{}, maxConcurrentDownloads),
+		purchaseCancelers:        make(map[uint64]context.CancelFunc),
+		tokenRefreshing:          make(map[string]*tokenRefreshCall),
+		storeSessions:            make(map[storeSessionKey]appstore.AppStore),
+		lookupCache:              make(map[string]cachedLookupEntry),
+		versionMetaEntries:       make(map[string]cachedVersionMetadata),
+		versionMetaBundleToAppID: make(map[string]int64),
+		versionMetaFlushDelay:    defaultVersionMetadataFlushDelay,
 	}
 	app.settings.DefaultDownloadDir = app.getDownloadsDir()
 	return app
@@ -318,7 +343,9 @@ func (a *App) loadSettings() {
 					a.emitLog("钥匙串密码无法在本机解密（数据目录可能来自其他电脑或用户），请在账号中心重新输入")
 				}
 			} else if s.KeychainPassphrase != "" {
-				needsMigration = true
+				if secretProtectionSupported() {
+					needsMigration = true
+				}
 				a.undecryptablePassphrase = ""
 			} else {
 				a.undecryptablePassphrase = ""
@@ -348,7 +375,12 @@ func (a *App) loadSettings() {
 		a.settings.DefaultPlatform = "iphone"
 	}
 	if needsMigration {
-		_ = a.saveSettingsLocked()
+		file, protected := a.preparePersistedSettingsLocked()
+		if protected {
+			if data, err := json.MarshalIndent(file, "", "  "); err == nil {
+				_ = writeFileAtomic(a.getSettingsFilePath(), data, 0600)
+			}
+		}
 	}
 	a.invalidateStoreSessions("")
 }
@@ -400,16 +432,22 @@ func (a *App) saveTasksLocked() {
 	}
 }
 
-func (a *App) saveSettingsLocked() error {
+func (a *App) preparePersistedSettingsLocked() (persistedSettings, bool) {
 	file := persistedSettings{Settings: a.settings}
 	if a.settings.KeychainPassphrase != "" {
-		if protected, err := protectSecret(a.settings.KeychainPassphrase); err == nil {
+		if protected, err := protectSecret(a.settings.KeychainPassphrase); err == nil && protected != "" {
 			file.KeychainPassphrase = ""
 			file.ProtectedKeychainPassphrase = protected
+			return file, true
 		}
 	} else if a.undecryptablePassphrase != "" {
 		file.ProtectedKeychainPassphrase = a.undecryptablePassphrase
 	}
+	return file, false
+}
+
+func (a *App) saveSettingsLocked() error {
+	file, _ := a.preparePersistedSettingsLocked()
 	data, err := json.MarshalIndent(file, "", "  ")
 	if err != nil {
 		return err
@@ -417,10 +455,41 @@ func (a *App) saveSettingsLocked() error {
 	return writeFileAtomic(a.getSettingsFilePath(), data, 0600)
 }
 
+const maxRecentLogs = 100
+
 func (a *App) emitLog(message string) {
+	timestamp := time.Now().Format("15:04:05")
+	formatted := fmt.Sprintf("[%s] %s", timestamp, message)
+
+	a.recentLogsMu.Lock()
+	a.recentLogs = append(a.recentLogs, formatted)
+	if len(a.recentLogs) > maxRecentLogs {
+		trimmed := make([]string, maxRecentLogs)
+		copy(trimmed, a.recentLogs[len(a.recentLogs)-maxRecentLogs:])
+		a.recentLogs = trimmed
+	}
+	a.recentLogsMu.Unlock()
+
 	if a.ctx != nil {
-		timestamp := time.Now().Format("15:04:05")
-		runtime.EventsEmit(a.ctx, "log", fmt.Sprintf("[%s] %s", timestamp, message))
+		runtime.EventsEmit(a.ctx, "log", formatted)
+	}
+}
+
+func (a *App) GetRecentLogs() []string {
+	a.recentLogsMu.Lock()
+	defer a.recentLogsMu.Unlock()
+	if len(a.recentLogs) == 0 {
+		return []string{}
+	}
+	out := make([]string, len(a.recentLogs))
+	copy(out, a.recentLogs)
+	return out
+}
+
+func (a *App) GetRuntimeInfo() RuntimeInfo {
+	return RuntimeInfo{
+		OS:                 goruntime.GOOS,
+		UsesSystemKeychain: goruntime.GOOS == "darwin",
 	}
 }
 
@@ -452,6 +521,11 @@ func (a *App) GetSettings() Settings {
 }
 
 func (a *App) SaveSettings(s Settings) error {
+	if s.EnableProxy && strings.TrimSpace(s.ProxyUrl) != "" {
+		if _, err := parseAndValidateProxyURL(s.ProxyUrl); err != nil {
+			return err
+		}
+	}
 	a.settingsMu.Lock()
 	// The keychain passphrase is managed explicitly from Account Center. Preserve it
 	// when other settings are saved so a stale frontend form cannot invalidate credentials.
@@ -491,28 +565,49 @@ func (a *App) SetKeychainPassphrase(passphrase string) error {
 	return err
 }
 
-func (a *App) TestProxy(proxyUrl string) ProxyTestResult {
-	if strings.TrimSpace(proxyUrl) == "" {
-		return ProxyTestResult{Success: false, Message: "代理地址不能为空"}
+func parseAndValidateProxyURL(raw string) (*url.URL, error) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return nil, fmt.Errorf("代理地址不能为空")
 	}
-
-	pURL, err := url.Parse(proxyUrl)
+	pURL, err := url.Parse(trimmed)
 	if err != nil {
-		return ProxyTestResult{Success: false, Message: fmt.Sprintf("代理地址格式无效: %v", err)}
+		return nil, fmt.Errorf("代理地址格式无效: %w", err)
+	}
+	switch strings.ToLower(pURL.Scheme) {
+	case "http", "https", "socks5", "socks5h":
+	default:
+		return nil, fmt.Errorf("代理地址格式无效: 不支持的协议 %q（支持 http/https/socks5）", pURL.Scheme)
+	}
+	if strings.TrimSpace(pURL.Hostname()) == "" {
+		return nil, fmt.Errorf("代理地址格式无效: 缺少主机名（示例: http://127.0.0.1:10808）")
+	}
+	return pURL, nil
+}
+
+func (a *App) TestProxy(proxyUrl string) ProxyTestResult {
+	pURL, err := parseAndValidateProxyURL(proxyUrl)
+	if err != nil {
+		return ProxyTestResult{Success: false, Message: err.Error()}
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			Proxy: http.ProxyURL(pURL),
-		},
-		Timeout: 6 * time.Second,
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.Proxy = http.ProxyURL(pURL)
+	defer transport.CloseIdleConnections()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://apple.com", nil)
+	if err != nil {
+		return ProxyTestResult{Success: false, Message: fmt.Sprintf("创建测试请求失败: %v", err)}
 	}
 
-	resp, err := client.Get("https://apple.com")
+	resp, err := (&http.Client{Transport: transport, Timeout: 6 * time.Second}).Do(req)
 	if err != nil {
 		return ProxyTestResult{Success: false, Message: fmt.Sprintf("连接失败: %v", err)}
 	}
-	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 16<<10))
+	_ = resp.Body.Close()
 
 	return ProxyTestResult{Success: true, Message: fmt.Sprintf("连接成功！HTTP 响应状态码: %s", resp.Status)}
 }
@@ -525,31 +620,45 @@ func (a *App) OpenInExplorer(targetPath string) error {
 	fi, statErr := os.Stat(targetPath)
 	switch goruntime.GOOS {
 	case "darwin":
+		var cmd *exec.Cmd
 		if statErr == nil {
 			if fi.IsDir() {
-				return exec.Command("open", targetPath).Start()
+				cmd = exec.Command("open", targetPath)
+			} else {
+				cmd = exec.Command("open", "-R", targetPath)
 			}
-			return exec.Command("open", "-R", targetPath).Start()
+		} else {
+			cmd = exec.Command("open", filepath.Dir(targetPath))
 		}
-		return exec.Command("open", filepath.Dir(targetPath)).Start()
+		if err := cmd.Start(); err != nil {
+			return err
+		}
+		go func() { _ = cmd.Wait() }()
+		return nil
 	case "windows":
-		if statErr == nil {
-			if fi.IsDir() {
-				return exec.Command("explorer", targetPath).Start()
-			}
-			return exec.Command("explorer", "/select,"+targetPath).Start()
-		}
-		return exec.Command("explorer", filepath.Dir(targetPath)).Start()
+		isDir := statErr == nil && fi.IsDir()
+		return openExplorerWindows(targetPath, statErr, isDir)
 	default:
 		dir := targetPath
 		if statErr != nil || !fi.IsDir() {
 			dir = filepath.Dir(targetPath)
 		}
-		return exec.Command("xdg-open", dir).Start()
+		cmd := exec.Command("xdg-open", dir)
+		if err := cmd.Start(); err != nil {
+			return err
+		}
+		go func() { _ = cmd.Wait() }()
+		return nil
 	}
 }
 
 func (a *App) CancelRunningCommand() {
+	if a.cancelStoreCommands() {
+		a.emitLog("用户取消了当前操作。")
+	}
+}
+
+func (a *App) cancelStoreCommands() bool {
 	a.cancelMu.Lock()
 	cancel := a.cancelFn
 	a.cancelFn = nil
@@ -559,9 +668,46 @@ func (a *App) CancelRunningCommand() {
 		cancel()
 	}
 	purchaseCancelled := a.cancelPurchaseCommands()
-	cancelled := cancel != nil || purchaseCancelled
-	if cancelled {
-		a.emitLog("用户取消了当前操作。")
+	return cancel != nil || purchaseCancelled
+}
+
+func (a *App) startInstallCommandContext() (context.Context, func(), error) {
+	a.installMu.Lock()
+	defer a.installMu.Unlock()
+	if a.installing {
+		return nil, nil, fmt.Errorf("已有设备安装任务正在进行中，请等待完成或先取消")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	a.installing = true
+	a.installCancel = cancel
+	cleaned := false
+	cleanup := func() {
+		cancel()
+		a.installMu.Lock()
+		if !cleaned {
+			cleaned = true
+			a.installing = false
+			a.installCancel = nil
+		}
+		a.installMu.Unlock()
+	}
+	return ctx, cleanup, nil
+}
+
+func (a *App) cancelInstallCommand() bool {
+	a.installMu.Lock()
+	cancel := a.installCancel
+	a.installMu.Unlock()
+	if cancel != nil {
+		cancel()
+		return true
+	}
+	return false
+}
+
+func (a *App) CancelInstallIPA() {
+	if a.cancelInstallCommand() {
+		a.emitLog("用户取消了 IPA 安装。")
 	}
 }
 

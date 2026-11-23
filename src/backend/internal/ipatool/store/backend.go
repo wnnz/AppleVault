@@ -435,6 +435,7 @@ func (b *Backend) transfer(request *http.Request) (*http.Response, error) {
 			return response, nil
 		}
 
+		_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, 8<<10))
 		_ = response.Body.Close()
 
 		if redirectCount >= 4 {

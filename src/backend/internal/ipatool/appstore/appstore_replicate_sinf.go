@@ -3,6 +3,7 @@ package appstore
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -21,21 +22,31 @@ type Sinf struct {
 }
 
 type ReplicateSinfInput struct {
+	Context     context.Context
 	Sinfs       []Sinf
 	PackagePath string
 }
 
 func (t *appstore) ReplicateSinf(input ReplicateSinfInput) error {
+	if input.Context != nil {
+		if err := input.Context.Err(); err != nil {
+			return err
+		}
+	}
+
 	tmpPath := fmt.Sprintf("%s.tmp", input.PackagePath)
 	if err := t.writeReplicatedZip(input, tmpPath); err != nil {
+		_ = t.os.Remove(tmpPath)
 		return err
 	}
 
 	if err := t.os.Remove(input.PackagePath); err != nil {
+		_ = t.os.Remove(tmpPath)
 		return fmt.Errorf("failed to remove original file: %w", err)
 	}
 
 	if err := t.os.Rename(tmpPath, input.PackagePath); err != nil {
+		_ = t.os.Remove(tmpPath)
 		return fmt.Errorf("failed to rename replicated file: %w", err)
 	}
 
@@ -55,7 +66,7 @@ func (t *appstore) writeReplicatedZip(input ReplicateSinfInput, tmpPath string) 
 		}
 	}()
 
-	tmpFile, err := t.os.OpenFile(tmpPath, os.O_CREATE|os.O_WRONLY, 0644)
+	tmpFile, err := t.os.OpenFile(tmpPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to open file: %w", err)
 	}
@@ -73,7 +84,7 @@ func (t *appstore) writeReplicatedZip(input ReplicateSinfInput, tmpPath string) 
 		}
 	}()
 
-	err = t.replicateZip(zipReader, zipWriter, input.PackagePath)
+	err = t.replicateZip(input.Context, zipReader, zipWriter, input.PackagePath)
 	if err != nil {
 		return fmt.Errorf("failed to replicate zip: %w", err)
 	}
@@ -168,7 +179,13 @@ func (t *appstore) replicateSinfFromInfo(info packageInfo, zip *zip.Writer, sinf
 	return nil
 }
 
-func (t *appstore) replicateZip(src *zip.ReadCloser, dst *zip.Writer, sourcePath string) error {
+func (t *appstore) replicateZip(ctx context.Context, src *zip.ReadCloser, dst *zip.Writer, sourcePath string) error {
+	if ctx != nil {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+	}
+
 	source, err := os.Open(sourcePath)
 	if err != nil {
 		return fmt.Errorf("failed to open zip headers: %w", err)
@@ -187,6 +204,12 @@ func (t *appstore) replicateZip(src *zip.ReadCloser, dst *zip.Writer, sourcePath
 	}
 
 	for _, file := range src.File {
+		if ctx != nil {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+		}
+
 		srcFile, err := file.OpenRaw()
 		if err != nil {
 			return fmt.Errorf("failed to open file: %w", err)
@@ -218,7 +241,7 @@ func (t *appstore) replicateZip(src *zip.ReadCloser, dst *zip.Writer, sourcePath
 		// for the central directory written by Close. Keep the two extras distinct.
 		header.Extra = zipExtraWithoutZIP64(file.Extra)
 
-		_, err = io.Copy(dstFile, srcFile)
+		_, err = io.Copy(dstFile, contextReader{ctx: ctx, r: srcFile})
 		if err != nil {
 			return fmt.Errorf("failed to copy file: %w", err)
 		}
@@ -234,6 +257,7 @@ func (*appstore) readInfoPlist(reader *zip.ReadCloser) (*packageInfo, error) {
 			if err != nil {
 				return nil, fmt.Errorf("failed to open file: %w", err)
 			}
+			defer src.Close()
 
 			data := new(bytes.Buffer)
 			_, err = io.Copy(data, src)
@@ -263,6 +287,7 @@ func (*appstore) readManifestPlist(reader *zip.ReadCloser) (*packageManifest, er
 			if err != nil {
 				return nil, fmt.Errorf("failed to open file: %w", err)
 			}
+			defer src.Close()
 
 			data := new(bytes.Buffer)
 			_, err = io.Copy(data, src)

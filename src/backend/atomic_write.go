@@ -31,23 +31,7 @@ func writeFileAtomic(path string, data []byte, perm os.FileMode) error {
 		return err
 	}
 
-	if err = os.Rename(tmpPath, path); err == nil {
-		return nil
-	}
-	// Windows does not replace an existing destination with os.Rename.
-	backupPath := path + ".bak"
-	_ = os.Remove(backupPath)
-	if _, statErr := os.Stat(path); statErr == nil {
-		if renameErr := os.Rename(path, backupPath); renameErr != nil {
-			return err
-		}
-	}
-	if renameErr := os.Rename(tmpPath, path); renameErr != nil {
-		_ = os.Rename(backupPath, path)
-		return renameErr
-	}
-	_ = os.Remove(backupPath)
-	return nil
+	return replaceFileAtomic(tmpPath, path)
 }
 
 // backupCorruptFile 把无法解析的文件重命名为 <path>.corrupt-<20060102-150405>，返回新路径。

@@ -1,6 +1,7 @@
 package appstore
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	gohttp "net/http"
@@ -28,9 +29,10 @@ type catalogVersionPlatformAttributes struct {
 	ExternalVersionID platformVersionExternalID `json:"externalVersionId,omitempty"`
 }
 
-func (t *appstore) lookupLatestIOSExternalVersionID(app App, countryCode string, platform Platform) (string, error) {
+func (t *appstore) lookupLatestIOSExternalVersionID(ctx context.Context, app App, countryCode string, platform Platform) (string, error) {
 	// This is the JSON catalog API used by the public App Store client.
 	res, err := t.platformClient.Send(http.Request{
+		Context:        ctx,
 		URL:            fmt.Sprintf("https://apps.apple.com/api/apps/v1/catalog/%s/apps/%d?platform=%s", strings.ToLower(countryCode), app.ID, platform),
 		Method:         http.MethodGET,
 		ResponseFormat: http.ResponseFormatJSON,

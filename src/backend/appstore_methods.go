@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -20,7 +21,10 @@ func (a *App) GetAccountInfo() (AccountInfo, error) {
 	}
 	ctx, cleanup := a.startPurchaseCommandContext()
 	defer cleanup()
-	store, err := a.newAppStoreForAccount(ctx, accountID)
+	if err := ctx.Err(); err != nil {
+		return AccountInfo{}, err
+	}
+	store, err := a.sharedAppStoreForAccount(accountID)
 	if err != nil {
 		return AccountInfo{}, err
 	}
@@ -50,9 +54,10 @@ func (a *App) Login(email, password, authCode string) (output LoginResult, resul
 	if err != nil {
 		return LoginResult{ErrorMessage: err.Error()}, nil
 	}
+	defer closeStoreIdleConnections(store)
 
 	result, err := store.Login(appstore.LoginInput{
-		Email: email, Password: password, AuthCode: strings.TrimSpace(authCode),
+		Context: ctx, Email: email, Password: password, AuthCode: strings.TrimSpace(authCode),
 	})
 	if errors.Is(err, appstore.ErrAuthCodeRequired) {
 		return LoginResult{Requires2FA: true, ErrorMessage: "Apple ID 或密码错误。若账号已开启双重认证且受信任设备收到了验证码，请在“双重认证验证码”栏中填入后重新登录"}, nil
@@ -73,7 +78,7 @@ func (a *App) Login(email, password, authCode string) (output LoginResult, resul
 
 func (a *App) Search(term string, limit int, platformValue string) (SearchResult, error) {
 	ctx := a.startCommandContext()
-	store, err := a.newAppStore(ctx)
+	store, err := a.sharedAppStore()
 	if err != nil {
 		return SearchResult{}, err
 	}
@@ -82,8 +87,9 @@ func (a *App) Search(term string, limit int, platformValue string) (SearchResult
 		return SearchResult{}, err
 	}
 
-	result, err := withAccountRetry(store, func(account appstore.Account) (appstore.SearchOutput, error) {
-		out, err := store.Search(appstore.SearchInput{Account: account, Term: term, Limit: int64(limit), Platform: platform})
+	accountID := a.activeAccountID()
+	result, err := withAccountRetryContext(ctx, a, accountID, store, func(account appstore.Account) (appstore.SearchOutput, error) {
+		out, err := store.Search(appstore.SearchInput{Context: ctx, Account: account, Term: term, Limit: int64(limit), Platform: platform})
 		if err == nil {
 			for _, item := range out.Results {
 				a.rememberLookupApp(account.StoreFront, platform, item)
@@ -114,8 +120,9 @@ func (a *App) ListVersions(bundleID string, appID int64) (output VersionsResult,
 			return VersionsResult{}, err
 		}
 
+		accountID := a.activeAccountID()
 		var resolvedApp appstore.App
-		result, err := withAccountRetry(store, func(account appstore.Account) (appstore.ListVersionsOutput, error) {
+		result, err := withAccountRetryContext(ctx, a, accountID, store, func(account appstore.Account) (appstore.ListVersionsOutput, error) {
 			item, err := a.resolveStoreAppCached(ctx, store, account, bundleID, appID, "", false)
 			if err != nil {
 				return appstore.ListVersionsOutput{}, err
@@ -152,7 +159,13 @@ func (a *App) ListVersions(bundleID string, appID int64) (output VersionsResult,
 			break
 		}
 		a.emitLog(fmt.Sprintf("[网络重试] 查询版本列表响应异常，正在自动重试 (%d/3)...", attempt))
-		time.Sleep(time.Duration(attempt) * 400 * time.Millisecond)
+		timer := time.NewTimer(time.Duration(attempt) * 400 * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return VersionsResult{}, ctx.Err()
+		case <-timer.C:
+		}
 	}
 	return VersionsResult{}, lastErr
 }
@@ -169,15 +182,19 @@ func (a *App) GetVersionMetadata(bundleID, versionID string, appID int64) (Versi
 		return cached, nil
 	}
 
-	ctx, cleanup := a.startPurchaseCommandContext()
+	parentCtx, cleanup := a.startPurchaseCommandContext()
 	defer cleanup()
+	ctx, cancel := context.WithTimeout(parentCtx, 45*time.Second)
+	defer cancel()
+
 	store, err := a.sharedAppStore()
 	if err != nil {
 		return VersionMetadataResult{}, err
 	}
 
+	accountID := a.activeAccountID()
 	var resolvedApp appstore.App
-	result, err := withAccountRetry(store, func(account appstore.Account) (appstore.GetVersionMetadataOutput, error) {
+	result, err := withAccountRetryContext(ctx, a, accountID, store, func(account appstore.Account) (appstore.GetVersionMetadataOutput, error) {
 		item, err := a.resolveStoreAppCached(ctx, store, account, bundleID, appID, "", false)
 		if err != nil {
 			return appstore.GetVersionMetadataOutput{}, err
@@ -230,8 +247,9 @@ func (a *App) Purchase(bundleID, platformValue string) (PurchaseResult, error) {
 		return PurchaseResult{}, err
 	}
 
+	accountID := a.activeAccountID()
 	alreadyOwned := false
-	_, err = withAccountRetry(store, func(account appstore.Account) (struct{}, error) {
+	_, err = withAccountRetryContext(ctx, a, accountID, store, func(account appstore.Account) (struct{}, error) {
 		item, err := a.resolveStoreAppCached(ctx, store, account, bundleID, 0, platform, true)
 		if err != nil {
 			return struct{}{}, err
@@ -261,17 +279,32 @@ func (a *App) ListPurchases(page, limit int) (PurchasedResult, error) {
 	}
 	ctx, cleanup := a.startPurchaseCommandContext()
 	defer cleanup()
-	store, err := a.newAppStore(ctx)
+	store, err := a.sharedAppStore()
 	if err != nil {
 		return PurchasedResult{}, err
 	}
 
-	return listPurchasedPage(store, page, limit)
+	return listPurchasedPageContext(ctx, a, a.activeAccountID(), store, page, limit)
 }
 
 func listPurchasedPage(store appstore.AppStore, page, limit int) (PurchasedResult, error) {
-	result, err := withAccountRetry(store, func(account appstore.Account) (appstore.OwnedAppsOutput, error) {
-		return store.OwnedApps(appstore.OwnedAppsInput{Account: account, Page: page, Limit: limit})
+	return listPurchasedPageContext(context.Background(), nil, "", store, page, limit)
+}
+
+func listPurchasedPageContext(ctx context.Context, app *App, accountID string, store appstore.AppStore, page, limit int) (PurchasedResult, error) {
+	result, err := withAccountRetryContext(ctx, app, accountID, store, func(account appstore.Account) (appstore.OwnedAppsOutput, error) {
+		out, err := store.OwnedApps(appstore.OwnedAppsInput{Context: ctx, Account: account, Page: page, Limit: limit})
+		if err == nil && app != nil {
+			for _, item := range out.Results {
+				app.rememberLookupApp(account.StoreFront, "", item)
+				for _, p := range item.Platforms {
+					if p != "" && p != appstore.PlatformUnknown {
+						app.rememberLookupApp(account.StoreFront, p, item)
+					}
+				}
+			}
+		}
+		return out, err
 	})
 	if err != nil {
 		return PurchasedResult{}, err

@@ -56,7 +56,7 @@ func (t *appstore) Download(input DownloadInput) (DownloadOutput, error) {
 
 	externalVersionID := input.ExternalVersionID
 	if externalVersionID == "" && (input.Platform == PlatformAppleTV || input.Platform == PlatformWatchOS || input.Platform == PlatformVisionOS) {
-		externalVersionID, err = t.lookupLatestExternalVersionID(input.Account, input.App, input.Platform)
+		externalVersionID, err = t.lookupLatestExternalVersionID(input.Context, input.Account, input.App, input.Platform)
 		// Delisted tvOS apps may have no catalog offer but still be available
 		// for redownload. Validate the returned package's platform below.
 		missingTVOffer := input.Platform == PlatformAppleTV &&
@@ -108,7 +108,7 @@ func (t *appstore) Download(input DownloadInput) (DownloadOutput, error) {
 		return DownloadOutput{}, err
 	}
 
-	destination, err := t.resolveDestinationPath(input.App, version, input.OutputPath, packagePlatform)
+	destination, err := t.resolveDestinationPathWithVersion(input.App, version, input.ExternalVersionID, input.OutputPath, packagePlatform)
 	if err != nil {
 		return DownloadOutput{}, fmt.Errorf("failed to resolve destination path: %w", err)
 	}
@@ -123,8 +123,10 @@ func (t *appstore) Download(input DownloadInput) (DownloadOutput, error) {
 		return DownloadOutput{}, fmt.Errorf("failed to download file: %w", err)
 	}
 
-	if err := validateFileMD5(tmpPath, item.HashMD5); err != nil {
-		_ = t.os.Remove(tmpPath)
+	if err := validateFileMD5Context(input.Context, tmpPath, item.HashMD5); err != nil {
+		if input.Context == nil || input.Context.Err() == nil {
+			_ = t.os.Remove(tmpPath)
+		}
 		return DownloadOutput{}, fmt.Errorf("failed to verify download checksum: %w", err)
 	}
 
@@ -141,12 +143,16 @@ func (t *appstore) Download(input DownloadInput) (DownloadOutput, error) {
 		return DownloadOutput{}, fmt.Errorf("failed to download artwork: %w", err)
 	}
 
-	if err := t.applyPatches(item, input.Account, tmpPath, destination, artwork); err != nil {
+	if err := t.applyPatches(input.Context, item, input.Account, tmpPath, destination, artwork); err != nil {
+		_ = t.os.Remove(destination)
 		return DownloadOutput{}, fmt.Errorf("failed to apply patches: %w", err)
 	}
 
-	if err := validateIPAZip(destination); err != nil {
+	if err := validateIPAZipContext(input.Context, destination); err != nil {
 		_ = t.os.Remove(destination)
+		if input.Context == nil || input.Context.Err() == nil {
+			_ = t.os.Remove(tmpPath)
+		}
 		return DownloadOutput{}, fmt.Errorf("failed to validate IPA integrity: %w", err)
 	}
 
@@ -381,10 +387,33 @@ func (t *appstore) downloadFileAttempt(ctx context.Context, src, dst string, pro
 	return nil
 }
 
+type contextReader struct {
+	ctx context.Context
+	r   io.Reader
+}
+
+func (cr contextReader) Read(p []byte) (int, error) {
+	if cr.ctx != nil {
+		if err := cr.ctx.Err(); err != nil {
+			return 0, err
+		}
+	}
+	return cr.r.Read(p)
+}
+
 func validateFileMD5(path, expected string) error {
+	return validateFileMD5Context(context.Background(), path, expected)
+}
+
+func validateFileMD5Context(ctx context.Context, path, expected string) error {
 	expected = strings.TrimSpace(expected)
 	if expected == "" {
 		return nil
+	}
+	if ctx != nil {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 	}
 	file, err := os.Open(path)
 	if err != nil {
@@ -392,7 +421,7 @@ func validateFileMD5(path, expected string) error {
 	}
 	defer file.Close()
 	hash := md5.New()
-	if _, err = io.Copy(hash, file); err != nil {
+	if _, err = io.Copy(hash, contextReader{ctx: ctx, r: file}); err != nil {
 		return err
 	}
 	want, err := decodeMD5(expected)
@@ -417,6 +446,15 @@ func decodeMD5(value string) ([]byte, error) {
 }
 
 func validateIPAZip(path string) error {
+	return validateIPAZipContext(context.Background(), path)
+}
+
+func validateIPAZipContext(ctx context.Context, path string) error {
+	if ctx != nil {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+	}
 	reader, err := zip.OpenReader(path)
 	if err != nil {
 		return err
@@ -424,6 +462,11 @@ func validateIPAZip(path string) error {
 	defer reader.Close()
 	foundInfo := false
 	for _, entry := range reader.File {
+		if ctx != nil {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+		}
 		if isTopLevelAppInfoPlist(entry.Name) {
 			foundInfo = true
 		}
@@ -434,7 +477,7 @@ func validateIPAZip(path string) error {
 		if err != nil {
 			return fmt.Errorf("open %s: %w", entry.Name, err)
 		}
-		_, copyErr := io.Copy(io.Discard, stream)
+		_, copyErr := io.Copy(io.Discard, contextReader{ctx: ctx, r: stream})
 		closeErr := stream.Close()
 		if copyErr != nil {
 			return fmt.Errorf("verify %s: %w", entry.Name, copyErr)
@@ -449,23 +492,53 @@ func validateIPAZip(path string) error {
 	return nil
 }
 
+func sanitizeFileComponent(value string) string {
+	cleaned := strings.TrimSpace(value)
+	if cleaned == "" {
+		return ""
+	}
+	var b strings.Builder
+	b.Grow(len(cleaned))
+	for _, r := range cleaned {
+		if r < 0x20 || strings.ContainsRune(`\/:*?"<>|`, r) {
+			b.WriteByte('_')
+		} else {
+			b.WriteRune(r)
+		}
+	}
+	safe := strings.ReplaceAll(b.String(), "..", "_")
+	return strings.Trim(safe, ". ")
+}
+
 func fileName(app App, version string) string {
 	return packageFileName(app, version, "")
 }
 
 func packageFileName(app App, version string, platform Platform) string {
+	return packageFileNameWithVersionID(app, version, "", platform)
+}
+
+func packageFileNameWithVersionID(app App, version, externalVersionID string, platform Platform) string {
 	var parts []string
 
-	if app.BundleID != "" {
-		parts = append(parts, app.BundleID)
+	if safeBundle := sanitizeFileComponent(app.BundleID); safeBundle != "" {
+		parts = append(parts, safeBundle)
 	}
 
 	if app.ID != 0 {
 		parts = append(parts, strconv.FormatInt(app.ID, 10))
 	}
 
-	if version != "" {
-		parts = append(parts, version)
+	if safeVersion := sanitizeFileComponent(version); safeVersion != "" {
+		parts = append(parts, safeVersion)
+	}
+
+	if safeVersionID := sanitizeFileComponent(externalVersionID); safeVersionID != "" {
+		parts = append(parts, safeVersionID)
+	}
+
+	if len(parts) == 0 {
+		parts = append(parts, "package")
 	}
 
 	extension := "ipa"
@@ -477,7 +550,11 @@ func packageFileName(app App, version string, platform Platform) string {
 }
 
 func (t *appstore) resolveDestinationPath(app App, version string, path string, platform Platform) (string, error) {
-	file := packageFileName(app, version, platform)
+	return t.resolveDestinationPathWithVersion(app, version, "", path, platform)
+}
+
+func (t *appstore) resolveDestinationPathWithVersion(app App, version, externalVersionID, path string, platform Platform) (string, error) {
+	file := packageFileNameWithVersionID(app, version, externalVersionID, platform)
 
 	if path == "" {
 		workdir, err := t.os.Getwd()
@@ -485,7 +562,7 @@ func (t *appstore) resolveDestinationPath(app App, version string, path string, 
 			return "", fmt.Errorf("failed to get current directory: %w", err)
 		}
 
-		return fmt.Sprintf("%s/%s", workdir, file), nil
+		return filepath.Join(workdir, file), nil
 	}
 
 	isDir, err := t.isDirectory(path)
@@ -514,7 +591,13 @@ func (t *appstore) isDirectory(path string) (bool, error) {
 }
 
 //nolint:nonamedreturns // Deferred close errors must propagate to callers.
-func (t *appstore) applyPatches(item downloadItemResult, acc Account, src, dst string, artwork []byte) (err error) {
+func (t *appstore) applyPatches(ctx context.Context, item downloadItemResult, acc Account, src, dst string, artwork []byte) (err error) {
+	if ctx != nil {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+	}
+
 	srcZip, err := zip.OpenReader(src)
 	if err != nil {
 		return fmt.Errorf("failed to open zip reader: %w", err)
@@ -539,7 +622,7 @@ func (t *appstore) applyPatches(item downloadItemResult, acc Account, src, dst s
 		}
 	}()
 
-	err = t.replicateZip(srcZip, dstZip, src)
+	err = t.replicateZip(ctx, srcZip, dstZip, src)
 	if err != nil {
 		return fmt.Errorf("failed to replicate zip: %w", err)
 	}

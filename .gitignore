@@ -2,3 +2,4 @@ build/bin
 build/release
 node_modules
 src/frontend/dist
+.vite/

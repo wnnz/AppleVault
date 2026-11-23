@@ -10,6 +10,10 @@ export function CancelDownloadTask(arg1) {
   return window['go']['backend']['App']['CancelDownloadTask'](arg1);
 }
 
+export function CancelInstallIPA() {
+  return window['go']['backend']['App']['CancelInstallIPA']();
+}
+
 export function CancelRunningCommand() {
   return window['go']['backend']['App']['CancelRunningCommand']();
 }
@@ -40,6 +44,14 @@ export function GetAccounts() {
 
 export function GetDownloadTasks() {
   return window['go']['backend']['App']['GetDownloadTasks']();
+}
+
+export function GetRecentLogs() {
+  return window['go']['backend']['App']['GetRecentLogs']();
+}
+
+export function GetRuntimeInfo() {
+  return window['go']['backend']['App']['GetRuntimeInfo']();
 }
 
 export function GetSettings() {

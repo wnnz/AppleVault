@@ -94,3 +94,37 @@ func TestVerifyZIPEntriesContext(t *testing.T) {
 		t.Fatalf("expected context.Canceled, got %v", err)
 	}
 }
+
+func TestInspectIPAiPhoneOnlyAllowedOnIPad(t *testing.T) {
+	app := NewApp()
+
+	iphoneOnlyPath := createTestIPA(t, ipaBundleInfo{
+		DisplayName:        "iPhoneApp",
+		BundleID:           "com.example.iphoneonly",
+		ShortVersion:       "1.0",
+		SupportedPlatforms: []string{"iPhoneOS"},
+		DeviceFamily:       []int{1},
+	}, true)
+	resIPad, err := app.InspectIPA(iphoneOnlyPath, "iPad16,2", "18.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !resIPad.Compatible || !strings.Contains(resIPad.CompatibilityMessage, "兼容模式") {
+		t.Fatalf("expected iPhone-only IPA to be allowed in compatibility mode on iPad, got %+v", resIPad)
+	}
+
+	ipadOnlyPath := createTestIPA(t, ipaBundleInfo{
+		DisplayName:        "iPadApp",
+		BundleID:           "com.example.ipadonly",
+		ShortVersion:       "1.0",
+		SupportedPlatforms: []string{"iPhoneOS"},
+		DeviceFamily:       []int{2},
+	}, true)
+	resIPhone, err := app.InspectIPA(ipadOnlyPath, "iPhone17,1", "18.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resIPhone.Compatible {
+		t.Fatalf("expected iPad-only IPA to be incompatible with iPhone, got %+v", resIPhone)
+	}
+}

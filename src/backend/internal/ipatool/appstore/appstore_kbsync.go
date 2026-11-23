@@ -43,7 +43,7 @@ func (t *appstore) sendPreferredDownload(ctx context.Context, endpointURL string
 	}
 
 	if versionID == "" {
-		versionID, err = t.lookupLatestExternalVersionID(acc, app, platform)
+		versionID, err = t.lookupLatestExternalVersionID(ctx, acc, app, platform)
 		if err != nil {
 			return http.Result[downloadResult]{}, platform, fmt.Errorf("failed to resolve platform version for ent/download: %w", err)
 		}

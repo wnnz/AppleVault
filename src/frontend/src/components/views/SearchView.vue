@@ -86,7 +86,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'selectAppForVersions', app: main.AppItem): void
+  (e: 'selectAppForVersions', app: main.AppItem, platform?: string): void
   (e: 'downloadApp', app: main.AppItem, platform?: string): void
   (e: 'busyChange', busy: boolean, text?: string): void
 }>()
@@ -180,7 +180,7 @@ const searchColumns = [
     fixed: 'right' as const,
     render(row: main.AppItem) {
       return h('div', { class: 'app-button-group' }, [
-        h(AppButton, { size: 'tiny', secondary: true, onClick: () => emit('selectAppForVersions', row) }, () => '历史版本'),
+        h(AppButton, { size: 'tiny', secondary: true, onClick: () => emit('selectAppForVersions', row, searchForm.value.platform) }, () => '历史版本'),
         h(AppButton, { size: 'tiny', type: 'primary', onClick: () => emit('downloadApp', row, searchForm.value.platform) }, () => '下载'),
         h(AppButton, { size: 'tiny', secondary: true, onClick: () => handlePurchaseApp(row.bundleID) }, () => '获取许可')
       ])

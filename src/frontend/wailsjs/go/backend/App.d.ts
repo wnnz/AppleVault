@@ -6,6 +6,8 @@ export function AddDownloadTask(arg1:string,arg2:string,arg3:number,arg4:string,
 
 export function CancelDownloadTask(arg1:string):Promise<void>;
 
+export function CancelInstallIPA():Promise<void>;
+
 export function CancelRunningCommand():Promise<void>;
 
 export function CheckForUpdates():Promise<main.UpdateInfo>;
@@ -21,6 +23,10 @@ export function GetAppVersion():Promise<string>;
 export function GetAccounts():Promise<Array<main.AccountInfo>>;
 
 export function GetDownloadTasks():Promise<Array<main.DownloadTask>>;
+
+export function GetRecentLogs():Promise<Array<string>>;
+
+export function GetRuntimeInfo():Promise<main.RuntimeInfo>;
 
 export function GetSettings():Promise<main.Settings>;
 

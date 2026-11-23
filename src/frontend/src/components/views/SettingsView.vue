@@ -155,7 +155,7 @@ const settings = ref<main.Settings>({
   themeHintShown: false,
   defaultDownloadDir: 'data/downloads/default',
   defaultPlatform: 'iphone',
-  enableProxy: true,
+  enableProxy: false,
   proxyUrl: 'http://127.0.0.1:10808'
 })
 

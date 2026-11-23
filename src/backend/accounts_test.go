@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"context"
 	"encoding/json"
 	"path/filepath"
 	"testing"
@@ -174,5 +175,70 @@ func TestRemoveAccountSucceedsWhenCredentialsMissingOrProxyInvalid(t *testing.T)
 	accounts := app.GetAccounts()
 	if len(accounts) != 1 || accounts[0].ID != "two" {
 		t.Fatalf("expected only account two remaining, got %#v", accounts)
+	}
+}
+
+func TestRemoveAccountCancelsOwnTasksBeforeOtherAccounts(t *testing.T) {
+	app := NewApp()
+	app.dataDirOverride = t.TempDir()
+
+	app.accountMu.Lock()
+	app.accounts = accountRegistry{
+		ActiveAccountID: "one",
+		Accounts: []storedAccount{
+			{ID: "one", Email: "one@example.com", LastUsed: 20},
+			{ID: "two", Email: "two@example.com", LastUsed: 10},
+		},
+	}
+	app.syncCachedAccountLocked()
+	if err := app.saveAccountsLocked(); err != nil {
+		app.accountMu.Unlock()
+		t.Fatal(err)
+	}
+	app.accountMu.Unlock()
+
+	ctx1, cancel1 := context.WithCancel(context.Background())
+	done1 := make(chan struct{})
+	go func() {
+		<-ctx1.Done()
+		close(done1)
+	}()
+
+	ctx2, cancel2 := context.WithCancel(context.Background())
+	defer cancel2()
+	done2 := make(chan struct{})
+
+	task1 := newDownloadTask("one", "task-acc1", "AppOne", "com.one", 1, "1.0", "1", "10 MB", "iphone")
+	task1.Status = "downloading"
+	task2 := newDownloadTask("two", "task-acc2", "AppTwo", "com.two", 2, "1.0", "2", "10 MB", "iphone")
+	task2.Status = "downloading"
+
+	app.tasksMu.Lock()
+	app.ensureTaskMapsLocked()
+	app.tasks = []*DownloadTask{task1, task2}
+	app.taskCancels[task1.ID] = cancel1
+	app.taskDone[task1.ID] = done1
+	app.taskCancels[task2.ID] = cancel2
+	app.taskDone[task2.ID] = done2
+	app.tasksMu.Unlock()
+
+	if _, err := app.RemoveAccount("one"); err != nil {
+		t.Fatalf("RemoveAccount failed: %v", err)
+	}
+
+	if ctx1.Err() == nil {
+		t.Fatal("expected removed account's task context to be canceled")
+	}
+	if ctx2.Err() != nil {
+		t.Fatal("other account's task context must not be canceled")
+	}
+
+	app.tasksMu.RLock()
+	defer app.tasksMu.RUnlock()
+	if task1.Status != "canceled" || task1.Speed != "账号已移除" {
+		t.Fatalf("unexpected removed account task state: %+v", task1)
+	}
+	if task2.Status != "downloading" {
+		t.Fatalf("other account task should stay downloading, got %+v", task2)
 	}
 }

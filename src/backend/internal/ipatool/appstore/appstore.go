@@ -88,6 +88,9 @@ func (t *appstore) CloseIdleConnections() {
 	if t.authBackend != nil {
 		t.authBackend.CloseIdleConnections()
 	}
+	if t.authHTTP != nil {
+		t.authHTTP.CloseIdleConnections()
+	}
 }
 
 type Args struct {
@@ -142,7 +145,6 @@ func NewAppStore(args Args) AppStore {
 		httpClient:          http.NewClient[interface{}](http.Args{CookieJar: args.CookieJar, Executor: backend.Client("transfer")}),
 		macDecrypterFactory: defaultMacPackageDecrypterFactory,
 		actionSignerFactory: actionSignerFactory,
-		authRetrySleep:      time.Sleep,
 		machine:             args.Machine,
 		os:                  args.OperatingSystem,
 		authBackend:         backend,

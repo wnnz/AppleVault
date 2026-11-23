@@ -88,16 +88,27 @@
         </div>
         <div class="action-banner-desc">本工具下载的正版 IPA 需安装至登录了相同 Apple ID 的设备上，未签名包将无法被系统接受。</div>
       </div>
-      <AppButton
-        type="primary"
-        size="large"
-        :disabled="!selectedIPAPath || !selectedDeviceUDID || isLoadingDevices || isInspectingIPA || !!(ipaInspection && !ipaInspection.compatible)"
-        :loading="isInstallingIPA"
-        class="install-submit-btn"
-        @click="handleInstallIPA"
-      >
-        {{ isInstallingIPA ? '正在安装中...' : '开始安装到设备' }}
-      </AppButton>
+      <div class="btn-group-row">
+        <AppButton
+          v-if="isInstallingIPA"
+          type="error"
+          secondary
+          size="large"
+          @click="handleCancelInstallIPA"
+        >
+          取消安装
+        </AppButton>
+        <AppButton
+          type="primary"
+          size="large"
+          :disabled="!selectedIPAPath || !selectedDeviceUDID || isLoadingDevices || isInspectingIPA || !!(ipaInspection && !ipaInspection.compatible)"
+          :loading="isInstallingIPA"
+          class="install-submit-btn"
+          @click="handleInstallIPA"
+        >
+          {{ isInstallingIPA ? '正在安装中...' : '开始安装到设备' }}
+        </AppButton>
+      </div>
     </AppCard>
   </div>
 </template>
@@ -105,7 +116,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { backend as main } from '../../../wailsjs/go/models'
-import { SelectIPA, ListDevices, InstallIPA, InspectIPA } from '../../../wailsjs/go/backend/App'
+import { SelectIPA, ListDevices, InstallIPA, InspectIPA, CancelInstallIPA } from '../../../wailsjs/go/backend/App'
 import AppButton from '../../ui/components/AppButton.vue'
 import AppCard from '../../ui/components/AppCard.vue'
 import AppInput from '../../ui/components/AppInput.vue'
@@ -272,10 +283,25 @@ async function handleInstallIPA() {
       message.error(result.message || 'IPA 安装失败')
     }
   } catch (err: any) {
-    emit('busyChange', false, 'IPA 安装失败')
-    message.error(`IPA 安装失败: ${err}`)
+    const detail = String(err)
+    if (detail.includes('已取消安装')) {
+      emit('busyChange', false, '已取消 IPA 安装')
+      message.info('已取消 IPA 安装')
+    } else {
+      emit('busyChange', false, 'IPA 安装失败')
+      message.error(`IPA 安装失败: ${err}`)
+    }
   } finally {
     isInstallingIPA.value = false
+  }
+}
+
+async function handleCancelInstallIPA() {
+  emit('busyChange', true, '正在取消 IPA 安装...')
+  try {
+    await CancelInstallIPA()
+  } catch (err: any) {
+    message.error(`取消安装失败: ${err}`)
   }
 }
 

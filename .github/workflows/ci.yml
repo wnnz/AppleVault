@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+      - "feature/**"
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: Windows (amd64)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: src/frontend/pnpm-lock.yaml
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install, test, and build frontend
+        working-directory: src/frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run test
+          pnpm run build
+
+      - name: Vet backend
+        run: go vet -unsafeptr=false ./...
+
+      - name: Build backend and app
+        run: go build ./...
+
+      - name: Run backend tests
+        run: go test -count=1 ./src/backend/...
+
+  macos:
+    name: macOS
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: src/frontend/pnpm-lock.yaml
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install, test, and build frontend
+        working-directory: src/frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run test
+          pnpm run build
+
+      - name: Vet backend
+        run: go vet ./...
+
+      - name: Build backend and app
+        run: go build ./...
+
+      - name: Run backend race tests
+        run: go test -race -count=1 ./src/backend/...

@@ -1,7 +1,10 @@
 package backend
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -236,5 +239,113 @@ func TestFormatBytesBounds(t *testing.T) {
 	large := formatBytes(1 << 50)
 	if !strings.Contains(large, "TB") {
 		t.Fatalf("formatBytes(1<<50) = %q, expected TB unit", large)
+	}
+}
+
+func TestSecretAESGCMRoundTripAndTamper(t *testing.T) {
+	key1 := bytes.Repeat([]byte{0x1a}, 32)
+	key2 := bytes.Repeat([]byte{0x2b}, 32)
+
+	if sealed, err := sealSecretAESGCM(key1, ""); err != nil || sealed != "" {
+		t.Fatalf("empty seal got (%q, %v), want (\"\", nil)", sealed, err)
+	}
+	if plain, err := openSecretAESGCM(key1, ""); err != nil || plain != "" {
+		t.Fatalf("empty open got (%q, %v), want (\"\", nil)", plain, err)
+	}
+
+	const secret = "passphrase-!@#$-中文"
+	sealed, err := sealSecretAESGCM(key1, secret)
+	if err != nil {
+		t.Fatalf("sealSecretAESGCM failed: %v", err)
+	}
+	if !strings.HasPrefix(sealed, aesGCMTokenPrefix) {
+		t.Fatalf("sealed secret %q missing prefix %q", sealed, aesGCMTokenPrefix)
+	}
+
+	plain, err := openSecretAESGCM(key1, sealed)
+	if err != nil || plain != secret {
+		t.Fatalf("openSecretAESGCM = (%q, %v), want %q", plain, err, secret)
+	}
+
+	if _, err := sealSecretAESGCM(key1[:16], secret); err == nil {
+		t.Fatal("expected error for invalid 16-byte seal key")
+	}
+	if _, err := openSecretAESGCM(key1[:16], sealed); err == nil {
+		t.Fatal("expected error for invalid 16-byte open key")
+	}
+	if _, err := openSecretAESGCM(key2, sealed); err == nil {
+		t.Fatal("expected error when decrypting with wrong key")
+	}
+	if _, err := openSecretAESGCM(key1, "plain:"+secret); err == nil {
+		t.Fatal("expected error for unsupported prefix")
+	}
+
+	raw, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(sealed, aesGCMTokenPrefix))
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw[len(raw)-1] ^= 0xff
+	tampered := aesGCMTokenPrefix + base64.StdEncoding.EncodeToString(raw)
+	if _, err := openSecretAESGCM(key1, tampered); err == nil {
+		t.Fatal("expected authentication error for tampered ciphertext")
+	}
+}
+
+func TestParseAndValidateProxyURL(t *testing.T) {
+	invalid := []string{
+		"",
+		"   ",
+		"127.0.0.1:10808",
+		"ftp://127.0.0.1:21",
+		"http://",
+		"://bad-url",
+	}
+	for _, raw := range invalid {
+		if parsed, err := parseAndValidateProxyURL(raw); err == nil {
+			t.Errorf("parseAndValidateProxyURL(%q) unexpectedly succeeded: %v", raw, parsed)
+		}
+	}
+
+	valid := []string{
+		"http://127.0.0.1:10808",
+		"https://proxy.example.com:8443",
+		"socks5://127.0.0.1:1080",
+		"socks5h://user:pass@127.0.0.1:1080",
+	}
+	for _, raw := range valid {
+		if parsed, err := parseAndValidateProxyURL(raw); err != nil || parsed == nil {
+			t.Errorf("parseAndValidateProxyURL(%q) failed: %v", raw, err)
+		}
+	}
+}
+
+func TestNewAppDefaultsProxyDisabled(t *testing.T) {
+	app := NewApp()
+	if app.GetSettings().EnableProxy {
+		t.Fatal("expected new app to default EnableProxy to false")
+	}
+}
+
+func TestGetRecentLogsBuffersStartupLogs(t *testing.T) {
+	app := NewApp()
+	for i := 0; i < 120; i++ {
+		app.emitLog(fmt.Sprintf("startup-log-%03d", i))
+	}
+
+	logs := app.GetRecentLogs()
+	if len(logs) != maxRecentLogs {
+		t.Fatalf("GetRecentLogs() returned %d items, want %d", len(logs), maxRecentLogs)
+	}
+	if !strings.Contains(logs[0], "startup-log-020") {
+		t.Fatalf("oldest retained log = %q, want startup-log-020", logs[0])
+	}
+	if !strings.Contains(logs[len(logs)-1], "startup-log-119") {
+		t.Fatalf("newest retained log = %q, want startup-log-119", logs[len(logs)-1])
+	}
+
+	logs[0] = "mutated-by-caller"
+	again := app.GetRecentLogs()
+	if again[0] == "mutated-by-caller" {
+		t.Fatal("GetRecentLogs must return a defensive copy")
 	}
 }

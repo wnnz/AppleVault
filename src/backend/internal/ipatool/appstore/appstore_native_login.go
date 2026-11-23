@@ -17,7 +17,10 @@ func (t *appstore) nativeLogin(input LoginInput) (LoginOutput, error) {
 	if len(t.anisetteState) == 0 && t.keychain != nil {
 		t.anisetteState, _ = t.keychain.Get(anisetteKeychainKey)
 	}
-	ctx := t.requestContext()
+	ctx := input.Context
+	if ctx == nil {
+		ctx = t.requestContext()
+	}
 	macAddress, err := t.machine.MacAddress()
 	if err != nil {
 		return LoginOutput{}, fmt.Errorf("get Store machine identity: %w", err)

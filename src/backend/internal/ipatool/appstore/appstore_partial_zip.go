@@ -125,7 +125,10 @@ func trySuffixRangeReaderAt(ctx context.Context, client apphttp.Client[interface
 	}
 
 	if res != nil && res.Body != nil {
-		defer res.Body.Close()
+		defer func() {
+			_, _ = io.Copy(io.Discard, io.LimitReader(res.Body, 64))
+			_ = res.Body.Close()
+		}()
 	}
 
 	if res.StatusCode == http.StatusRequestedRangeNotSatisfiable || res.StatusCode == http.StatusBadRequest {
@@ -171,7 +174,10 @@ func remoteFileSize(ctx context.Context, client apphttp.Client[interface{}], url
 	}
 
 	if res != nil && res.Body != nil {
-		defer res.Body.Close()
+		defer func() {
+			_, _ = io.Copy(io.Discard, io.LimitReader(res.Body, 64))
+			_ = res.Body.Close()
+		}()
 	}
 
 	if res.StatusCode != http.StatusPartialContent {
@@ -391,7 +397,10 @@ func (r *httpRangeReaderAt) fetchRange(start, end int64) ([]byte, error) {
 	}
 
 	if res != nil && res.Body != nil {
-		defer res.Body.Close()
+		defer func() {
+			_, _ = io.Copy(io.Discard, io.LimitReader(res.Body, 64))
+			_ = res.Body.Close()
+		}()
 	}
 
 	if res.StatusCode != http.StatusPartialContent {
@@ -689,11 +698,15 @@ func readVersionMetadataFromInfoPlist(file *zip.File) (versionMetadata, error) {
 	}
 	defer src.Close()
 
+	const maxInfoPlistReadBytes int64 = 4 << 20
 	data := new(bytes.Buffer)
 
-	_, err = io.Copy(data, src)
+	_, err = io.Copy(data, io.LimitReader(src, maxInfoPlistReadBytes+1))
 	if err != nil {
 		return versionMetadata{}, fmt.Errorf("failed to read Info.plist: %w", err)
+	}
+	if int64(data.Len()) > maxInfoPlistReadBytes {
+		return versionMetadata{}, errors.New("Info.plist exceeds size limit")
 	}
 
 	metadata := map[string]interface{}{}

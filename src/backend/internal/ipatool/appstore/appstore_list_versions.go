@@ -42,9 +42,9 @@ func (t *appstore) ListVersions(input ListVersionsInput) (ListVersionsOutput, er
 
 	switch platform {
 	case PlatformMacOS:
-		externalVersionID, err = t.lookupLatestMacOSExternalVersionID(input.Account, input.App)
+		externalVersionID, err = t.lookupLatestMacOSExternalVersionID(input.Context, input.Account, input.App)
 	case PlatformAppleTV, PlatformWatchOS, PlatformVisionOS:
-		externalVersionID, err = t.lookupLatestExternalVersionID(input.Account, input.App, platform)
+		externalVersionID, err = t.lookupLatestExternalVersionID(input.Context, input.Account, input.App, platform)
 	}
 
 	if err != nil {

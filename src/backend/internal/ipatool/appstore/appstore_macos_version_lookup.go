@@ -1,6 +1,7 @@
 package appstore
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,7 +14,7 @@ import (
 	"AppleVault/src/backend/internal/ipatool/http"
 )
 
-func (t *appstore) lookupLatestMacOSExternalVersionID(acc Account, app App) (string, error) {
+func (t *appstore) lookupLatestMacOSExternalVersionID(ctx context.Context, acc Account, app App) (string, error) {
 	countryCode, err := t.countryCodeFromStoreFront(acc.StoreFront)
 	if err != nil {
 		return "", fmt.Errorf("failed to resolve the country code: %w", err)
@@ -22,6 +23,7 @@ func (t *appstore) lookupLatestMacOSExternalVersionID(acc Account, app App) (str
 	// The legacy MDM lookup can return an iOS offer even with platform=osx.
 	// Use the Mac product page to select the native Mac offer instead.
 	res, err := t.storefrontClient.Send(http.Request{
+		Context:        ctx,
 		URL:            fmt.Sprintf("https://apps.apple.com/%s/app/id%d?platform=mac", strings.ToLower(countryCode), app.ID),
 		Method:         http.MethodGET,
 		ResponseFormat: http.ResponseFormatRaw,

@@ -109,6 +109,7 @@ const purchasedPageSize = ref(20)
 const purchasedTotal = ref(0)
 const purchasedApps = ref<main.AppItem[]>([])
 const purchasedSearchKeyword = ref('')
+let loadSequence = 0
 
 const purchasedPageSizeOptions = [
   { label: '20', value: 20 },
@@ -148,10 +149,21 @@ function formatReadableDate(raw?: string): string {
   return raw.replace(/T/, ' ').replace(/:\d{2}Z$/, '').replace(/Z$/, '')
 }
 
+function resetPurchasedState() {
+  loadSequence++
+  isPurchasedLoading.value = false
+  purchasedLoadLoaded.value = 0
+  purchasedLoadTotal.value = 0
+  purchasedTotal.value = 0
+  purchasedPage.value = 1
+  purchasedApps.value = []
+}
+
 /**
  * 分页并发获取 Apple ID 名下的所有已购记录
  */
 async function loadPurchases() {
+  const seq = ++loadSequence
   isPurchasedLoading.value = true
   emit('busyChange', true, '正在获取已购应用总数...')
   purchasedLoadLoaded.value = 0
@@ -160,6 +172,7 @@ async function loadPurchases() {
   try {
     const pageSize = 100
     const firstPage = await ListPurchases(1, pageSize)
+    if (seq !== loadSequence) return
     const firstApps = firstPage.apps || []
     const firstTotal = firstPage.totalCount || firstApps.length
     const allApps = [...firstApps]
@@ -171,17 +184,20 @@ async function loadPurchases() {
 
     const maxConcurrentPages = 4
     for (let batchStart = 2; batchStart <= totalPages; batchStart += maxConcurrentPages) {
+      if (seq !== loadSequence) return
       const pages = Array.from(
         { length: Math.min(maxConcurrentPages, totalPages - batchStart + 1) },
         (_, index) => batchStart + index
       )
       const pageResults = await Promise.all(pages.map(async page => {
         const pageResult = await ListPurchases(page, pageSize)
+        if (seq !== loadSequence) return { page, apps: [] as main.AppItem[] }
         const pageApps = pageResult.apps || []
         purchasedLoadLoaded.value = Math.min(purchasedLoadLoaded.value + pageApps.length, firstTotal)
         emit('busyChange', true, `正在加载已购应用 (${purchasedLoadLoaded.value}/${firstTotal})...`)
         return { page, apps: pageApps }
       }))
+      if (seq !== loadSequence) return
 
       pageResults.sort((a, b) => a.page - b.page)
       for (const result of pageResults) {
@@ -194,10 +210,13 @@ async function loadPurchases() {
     purchasedPage.value = 1
     emit('busyChange', false, `已购应用加载完成 (共 ${purchasedApps.value.length} 款)。`)
   } catch (err: any) {
+    if (seq !== loadSequence) return
     message.error(`加载已购列表失败: ${err}`)
     emit('busyChange', false, '加载失败')
   } finally {
-    isPurchasedLoading.value = false
+    if (seq === loadSequence) {
+      isPurchasedLoading.value = false
+    }
   }
 }
 
@@ -259,6 +278,7 @@ const displayedPurchasedColumns = computed(() => {
 defineExpose({
   purchasedApps,
   purchasedTotal,
-  loadPurchases
+  loadPurchases,
+  resetPurchasedState
 })
 </script>

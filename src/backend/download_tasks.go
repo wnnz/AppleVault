@@ -9,7 +9,35 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
+const (
+	maxConcurrentDownloads = 2
+	maxStoredDownloadTasks = 200
+)
+
 // --- Download Task Manager ---
+
+func (a *App) nextTaskID() string {
+	return fmt.Sprintf("%d-%d", time.Now().UnixNano(), a.taskSeq.Add(1))
+}
+
+func (a *App) ensureTaskMapsLocked() {
+	if a.taskCancels == nil {
+		a.taskCancels = make(map[string]context.CancelFunc)
+	}
+	if a.taskDone == nil {
+		a.taskDone = make(map[string]chan struct{})
+	}
+	if a.downloadSem == nil {
+		a.downloadSem = make(chan struct{}, maxConcurrentDownloads)
+	}
+}
+
+func (a *App) downloadSemaphore() chan struct{} {
+	a.tasksMu.Lock()
+	defer a.tasksMu.Unlock()
+	a.ensureTaskMapsLocked()
+	return a.downloadSem
+}
 
 func (a *App) currentDownloadPlatform() string {
 	a.settingsMu.RLock()
@@ -44,13 +72,18 @@ func (a *App) AddDownloadTask(appName, bundleId string, appId int64, version, ve
 	a.tasksMu.Lock()
 	defer a.tasksMu.Unlock()
 
-	id := fmt.Sprintf("%d", time.Now().UnixNano())
+	if a.shuttingDown {
+		return DownloadTask{}, fmt.Errorf("软件正在退出，无法添加下载任务")
+	}
+
+	id := a.nextTaskID()
 	task := newDownloadTask(accountID, id, appName, bundleId, appId, version, versionId, fileSize, resolvedPlatform)
 	if a.hasActiveDuplicateLocked(task) {
 		return DownloadTask{}, fmt.Errorf("该应用版本已在下载队列中")
 	}
 
 	a.tasks = append([]*DownloadTask{task}, a.tasks...)
+	a.trimDownloadHistoryLocked()
 	a.saveTasksLocked()
 	a.startTaskLocked(task)
 	return *task, nil
@@ -70,7 +103,7 @@ func newDownloadTask(accountID, id, appName, bundleID string, appID int64, versi
 		Status:    "pending",
 		Speed:     "等待下载",
 		Progress:  0,
-		CreatedAt: time.Now().Format("15:04:05"),
+		CreatedAt: time.Now().Format("2006-01-02 15:04:05"),
 	}
 }
 
@@ -105,6 +138,10 @@ func (a *App) RetryDownloadTask(id string) (DownloadTask, error) {
 	a.tasksMu.Lock()
 	defer a.tasksMu.Unlock()
 
+	if a.shuttingDown {
+		return DownloadTask{}, fmt.Errorf("软件正在退出，无法重试下载任务")
+	}
+
 	var source *DownloadTask
 	for _, task := range a.tasks {
 		if task.ID == id {
@@ -112,7 +149,7 @@ func (a *App) RetryDownloadTask(id string) (DownloadTask, error) {
 			break
 		}
 	}
-	retry, err := retryDownloadTaskFrom(source, fmt.Sprintf("%d", time.Now().UnixNano()), fallbackAccountID, fallbackPlatform)
+	retry, err := retryDownloadTaskFrom(source, a.nextTaskID(), fallbackAccountID, fallbackPlatform)
 	if err != nil {
 		return DownloadTask{}, err
 	}
@@ -124,9 +161,27 @@ func (a *App) RetryDownloadTask(id string) (DownloadTask, error) {
 	}
 
 	a.tasks = append([]*DownloadTask{retry}, a.tasks...)
+	a.trimDownloadHistoryLocked()
 	a.saveTasksLocked()
 	a.startTaskLocked(retry)
 	return *retry, nil
+}
+
+func (a *App) trimDownloadHistoryLocked() {
+	for len(a.tasks) > maxStoredDownloadTasks {
+		removeIdx := -1
+		for i := len(a.tasks) - 1; i >= 0; i-- {
+			t := a.tasks[i]
+			if t == nil || (t.Status != "pending" && t.Status != "downloading") {
+				removeIdx = i
+				break
+			}
+		}
+		if removeIdx == -1 {
+			break
+		}
+		a.tasks = append(a.tasks[:removeIdx], a.tasks[removeIdx+1:]...)
+	}
 }
 
 func (a *App) taskExistsLocked(task *DownloadTask) bool {
@@ -144,7 +199,7 @@ func (a *App) hasActiveDuplicateLocked(candidate *DownloadTask) bool {
 			continue
 		}
 		if item.AccountID == candidate.AccountID &&
-			item.BundleID == candidate.BundleID &&
+			strings.EqualFold(strings.TrimSpace(item.BundleID), strings.TrimSpace(candidate.BundleID)) &&
 			item.AppID == candidate.AppID &&
 			item.VersionID == candidate.VersionID &&
 			item.Platform == candidate.Platform {
@@ -155,20 +210,57 @@ func (a *App) hasActiveDuplicateLocked(candidate *DownloadTask) bool {
 }
 
 func (a *App) startTaskLocked(task *DownloadTask) {
+	a.ensureTaskMapsLocked()
 	ctx, cancel := context.WithCancel(context.Background())
+	doneCh := make(chan struct{})
 	a.taskCancels[task.ID] = cancel
-	go a.runDownloadTask(ctx, task)
+	a.taskDone[task.ID] = doneCh
+	go a.runDownloadTaskWithSync(ctx, task, doneCh, a.downloadSem)
 }
 
 func (a *App) runDownloadTask(ctx context.Context, task *DownloadTask) {
+	a.runDownloadTaskWithSync(ctx, task, nil, a.downloadSemaphore())
+}
+
+func (a *App) runDownloadTaskWithSync(ctx context.Context, task *DownloadTask, doneCh chan struct{}, sem chan struct{}) {
 	defer func() {
 		a.tasksMu.Lock()
 		if cancel, ok := a.taskCancels[task.ID]; ok {
 			cancel()
 			delete(a.taskCancels, task.ID)
 		}
+		if ch, ok := a.taskDone[task.ID]; ok && ch == doneCh {
+			delete(a.taskDone, task.ID)
+		}
 		a.tasksMu.Unlock()
+		if doneCh != nil {
+			close(doneCh)
+		}
 	}()
+
+	if sem != nil {
+		a.tasksMu.Lock()
+		if ctx.Err() != nil || task.Status != "pending" || !a.taskExistsLocked(task) {
+			a.tasksMu.Unlock()
+			return
+		}
+		if len(sem) >= cap(sem) {
+			task.Speed = "排队等待中"
+			queuedSnap := *task
+			a.tasksMu.Unlock()
+			a.emitTaskUpdated(queuedSnap)
+		} else {
+			a.tasksMu.Unlock()
+		}
+
+		select {
+		case sem <- struct{}{}:
+			defer func() { <-sem }()
+		case <-ctx.Done():
+			a.finishDownloadTask(ctx, task, DownloadResult{}, ctx.Err())
+			return
+		}
+	}
 
 	a.tasksMu.Lock()
 	if ctx.Err() != nil || task.Status != "pending" || !a.taskExistsLocked(task) {
@@ -228,6 +320,10 @@ func (a *App) finishDownloadTask(ctx context.Context, task *DownloadTask, result
 		return
 	}
 	if ctx.Err() != nil {
+		if task.Status == "canceled" {
+			a.tasksMu.Unlock()
+			return
+		}
 		task.Status = "canceled"
 		task.Speed = "已取消"
 	} else if err != nil {
@@ -281,6 +377,56 @@ func (a *App) CancelDownloadTask(id string) {
 	a.tasksMu.Unlock()
 	if snap != nil {
 		a.emitTaskUpdated(*snap)
+	}
+}
+
+func (a *App) cancelDownloadTasksForAccount(accountID string) {
+	if accountID == "" {
+		return
+	}
+	var snaps []DownloadTask
+	var waitChans []chan struct{}
+	changed := false
+
+	a.tasksMu.Lock()
+	for _, t := range a.tasks {
+		if t.AccountID != accountID || (t.Status != "downloading" && t.Status != "pending") {
+			continue
+		}
+		if cancel, ok := a.taskCancels[t.ID]; ok {
+			cancel()
+		}
+		if doneCh, ok := a.taskDone[t.ID]; ok && doneCh != nil {
+			waitChans = append(waitChans, doneCh)
+		}
+		t.Status = "canceled"
+		t.Speed = "账号已移除"
+		snaps = append(snaps, *t)
+		changed = true
+	}
+	if changed {
+		a.saveTasksLocked()
+	}
+	a.tasksMu.Unlock()
+
+	for _, snap := range snaps {
+		a.emitTaskUpdated(snap)
+	}
+	waitForTaskChannels(waitChans, 2*time.Second)
+}
+
+func waitForTaskChannels(waitChans []chan struct{}, timeout time.Duration) {
+	if len(waitChans) == 0 {
+		return
+	}
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	for _, ch := range waitChans {
+		select {
+		case <-ch:
+		case <-timer.C:
+			return
+		}
 	}
 }
 

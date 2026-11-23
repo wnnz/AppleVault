@@ -84,6 +84,24 @@ function appendLog(line: string) {
   if (logLines.value.length > 600) {
     logLines.value.shift()
   }
+  scrollLogsToBottom()
+}
+
+function replayLogs(logs: string[]) {
+  if (!logs || logs.length === 0) return
+  if (logLines.value.length === 0) {
+    logLines.value.push(...logs.slice(-600))
+  } else {
+    const existing = new Set(logLines.value)
+    const missing = logs.filter(line => !existing.has(line))
+    if (missing.length > 0) {
+      logLines.value = [...missing, ...logLines.value].slice(-600)
+    }
+  }
+  scrollLogsToBottom()
+}
+
+function scrollLogsToBottom() {
   nextTick(() => {
     if (logContainerRef.value) {
       logContainerRef.value.scrollTop = logContainerRef.value.scrollHeight
@@ -93,6 +111,7 @@ function appendLog(line: string) {
 
 defineExpose({
   appendLog,
+  replayLogs,
   toggleLogs,
   clearLogs
 })

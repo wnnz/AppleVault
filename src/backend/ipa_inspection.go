@@ -179,6 +179,9 @@ func evaluateIPACompatibility(info ipaBundleInfo, signed bool, productType, osVe
 		return false, fmt.Sprintf("IPA 不支持目标设备平台 %s", expectedPlatform)
 	}
 	if len(info.DeviceFamily) > 0 && !containsInt(info.DeviceFamily, expectedFamily) {
+		if expectedFamily == 2 && containsInt(info.DeviceFamily, 1) {
+			return true, "该 IPA 仅声明支持 iPhone，可在 iPad 上以兼容模式运行（安装前将进行完整性校验）"
+		}
 		return false, "IPA 不支持所选设备类型"
 	}
 	return true, "IPA 结构、签名和设备兼容性检查通过（安装前将进行完整性校验）"

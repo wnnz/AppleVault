@@ -1,6 +1,7 @@
 package appstore
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -25,6 +26,7 @@ const (
 )
 
 type OwnedAppsInput struct {
+	Context  context.Context
 	Account  Account
 	Page     int
 	Limit    int
@@ -54,7 +56,12 @@ func (t *appstore) OwnedApps(input OwnedAppsInput) (OwnedAppsOutput, error) {
 		return OwnedAppsOutput{}, err
 	}
 
-	bag, err := t.bag(nil, guid)
+	ctx := input.Context
+	if ctx == nil {
+		ctx = t.requestContext()
+	}
+
+	bag, err := t.bag(ctx, guid)
 	if err != nil {
 		return OwnedAppsOutput{}, fmt.Errorf("failed to get bag: %w", err)
 	}
@@ -72,7 +79,7 @@ func (t *appstore) OwnedApps(input OwnedAppsInput) (OwnedAppsOutput, error) {
 		return OwnedAppsOutput{}, errors.New("SAP action signer factory returned nil")
 	}
 
-	apps, fetchErr := t.fetchOwnedApps(input.Account, guid, signer)
+	apps, fetchErr := t.fetchOwnedApps(ctx, input.Account, guid, signer)
 	if input.Platform != "" {
 		apps = slices.DeleteFunc(apps, func(app App) bool {
 			return !slices.Contains(app.Platforms, input.Platform)
@@ -138,7 +145,7 @@ func normalizeOwnedAppsInput(input OwnedAppsInput) (OwnedAppsInput, error) {
 	return input, nil
 }
 
-func (t *appstore) fetchOwnedApps(acc Account, guid string, signer ActionSigner) ([]App, error) {
+func (t *appstore) fetchOwnedApps(ctx context.Context, acc Account, guid string, signer ActionSigner) ([]App, error) {
 	var apps []App
 
 	storeFront, _, _ := strings.Cut(acc.StoreFront, ",")
@@ -147,7 +154,7 @@ func (t *appstore) fetchOwnedApps(acc Account, guid string, signer ActionSigner)
 	for _, store := range []string{"34", "13"} {
 		acc.StoreFront = storeFront + "," + store
 
-		results, err := t.fetchOwnedAppsForStorefront(acc, guid, signer)
+		results, err := t.fetchOwnedAppsForStorefront(ctx, acc, guid, signer)
 		if err != nil {
 			return nil, err
 		}
@@ -158,8 +165,8 @@ func (t *appstore) fetchOwnedApps(acc Account, guid string, signer ActionSigner)
 	return mergeOwnedApps(apps), nil
 }
 
-func (t *appstore) fetchOwnedAppsForStorefront(acc Account, guid string, signer ActionSigner) ([]App, error) {
-	loginResult, err := t.ownedAppsClient.Send(t.ownedAppsLoginRequest(acc, guid))
+func (t *appstore) fetchOwnedAppsForStorefront(ctx context.Context, acc Account, guid string, signer ActionSigner) ([]App, error) {
+	loginResult, err := t.ownedAppsClient.Send(t.ownedAppsLoginRequest(ctx, acc, guid))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open purchase history session: %w", err)
 	}
@@ -183,7 +190,7 @@ func (t *appstore) fetchOwnedAppsForStorefront(acc Account, guid string, signer 
 
 	query := fmt.Sprintf("('com.apple.itunes.extended\\-media\\-kind:%d','com.apple.itunes.extended\\-media\\-kind:%d','com.apple.itunes.extended\\-media\\-kind:%d')", ownedAppsMediaKind, ownedArcadeAppsMediaKind, ownedMacAppsMediaKind)
 
-	updateResult, err := t.ownedAppsClient.Send(t.ownedAppsUpdateRequest(acc, guid, uint32(sessionID), query, signer))
+	updateResult, err := t.ownedAppsClient.Send(t.ownedAppsUpdateRequest(ctx, acc, guid, uint32(sessionID), query, signer))
 	if err != nil {
 		return nil, fmt.Errorf("failed to update purchase history: %w", err)
 	}
@@ -206,6 +213,7 @@ func (t *appstore) fetchOwnedAppsForStorefront(acc Account, guid string, signer 
 	}
 
 	itemsResult, err := t.ownedAppsClient.Send(t.ownedAppsItemsRequest(
+		ctx,
 		acc,
 		guid,
 		uint32(sessionID),
@@ -234,8 +242,9 @@ func (t *appstore) fetchOwnedAppsForStorefront(acc Account, guid string, signer 
 	return apps, nil
 }
 
-func (t *appstore) ownedAppsLoginRequest(acc Account, guid string) http.Request {
+func (t *appstore) ownedAppsLoginRequest(ctx context.Context, acc Account, guid string) http.Request {
 	return http.Request{
+		Context:        ctx,
 		URL:            PrivatePurchaseDAAPBaseURL + "/login",
 		Method:         http.MethodPOST,
 		ResponseFormat: http.ResponseFormatRaw,
@@ -243,12 +252,13 @@ func (t *appstore) ownedAppsLoginRequest(acc Account, guid string) http.Request 
 	}
 }
 
-func (t *appstore) ownedAppsUpdateRequest(acc Account, guid string, sessionID uint32, query string, signer ActionSigner) http.Request {
+func (t *appstore) ownedAppsUpdateRequest(ctx context.Context, acc Account, guid string, sessionID uint32, query string, signer ActionSigner) http.Request {
 	body := []byte(fmt.Sprintf("session-id=%d&revision-number=(null)&query=%s", sessionID, query))
 	headers := ownedAppsHeaders(acc, guid, time.Now())
 	headers["Content-Type"] = "application/x-www-form-urlencoded"
 
 	return http.Request{
+		Context:        ctx,
 		URL:            PrivatePurchaseDAAPBaseURL + "/update",
 		Method:         http.MethodPOST,
 		ResponseFormat: http.ResponseFormatRaw,
@@ -258,11 +268,12 @@ func (t *appstore) ownedAppsUpdateRequest(acc Account, guid string, sessionID ui
 	}
 }
 
-func (t *appstore) ownedAppsItemsRequest(acc Account, guid string, sessionID, latestVersion uint32, query string, now time.Time, signer ActionSigner) http.Request {
+func (t *appstore) ownedAppsItemsRequest(ctx context.Context, acc Account, guid string, sessionID, latestVersion uint32, query string, now time.Time, signer ActionSigner) http.Request {
 	headers := ownedAppsHeaders(acc, guid, now)
 	headers["Content-Type"] = "application/x-dmap-tagged"
 
 	return http.Request{
+		Context:        ctx,
 		URL:            fmt.Sprintf("%s/databases/%d/items", PrivatePurchaseDAAPBaseURL, latestVersion),
 		Method:         http.MethodPOST,
 		ResponseFormat: http.ResponseFormatRaw,

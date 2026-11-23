@@ -188,3 +188,41 @@ func TestIOSToolCandidatePathsSupportsMacBundleAndWindows(t *testing.T) {
 		t.Fatalf("Windows first candidate = %v", winCandidates)
 	}
 }
+
+func TestInstallCommandContextIsolatedAndNonReentrant(t *testing.T) {
+	app := NewApp()
+
+	installCtx, cleanup, err := app.startInstallCommandContext()
+	if err != nil {
+		t.Fatalf("first startInstallCommandContext() error = %v", err)
+	}
+
+	if _, _, err := app.startInstallCommandContext(); err == nil {
+		cleanup()
+		t.Fatal("expected second concurrent startInstallCommandContext() to fail")
+	}
+
+	_ = app.startCommandContext()
+	app.cancelStoreCommands()
+	if installCtx.Err() != nil {
+		cleanup()
+		t.Fatalf("cancelStoreCommands() must not cancel install context, got %v", installCtx.Err())
+	}
+
+	app.CancelInstallIPA()
+	if installCtx.Err() == nil {
+		cleanup()
+		t.Fatal("CancelInstallIPA() must cancel active install context")
+	}
+
+	cleanup()
+	nextCtx, nextCleanup, err := app.startInstallCommandContext()
+	if err != nil {
+		t.Fatalf("startInstallCommandContext() after cleanup error = %v", err)
+	}
+	if nextCtx.Err() != nil {
+		nextCleanup()
+		t.Fatal("fresh install context should not be canceled")
+	}
+	nextCleanup()
+}

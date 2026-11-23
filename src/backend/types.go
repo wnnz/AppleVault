@@ -134,6 +134,11 @@ type DownloadTask struct {
 	CreatedAt    string `json:"createdAt"`
 }
 
+type RuntimeInfo struct {
+	OS                 string `json:"os"`
+	UsesSystemKeychain bool   `json:"usesSystemKeychain"`
+}
+
 type Settings struct {
 	KeychainPassphrase string `json:"keychainPassphrase"`
 	ThemeHintShown     bool   `json:"themeHintShown"`

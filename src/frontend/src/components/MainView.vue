@@ -117,7 +117,7 @@ import PurchasedView from './views/PurchasedView.vue'
 import SearchView from './views/SearchView.vue'
 import SettingsView from './views/SettingsView.vue'
 import VersionsView, { type VersionItem } from './views/VersionsView.vue'
-import { CancelRunningCommand, CheckForUpdates, GetAppVersion } from '../../wailsjs/go/backend/App'
+import { CancelInstallIPA, CancelRunningCommand, CheckForUpdates, GetAppVersion, GetRecentLogs } from '../../wailsjs/go/backend/App'
 import { BrowserOpenURL, EventsOn, OnFileDrop, OnFileDropOff } from '../../wailsjs/runtime/runtime'
 import { backend as main } from '../../wailsjs/go/models'
 import type { AppTheme } from '../ui/theme'
@@ -174,7 +174,7 @@ const currentSettings = ref<main.Settings>({
   themeHintShown: false,
   defaultDownloadDir: 'data/downloads/default',
   defaultPlatform: 'iphone',
-  enableProxy: true,
+  enableProxy: false,
   proxyUrl: 'http://127.0.0.1:10808'
 })
 const activeTaskCount = ref(0)
@@ -188,11 +188,9 @@ function handleBusyChange(busy: boolean, text?: string) {
 
 function resetAccountScopedViews(acc: main.AccountInfo) {
   currentAccount.value = acc
-  versionsViewRef.value?.stopAllQueries()
   searchViewRef.value?.searchResults.splice(0)
-  versionsViewRef.value?.versionItems.splice(0)
-  purchasedViewRef.value?.purchasedApps.splice(0)
-  if (purchasedViewRef.value) purchasedViewRef.value.purchasedTotal = 0
+  versionsViewRef.value?.resetVersionsState()
+  purchasedViewRef.value?.resetPurchasedState()
   void settingsViewRef.value?.loadSettings()
 }
 
@@ -226,9 +224,9 @@ function handleOpenDefaultDownloadDir() {
 }
 
 // 跨视图跳转联动
-function handleSelectAppForVersions(app: main.AppItem) {
+function handleSelectAppForVersions(app: main.AppItem, platform = '') {
   activeTab.value = 'versions'
-  versionsViewRef.value?.selectAppForVersions(app)
+  versionsViewRef.value?.selectAppForVersions(app, platform)
 }
 
 function handleDownloadApp(app: main.AppItem, platform = '') {
@@ -236,10 +234,10 @@ function handleDownloadApp(app: main.AppItem, platform = '') {
   activeTab.value = 'download'
 }
 
-function handleDownloadVersion(row: VersionItem, form: { appName: string; bundleId: string; appId: number }) {
+function handleDownloadVersion(row: VersionItem, form: { appName: string; bundleId: string; appId: number; platform?: string }) {
   const appName = form.appName || form.bundleId
   const ver = row.displayVersion !== '未查询' ? row.displayVersion : (row.versionId ? `Build ${row.versionId}` : '最新版')
-  downloadViewRef.value?.addDownloadTask(appName, form.bundleId, form.appId, ver, row.versionId, row.fileSize)
+  downloadViewRef.value?.addDownloadTask(appName, form.bundleId, form.appId, ver, row.versionId, row.fileSize, form.platform || '')
   activeTab.value = 'download'
 }
 
@@ -254,6 +252,12 @@ function handleInstallTask(outputPath: string) {
 }
 
 function handleCancel() {
+  if (activeTab.value === 'installer') {
+    void CancelInstallIPA()
+    isAnyOperationRunning.value = false
+    statusText.value = '正在取消 IPA 安装...'
+    return
+  }
   versionsViewRef.value?.stopAllQueries()
   CancelRunningCommand()
   isAnyOperationRunning.value = false
@@ -429,6 +433,14 @@ onMounted(() => {
       statusBarRef.value?.appendLog(msg)
     })
   )
+
+  if (!isDemo) {
+    void GetRecentLogs().then(logs => {
+      statusBarRef.value?.replayLogs(logs)
+    }).catch(() => {
+      // Ignore replay errors when running without the Wails bridge.
+    })
+  }
 
   // 监听后端任务进度更新与重载
   eventUnsubscribers.push(

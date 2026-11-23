@@ -95,7 +95,10 @@ func (a *App) InstallIPA(ipaPath, udid string) (InstallResult, error) {
 		return InstallResult{}, fmt.Errorf("请选择要安装的苹果设备")
 	}
 
-	ctx, cleanup := a.startPurchaseCommandContext()
+	ctx, cleanup, err := a.startInstallCommandContext()
+	if err != nil {
+		return InstallResult{}, err
+	}
 	defer cleanup()
 
 	a.emitLog("正在校验 IPA 完整性...")
@@ -115,6 +118,9 @@ func (a *App) InstallIPA(ipaPath, udid string) (InstallResult, error) {
 	a.emitLog(fmt.Sprintf("开始安装 IPA 到设备 %s: %s（请保持设备屏幕处于点亮解锁状态，切勿息屏休眠）", udid, absolutePath))
 	output, err := a.runIOSTool(ctx, "install", "--path="+absolutePath, "--udid="+udid)
 	if err != nil {
+		if ctx.Err() != nil {
+			return InstallResult{}, fmt.Errorf("已取消安装")
+		}
 		return InstallResult{}, friendlyDeviceToolError(err)
 	}
 

@@ -3,6 +3,7 @@ package backend
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -38,8 +39,11 @@ func (a *App) beforeClose(ctx context.Context) bool {
 }
 
 func (a *App) shutdown(ctx context.Context) {
-	a.CancelRunningCommand()
+	a.cancelStoreCommands()
+	a.cancelInstallCommand()
+
 	a.tasksMu.Lock()
+	a.shuttingDown = true
 	for id, cancel := range a.taskCancels {
 		cancel()
 		delete(a.taskCancels, id)
@@ -50,8 +54,17 @@ func (a *App) shutdown(ctx context.Context) {
 			t.Speed = "已中断"
 		}
 	}
+	waitChans := make([]chan struct{}, 0, len(a.taskDone))
+	for _, ch := range a.taskDone {
+		if ch != nil {
+			waitChans = append(waitChans, ch)
+		}
+	}
 	a.saveTasksLocked()
 	a.tasksMu.Unlock()
+
+	waitForTaskChannels(waitChans, 3*time.Second)
+	_ = a.flushVersionMetadataCache()
 	a.invalidateStoreSessions("")
 }
 

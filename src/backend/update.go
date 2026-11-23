@@ -6,14 +6,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
 )
 
 const (
-	AppVersion       = "1.6.0"
+	AppVersion       = "1.7.0"
 	latestReleaseAPI = "https://api.github.com/repos/wnnz/AppleVault/releases/latest"
 	maxReleaseBody   = 1 << 20
 )
@@ -37,14 +36,15 @@ func (a *App) CheckForUpdates() (UpdateInfo, error) {
 	request.Header.Set("User-Agent", "AppleVault/"+AppVersion)
 
 	transport := http.DefaultTransport.(*http.Transport).Clone()
+	defer transport.CloseIdleConnections()
 	a.settingsMu.RLock()
 	proxyEnabled := a.settings.EnableProxy
 	proxyAddress := strings.TrimSpace(a.settings.ProxyUrl)
 	a.settingsMu.RUnlock()
 	if proxyEnabled && proxyAddress != "" {
-		proxyURL, parseErr := url.Parse(proxyAddress)
+		proxyURL, parseErr := parseAndValidateProxyURL(proxyAddress)
 		if parseErr != nil {
-			return UpdateInfo{}, fmt.Errorf("代理地址格式无效: %w", parseErr)
+			return UpdateInfo{}, parseErr
 		}
 		transport.Proxy = http.ProxyURL(proxyURL)
 	} else {

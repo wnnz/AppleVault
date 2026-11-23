@@ -176,12 +176,13 @@ jobs:
           cache: true
 
       - name: Install go-winres
-        run: go install github.com/tc-hib/go-winres@latest
+        run: go install github.com/tc-hib/go-winres@v0.3.3
 
-      - name: Install and build frontend
+      - name: Install, test, and build frontend
         working-directory: src/frontend
         run: |
           pnpm install --frozen-lockfile
+          pnpm run test
           pnpm run build
 
       - name: Run backend tests
@@ -225,10 +226,11 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Install and build frontend
+      - name: Install, test, and build frontend
         working-directory: src/frontend
         run: |
           pnpm install --frozen-lockfile
+          pnpm run test
           pnpm run build
 
       - name: Run backend tests
@@ -266,7 +268,7 @@ jobs:
 
       - name: Generate SHA256SUMS.txt
         working-directory: dist
-        run: cat *.sha256 > SHA256SUMS.txt
+        run: cat *.sha256 | tr -d '\r' | sort -k2 > SHA256SUMS.txt
 
       - name: Prepare release notes
         env:

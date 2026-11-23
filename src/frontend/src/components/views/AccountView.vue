@@ -10,7 +10,10 @@
     <AppCard class="clean-card account-keychain-card mb-4">
       <div class="account-keychain-copy">
         <div class="card-headline"><span class="headline-title">钥匙串密码</span></div>
-        <div class="field-desc">用于加密本地 Apple ID 凭据。已有账号依赖当前密码，请勿随意修改；已有配置中的密码会继续保留。</div>
+        <div class="field-desc">
+          <template v-if="usesSystemKeychain">macOS 默认优先使用系统登录钥匙串保存凭据；此处密码仅在无法访问系统钥匙串时作为本地文件钥匙串后备密码，并受 macOS 钥匙串保护。</template>
+          <template v-else>用于加密本地 Apple ID 凭据。已有账号依赖当前密码，请勿随意修改；已有配置中的密码会继续保留。</template>
+        </div>
       </div>
       <div class="account-keychain-control">
         <AppInput
@@ -152,7 +155,8 @@ import {
   RemoveAccount,
   SwitchAccount,
   GetSettings,
-  SetKeychainPassphrase
+  SetKeychainPassphrase,
+  GetRuntimeInfo
 } from '../../../wailsjs/go/backend/App'
 import AppButton from '../../ui/components/AppButton.vue'
 import AppCard from '../../ui/components/AppCard.vue'
@@ -185,6 +189,7 @@ const isAccountActionRunning = computed(() =>
 const keychainPassphrase = ref('')
 const savedKeychainPassphrase = ref('')
 const isSavingKeychainPassphrase = ref(false)
+const usesSystemKeychain = ref(false)
 
 // 登录表单
 const showLoginModal = ref(false)
@@ -260,9 +265,13 @@ async function saveKeychainPassphrase() {
 
 async function loadKeychainPassphrase() {
   try {
-    const settings = await GetSettings()
+    const [settings, runtimeInfo] = await Promise.all([
+      GetSettings(),
+      GetRuntimeInfo().catch(() => ({ os: '', usesSystemKeychain: false }))
+    ])
     keychainPassphrase.value = settings.keychainPassphrase || ''
     savedKeychainPassphrase.value = keychainPassphrase.value
+    usesSystemKeychain.value = !!runtimeInfo.usesSystemKeychain
   } catch (err) {
     console.error('加载钥匙串密码失败:', err)
   }

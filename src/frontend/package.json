@@ -1,10 +1,11 @@
 {
   "name": "apple-vault",
   "private": true,
-  "version": "1.6.0",
+  "version": "1.7.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "test": "vitest run",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview"
   },
@@ -21,6 +22,7 @@
     "typescript": "^5.9.3",
     "unocss": "66.10.2",
     "vite": "^7.3.6",
+    "vitest": "^5.1.1",
     "vue-tsc": "^3.3.11"
   }
 }

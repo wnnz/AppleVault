@@ -30,7 +30,7 @@ const (
 	ipatoolCookieFile      = "cookies"
 	ipatoolKeychainService = "ipatool-auth.service"
 	lookupCacheTTL         = 30 * time.Minute
-	maxLookupCacheItems    = 512
+	maxLookupCacheItems    = 4096
 )
 
 type storeSessionKey struct {
@@ -45,6 +45,58 @@ type storeSessionKey struct {
 type cachedLookupEntry struct {
 	app       appstore.App
 	expiresAt time.Time
+}
+
+// syncCookieJar serializes concurrent cookie updates and skips redundant disk saves.
+type syncCookieJar struct {
+	mu    sync.Mutex
+	inner ipahttp.CookieJar
+	dirty bool
+}
+
+func newSyncCookieJar(inner ipahttp.CookieJar) *syncCookieJar {
+	return &syncCookieJar{inner: inner}
+}
+
+func (j *syncCookieJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
+	if len(cookies) == 0 {
+		return
+	}
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	j.inner.SetCookies(u, cookies)
+	j.dirty = true
+}
+
+func (j *syncCookieJar) Cookies(u *url.URL) []*http.Cookie {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	return j.inner.Cookies(u)
+}
+
+func (j *syncCookieJar) Save() error {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	if !j.dirty {
+		return nil
+	}
+	if err := j.inner.Save(); err != nil {
+		return err
+	}
+	j.dirty = false
+	return nil
+}
+
+type tokenRefreshCall struct {
+	done    chan struct{}
+	account appstore.Account
+	err     error
+}
+
+func closeStoreIdleConnections(store appstore.AppStore) {
+	if closer, ok := store.(interface{ CloseIdleConnections() }); ok {
+		closer.CloseIdleConnections()
+	}
 }
 
 // cachingKeychain avoids repeated PBKDF2 decryption and redundant writes on file keyrings.
@@ -149,46 +201,55 @@ func (a *App) sharedAppStoreForAccount(accountID string) (appstore.AppStore, err
 }
 
 func (a *App) sharedAppStoreFor(accountID, notFoundMessage string) (appstore.AppStore, error) {
-	item, ok := a.accountByID(accountID)
-	if !ok {
-		return nil, errors.New(notFoundMessage)
-	}
+	for attempt := 0; attempt < 2; attempt++ {
+		item, ok := a.accountByID(accountID)
+		if !ok {
+			return nil, errors.New(notFoundMessage)
+		}
 
-	key := a.currentStoreSessionKey(item.ID, item.Legacy)
-	a.storeMu.Lock()
-	if cached, exists := a.storeSessions[key]; exists {
+		key := a.currentStoreSessionKey(item.ID, item.Legacy)
+		a.storeMu.Lock()
+		if cached, exists := a.storeSessions[key]; exists {
+			a.storeMu.Unlock()
+			return cached, nil
+		}
 		a.storeMu.Unlock()
-		return cached, nil
-	}
-	a.storeMu.Unlock()
 
-	store, err := a.newAppStoreWithStorage(context.Background(), item.ID, item.Legacy)
-	if err != nil {
-		return nil, err
-	}
+		store, err := a.newAppStoreWithKey(context.Background(), key)
+		if err != nil {
+			return nil, err
+		}
 
-	a.storeMu.Lock()
-	if a.storeSessions == nil {
-		a.storeSessions = make(map[storeSessionKey]appstore.AppStore)
-	}
-	for existingKey, existingStore := range a.storeSessions {
-		if existingKey.accountID == item.ID && existingKey != key {
-			if closer, ok := existingStore.(interface{ CloseIdleConnections() }); ok {
-				closer.CloseIdleConnections()
+		latestItem, stillExists := a.accountByID(accountID)
+		if !stillExists {
+			closeStoreIdleConnections(store)
+			return nil, errors.New(notFoundMessage)
+		}
+		if a.currentStoreSessionKey(latestItem.ID, latestItem.Legacy) != key {
+			closeStoreIdleConnections(store)
+			continue
+		}
+
+		a.storeMu.Lock()
+		if a.storeSessions == nil {
+			a.storeSessions = make(map[storeSessionKey]appstore.AppStore)
+		}
+		for existingKey, existingStore := range a.storeSessions {
+			if existingKey.accountID == item.ID && existingKey != key {
+				closeStoreIdleConnections(existingStore)
+				delete(a.storeSessions, existingKey)
 			}
-			delete(a.storeSessions, existingKey)
 		}
-	}
-	if existingStore, exists := a.storeSessions[key]; exists {
+		if existingStore, exists := a.storeSessions[key]; exists {
+			a.storeMu.Unlock()
+			closeStoreIdleConnections(store)
+			return existingStore, nil
+		}
+		a.storeSessions[key] = store
 		a.storeMu.Unlock()
-		if closer, ok := store.(interface{ CloseIdleConnections() }); ok {
-			closer.CloseIdleConnections()
-		}
-		return existingStore, nil
+		return store, nil
 	}
-	a.storeSessions[key] = store
-	a.storeMu.Unlock()
-	return store, nil
+	return nil, errors.New("创建 App Store 会话失败，请重试")
 }
 
 func (a *App) invalidateStoreSessions(accountID string) {
@@ -204,9 +265,7 @@ func (a *App) invalidateStoreSessions(accountID string) {
 	a.storeMu.Unlock()
 
 	for _, store := range evicted {
-		if closer, ok := store.(interface{ CloseIdleConnections() }); ok {
-			closer.CloseIdleConnections()
-		}
+		closeStoreIdleConnections(store)
 	}
 }
 
@@ -241,13 +300,11 @@ func (a *App) newAppStoreForLogin(ctx context.Context, email string) (appstore.A
 }
 
 func (a *App) newAppStoreWithStorage(ctx context.Context, accountID string, legacy bool) (appstore.AppStore, error) {
-	a.settingsMu.RLock()
-	passphrase := a.settings.KeychainPassphrase
-	enableProxy := a.settings.EnableProxy
-	proxyAddress := strings.TrimSpace(a.settings.ProxyUrl)
-	a.settingsMu.RUnlock()
+	return a.newAppStoreWithKey(ctx, a.currentStoreSessionKey(accountID, legacy))
+}
 
-	configDirectory, serviceName := a.accountStorage(accountID, legacy)
+func (a *App) newAppStoreWithKey(ctx context.Context, key storeSessionKey) (appstore.AppStore, error) {
+	configDirectory, serviceName := a.accountStorageForDataDir(key.dataDir, key.accountID, key.legacy)
 	if err := os.MkdirAll(configDirectory, 0700); err != nil {
 		return nil, fmt.Errorf("创建 App Store 配置目录失败: %w", err)
 	}
@@ -268,10 +325,10 @@ func (a *App) newAppStoreWithStorage(ctx context.Context, accountID string, lega
 		ServiceName: serviceName,
 		FileDir:     configDirectory,
 		FilePasswordFunc: func(string) (string, error) {
-			if passphrase == "" {
+			if key.passphrase == "" {
 				return "", errors.New("钥匙串密码不能为空")
 			}
-			return passphrase, nil
+			return key.passphrase, nil
 		},
 	})
 	if err != nil {
@@ -279,23 +336,23 @@ func (a *App) newAppStoreWithStorage(ctx context.Context, accountID string, lega
 	}
 
 	transport := http.DefaultTransport.(*http.Transport).Clone()
-	if enableProxy && proxyAddress != "" {
-		proxyURL, err := url.Parse(proxyAddress)
+	if key.enableProxy && key.proxyAddress != "" {
+		proxyURL, err := parseAndValidateProxyURL(key.proxyAddress)
 		if err != nil {
-			return nil, fmt.Errorf("代理地址格式无效: %w", err)
+			return nil, err
 		}
 		transport.Proxy = http.ProxyURL(proxyURL)
-		a.emitLog(fmt.Sprintf("[网络代理] 已启用: %s", ipahttp.DiagnosticURL(proxyAddress)))
+		a.emitLog(fmt.Sprintf("[网络代理] 已启用: %s", ipahttp.DiagnosticURL(key.proxyAddress)))
 	} else {
 		transport.Proxy = nil
 	}
 
 	osAdapter := operatingsystem.New()
-	a.writeDiagnostic("store.config", map[string]interface{}{"account_id": accountID, "proxy_enabled": enableProxy && proxyAddress != "", "proxy_endpoint": ipahttp.DiagnosticURL(proxyAddress), "identity_strategy": "ipatool-2.8.1"})
+	a.writeDiagnostic("store.config", map[string]interface{}{"account_id": key.accountID, "proxy_enabled": key.enableProxy && key.proxyAddress != "", "proxy_endpoint": ipahttp.DiagnosticURL(key.proxyAddress), "identity_strategy": "ipatool-2.8.1"})
 	store := appstore.NewAppStore(appstore.Args{
-		CookieJar:       ipahttp.CookieJar(jar),
+		CookieJar:       newSyncCookieJar(ipahttp.CookieJar(jar)),
 		Keychain:        newCachingKeychain(keychain.New(keychain.Args{Keyring: ring, Label: serviceName})),
-		Machine:         localMachine{home: a.getDataDir(), identity: machine.New(machine.Args{OS: osAdapter})},
+		Machine:         localMachine{home: key.dataDir, identity: machine.New(machine.Args{OS: osAdapter})},
 		OperatingSystem: osAdapter,
 		Context:         ctx,
 		Transport:       transport,
@@ -318,11 +375,12 @@ func authenticationErrorMessage(err error) string {
 	return err.Error()
 }
 
-func refreshAccount(store appstore.AppStore, account appstore.Account) (appstore.Account, error) {
+func refreshAccount(ctx context.Context, store appstore.AppStore, account appstore.Account) (appstore.Account, error) {
 	if strings.TrimSpace(account.Email) == "" || account.Password == "" {
 		return appstore.Account{}, errors.New("缺少重新认证所需的凭据，请在账号中心重新登录")
 	}
 	result, err := store.Login(appstore.LoginInput{
+		Context:  ctx,
 		Email:    account.Email,
 		Password: account.Password,
 	})
@@ -338,7 +396,61 @@ func refreshAccount(store appstore.AppStore, account appstore.Account) (appstore
 	return result.Account, nil
 }
 
+func (a *App) refreshAccountShared(ctx context.Context, accountID string, store appstore.AppStore, expired appstore.Account) (appstore.Account, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if accountID == "" {
+		return refreshAccount(ctx, store, expired)
+	}
+
+	if info, err := store.AccountInfo(); err == nil && info.Account.PasswordToken != "" && info.Account.PasswordToken != expired.PasswordToken {
+		return info.Account, nil
+	}
+
+	a.tokenRefreshMu.Lock()
+	if a.tokenRefreshing == nil {
+		a.tokenRefreshing = make(map[string]*tokenRefreshCall)
+	}
+	if inFlight, exists := a.tokenRefreshing[accountID]; exists {
+		a.tokenRefreshMu.Unlock()
+		select {
+		case <-inFlight.done:
+			if inFlight.err != nil {
+				return appstore.Account{}, inFlight.err
+			}
+			return inFlight.account, nil
+		case <-ctx.Done():
+			return appstore.Account{}, ctx.Err()
+		}
+	}
+
+	if info, err := store.AccountInfo(); err == nil && info.Account.PasswordToken != "" && info.Account.PasswordToken != expired.PasswordToken {
+		a.tokenRefreshMu.Unlock()
+		return info.Account, nil
+	}
+
+	call := &tokenRefreshCall{done: make(chan struct{})}
+	a.tokenRefreshing[accountID] = call
+	a.tokenRefreshMu.Unlock()
+
+	account, err := refreshAccount(ctx, store, expired)
+
+	a.tokenRefreshMu.Lock()
+	delete(a.tokenRefreshing, accountID)
+	call.account = account
+	call.err = err
+	close(call.done)
+	a.tokenRefreshMu.Unlock()
+
+	return account, err
+}
+
 func withAccountRetry[T any](store appstore.AppStore, operation func(appstore.Account) (T, error)) (T, error) {
+	return withAccountRetryContext(context.Background(), nil, "", store, operation)
+}
+
+func withAccountRetryContext[T any](ctx context.Context, app *App, accountID string, store appstore.AppStore, operation func(appstore.Account) (T, error)) (T, error) {
 	var zero T
 	info, err := store.AccountInfo()
 	if err != nil {
@@ -350,7 +462,13 @@ func withAccountRetry[T any](store appstore.AppStore, operation func(appstore.Ac
 		return result, err
 	}
 
-	account, loginErr := refreshAccount(store, info.Account)
+	var account appstore.Account
+	var loginErr error
+	if app != nil && accountID != "" {
+		account, loginErr = app.refreshAccountShared(ctx, accountID, store, info.Account)
+	} else {
+		account, loginErr = refreshAccount(ctx, store, info.Account)
+	}
 	if loginErr != nil {
 		return zero, fmt.Errorf("Apple ID 登录已失效: %w", loginErr)
 	}
@@ -455,14 +573,38 @@ func parseStorePlatform(value string) (appstore.Platform, error) {
 	return appstore.ParsePlatform(strings.TrimSpace(value))
 }
 
+func formatStorePrice(item appstore.App) string {
+	if item.Price == 0 {
+		return "免费"
+	}
+	if formatted := strings.TrimSpace(item.FormattedPrice); formatted != "" {
+		return formatted
+	}
+	currency := strings.ToUpper(strings.TrimSpace(item.Currency))
+	switch currency {
+	case "CNY", "RMB", "JPY":
+		return fmt.Sprintf("¥%.2f", item.Price)
+	case "USD":
+		return fmt.Sprintf("$%.2f", item.Price)
+	case "EUR":
+		return fmt.Sprintf("€%.2f", item.Price)
+	case "GBP":
+		return fmt.Sprintf("£%.2f", item.Price)
+	case "HKD":
+		return fmt.Sprintf("HK$%.2f", item.Price)
+	case "TWD":
+		return fmt.Sprintf("NT$%.2f", item.Price)
+	case "":
+		return fmt.Sprintf("%.2f", item.Price)
+	default:
+		return fmt.Sprintf("%s %.2f", currency, item.Price)
+	}
+}
+
 func mapStoreApp(item appstore.App) AppItem {
 	purchaseDate := ""
 	if !item.PurchaseDate.IsZero() {
 		purchaseDate = item.PurchaseDate.Format(time.RFC3339)
-	}
-	displayPrice := "免费"
-	if item.Price != 0 {
-		displayPrice = fmt.Sprintf("¥%.2f", item.Price)
 	}
 	return AppItem{
 		ID:           item.ID,
@@ -471,7 +613,7 @@ func mapStoreApp(item appstore.App) AppItem {
 		Version:      item.Version,
 		Price:        item.Price,
 		PurchaseDate: purchaseDate,
-		DisplayPrice: displayPrice,
+		DisplayPrice: formatStorePrice(item),
 	}
 }
 
@@ -541,7 +683,7 @@ func (a *App) downloadFromStore(ctx context.Context, accountID, bundleID string,
 	}()
 
 	purchased := false
-	result, err := withAccountRetry(store, func(account appstore.Account) (appstore.DownloadOutput, error) {
+	result, err := withAccountRetryContext(ctx, a, accountID, store, func(account appstore.Account) (appstore.DownloadOutput, error) {
 		item, err := a.resolveStoreAppCached(ctx, store, account, bundleID, appID, platform, true)
 		if err != nil {
 			return appstore.DownloadOutput{}, err
@@ -567,8 +709,17 @@ func (a *App) downloadFromStore(ctx context.Context, accountID, bundleID string,
 	if err != nil {
 		return DownloadResult{}, err
 	}
-	if err := store.ReplicateSinf(appstore.ReplicateSinfInput{Sinfs: result.Sinfs, PackagePath: result.DestinationPath}); err != nil {
+	if err := ctx.Err(); err != nil {
 		return DownloadResult{}, err
+	}
+	if strings.EqualFold(filepath.Ext(result.DestinationPath), ".ipa") {
+		if err := store.ReplicateSinf(appstore.ReplicateSinfInput{
+			Context:     ctx,
+			Sinfs:       result.Sinfs,
+			PackagePath: result.DestinationPath,
+		}); err != nil {
+			return DownloadResult{}, err
+		}
 	}
 	return DownloadResult{Output: result.DestinationPath, Purchased: purchased, Success: true}, nil
 }

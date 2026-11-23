@@ -1,6 +1,7 @@
 package appstore
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -62,7 +63,7 @@ func (id *platformVersionExternalID) UnmarshalJSON(data []byte) error {
 	return fmt.Errorf("invalid external version id %s", string(data))
 }
 
-func (t *appstore) lookupLatestExternalVersionID(acc Account, app App, platform Platform) (string, error) {
+func (t *appstore) lookupLatestExternalVersionID(ctx context.Context, acc Account, app App, platform Platform) (string, error) {
 	if app.ID == 0 {
 		return "", errors.New("app ID is required for platform version lookup")
 	}
@@ -73,7 +74,7 @@ func (t *appstore) lookupLatestExternalVersionID(acc Account, app App, platform 
 	}
 
 	if platform == PlatformVisionOS {
-		return t.lookupLatestVisionOSExternalVersionID(app.ID, countryCode)
+		return t.lookupLatestVisionOSExternalVersionID(ctx, app.ID, countryCode)
 	}
 
 	metadataPlatform, err := platform.metadataPlatform()
@@ -92,6 +93,7 @@ func (t *appstore) lookupLatestExternalVersionID(acc Account, app App, platform 
 
 	for _, catalog := range catalogs {
 		request := t.platformVersionLookupRequest(app.ID, countryCode, catalog)
+		request.Context = ctx
 
 		res, err := t.platformClient.Send(request)
 		if err != nil {
@@ -135,7 +137,7 @@ func (t *appstore) lookupLatestExternalVersionID(acc Account, app App, platform 
 	if platform == PlatformIPhone || platform == PlatformIPad {
 		// Apple Arcade apps can be absent from every MDM catalog. The App
 		// Store's catalog API still exposes their current iOS version.
-		version, err := t.lookupLatestIOSExternalVersionID(app, countryCode, platform)
+		version, err := t.lookupLatestIOSExternalVersionID(ctx, app, countryCode, platform)
 		if err == nil {
 			return version, nil
 		}
@@ -146,8 +148,9 @@ func (t *appstore) lookupLatestExternalVersionID(acc Account, app App, platform 
 	return "", fmt.Errorf("app %d in storefront %s (catalogs: %s): %w", app.ID, countryCode, strings.Join(catalogs, ", "), lastErr)
 }
 
-func (t *appstore) lookupLatestVisionOSExternalVersionID(appID int64, countryCode string) (string, error) {
+func (t *appstore) lookupLatestVisionOSExternalVersionID(ctx context.Context, appID int64, countryCode string) (string, error) {
 	request := http.Request{
+		Context:        ctx,
 		URL:            visionProductURL(appID, countryCode),
 		Method:         http.MethodGET,
 		ResponseFormat: http.ResponseFormatRaw,

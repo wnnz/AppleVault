@@ -1,6 +1,7 @@
 package appstore
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 )
 
 type SearchInput struct {
+	Context  context.Context
 	Account  Account
 	Term     string
 	Limit    int64
@@ -39,6 +41,7 @@ func (t *appstore) Search(input SearchInput) (SearchOutput, error) {
 	if err != nil {
 		return SearchOutput{}, fmt.Errorf("failed to create search request: %w", err)
 	}
+	request.Context = input.Context
 
 	res, err := t.searchClient.Send(request)
 	if err != nil {
@@ -65,6 +68,7 @@ func (t *appstore) Search(input SearchInput) (SearchOutput, error) {
 
 func (t *appstore) searchVisionOS(input SearchInput, countryCode string) (SearchOutput, error) {
 	request := http.Request{
+		Context:        input.Context,
 		URL:            visionSearchURL(input.Term, countryCode),
 		Method:         http.MethodGET,
 		ResponseFormat: http.ResponseFormatRaw,
@@ -97,6 +101,7 @@ func (t *appstore) searchVisionOS(input SearchInput, countryCode string) (Search
 	if err != nil {
 		return SearchOutput{}, fmt.Errorf("failed to create visionOS metadata request: %w", err)
 	}
+	lookupRequest.Context = input.Context
 
 	lookupResponse, err := t.searchClient.Send(lookupRequest)
 	if err != nil {

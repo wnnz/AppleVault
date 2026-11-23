@@ -3,8 +3,11 @@
 package backend
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 	"unsafe"
@@ -15,6 +18,37 @@ func setSysProcAttr(cmd *exec.Cmd) {
 		HideWindow:    true,
 		CreationFlags: 0x08000000, // CREATE_NO_WINDOW
 	}
+}
+
+func openExplorerWindows(targetPath string, statErr error, isDir bool) error {
+	if statErr == nil && !isDir {
+		if abs, err := filepath.Abs(targetPath); err == nil {
+			targetPath = abs
+		}
+		safePath := strings.ReplaceAll(targetPath, `"`, "")
+		cmd := exec.Command("explorer.exe")
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			CmdLine: fmt.Sprintf(`explorer.exe /select,"%s"`, safePath),
+		}
+		if err := cmd.Start(); err != nil {
+			return err
+		}
+		go func() { _ = cmd.Wait() }()
+		return nil
+	}
+	dir := targetPath
+	if statErr != nil || !isDir {
+		dir = filepath.Dir(targetPath)
+	}
+	if abs, err := filepath.Abs(dir); err == nil {
+		dir = abs
+	}
+	cmd := exec.Command("explorer.exe", dir)
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	go func() { _ = cmd.Wait() }()
+	return nil
 }
 
 func initWindowIcon() {
@@ -29,6 +63,7 @@ func initWindowIcon() {
 		procSendMessageW := user32.NewProc("SendMessageW")
 		procIsWindowVisible := user32.NewProc("IsWindowVisible")
 		procExtractIconW := shell32.NewProc("ExtractIconW")
+		procDestroyIcon := user32.NewProc("DestroyIcon")
 
 		exePath, err := os.Executable()
 		if err != nil {
@@ -40,7 +75,7 @@ func initWindowIcon() {
 		}
 
 		hIcon, _, _ := procExtractIconW.Call(0, uintptr(unsafe.Pointer(exePathPtr)), 0)
-		if hIcon == 0 {
+		if hIcon <= 1 {
 			return
 		}
 
@@ -60,6 +95,7 @@ func initWindowIcon() {
 			return 1 // 继续枚举
 		})
 
+		assigned := false
 		for i := 0; i < 15; i++ {
 			targetHwnd = 0
 			procEnumWindows.Call(cb, 0)
@@ -71,9 +107,13 @@ func initWindowIcon() {
 				)
 				procSendMessageW.Call(targetHwnd, WM_SETICON, ICON_SMALL, hIcon)
 				procSendMessageW.Call(targetHwnd, WM_SETICON, ICON_BIG, hIcon)
+				assigned = true
 				break
 			}
 			time.Sleep(150 * time.Millisecond)
+		}
+		if !assigned {
+			procDestroyIcon.Call(hIcon)
 		}
 	}()
 }

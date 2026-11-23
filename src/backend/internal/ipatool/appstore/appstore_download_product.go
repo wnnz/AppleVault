@@ -39,7 +39,7 @@ func (t *appstore) sendDownloadProduct(ctx context.Context, acc Account, app App
 	if externalVersionID == "" && platform == PlatformMacOS {
 		var err error
 
-		externalVersionID, err = t.lookupLatestMacOSExternalVersionID(acc, app)
+		externalVersionID, err = t.lookupLatestMacOSExternalVersionID(ctx, acc, app)
 		if err != nil {
 			return http.Result[downloadResult]{}, platform, fmt.Errorf("failed to resolve latest macOS version for download: %w", err)
 		}
@@ -105,7 +105,7 @@ func (t *appstore) sendDownloadProduct(ctx context.Context, acc Account, app App
 			platform = PlatformIPhone
 		}
 
-		externalVersionID, err = t.lookupLatestExternalVersionID(acc, app, platform)
+		externalVersionID, err = t.lookupLatestExternalVersionID(ctx, acc, app, platform)
 		if errors.Is(err, errIOSCatalogAppNotFound) {
 			// A delisted app can still be available to this account. Neither
 			// recovery endpoint needs a catalog version to select its entitled build.
@@ -263,6 +263,10 @@ func (t *appstore) sendUpdateProductContext(ctx context.Context, endpoint string
 }
 
 func (t *appstore) sendCommerceDownloadRequest(ctx context.Context, request http.Request, guid string) (http.Result[downloadResult], error) {
+	if ctx == nil {
+		ctx = t.requestContext()
+	}
+	request.Context = ctx
 	if t.authBackend != nil {
 		hardwareID, err := hex.DecodeString(guid)
 		if err != nil || len(hardwareID) != 6 {

@@ -43,6 +43,7 @@ const (
 )
 
 type LoginInput struct {
+	Context  context.Context
 	Email    string
 	Password string
 	AuthCode string
@@ -64,6 +65,11 @@ func (t *appstore) Login(input LoginInput) (LoginOutput, error) {
 }
 
 func (t *appstore) legacyLogin(input LoginInput) (LoginOutput, error) {
+	ctx := input.Context
+	if ctx == nil {
+		ctx = t.requestContext()
+	}
+
 	authCode, err := normalizeAuthCode(input.AuthCode)
 	if err != nil {
 		return LoginOutput{}, err
@@ -85,7 +91,7 @@ func (t *appstore) legacyLogin(input LoginInput) (LoginOutput, error) {
 		return LoginOutput{}, err
 	}
 
-	bag, err := t.bag(nil, guid)
+	bag, err := t.bag(ctx, guid)
 	if err != nil {
 		return LoginOutput{}, fmt.Errorf("failed to get bag: %w", err)
 	}
@@ -103,7 +109,7 @@ func (t *appstore) legacyLogin(input LoginInput) (LoginOutput, error) {
 		return LoginOutput{}, errors.New("SAP action signer factory returned nil")
 	}
 
-	acc, loginErr := t.login(input.Email, input.Password, authCode, guid, bag.SAPConfig.AuthEndpoint, signer)
+	acc, loginErr := t.login(ctx, input.Email, input.Password, authCode, guid, bag.SAPConfig.AuthEndpoint, signer)
 	closeErr := signer.Close()
 
 	if closeErr != nil {
@@ -186,8 +192,9 @@ type loginResult struct {
 
 var storeCookieDSIDPattern = regexp.MustCompile(`(?:^|[ ,])mz_at(?:0|_ssl)-([0-9]+)=`)
 
-func (t *appstore) login(email, password, authCode, guid, endpoint string, signer ActionSigner) (Account, error) {
+func (t *appstore) login(ctx context.Context, email, password, authCode, guid, endpoint string, signer ActionSigner) (Account, error) {
 	request := t.loginRequest(email, password, authCode, guid, endpoint, 1, signer)
+	request.Context = ctx
 	redirects := 0
 
 	var (
@@ -196,7 +203,7 @@ func (t *appstore) login(email, password, authCode, guid, endpoint string, signe
 	)
 
 	for attempt := 1; ; {
-		res, err = t.sendAuthenticationRequest(request)
+		res, err = t.sendAuthenticationRequest(ctx, request)
 
 		if err != nil {
 			stage := "sign-in"
@@ -235,6 +242,7 @@ func (t *appstore) login(email, password, authCode, guid, endpoint string, signe
 
 		attempt++
 		request = t.loginRequest(email, password, authCode, guid, request.URL, attempt, signer)
+		request.Context = ctx
 	}
 
 	sf, err := res.GetHeader(HTTPHeaderStoreFront)
@@ -290,16 +298,19 @@ func (t *appstore) login(email, password, authCode, guid, endpoint string, signe
 	return acc, nil
 }
 
-func (t *appstore) sendAuthenticationRequest(request http.Request) (http.Result[loginResult], error) {
+func (t *appstore) sendAuthenticationRequest(ctx context.Context, request http.Request) (http.Result[loginResult], error) {
+	if ctx == nil {
+		ctx = t.requestContext()
+	}
+	request.Context = ctx
+
 	statuses := make([]string, 0, maxAuthenticationRequestAttempts)
 	onlyHTTP := true
 
-	sleep := t.authRetrySleep
-	if sleep == nil {
-		sleep = time.Sleep
-	}
-
 	for attempt := 1; ; attempt++ {
+		if err := ctx.Err(); err != nil {
+			return http.Result[loginResult]{}, err
+		}
 		result, err := t.loginClient.Send(request)
 
 		status, retry := retryableAuthenticationError(err)
@@ -355,7 +366,17 @@ func (t *appstore) sendAuthenticationRequest(request http.Request) (http.Result[
 			delay = max(requested, time.Second)
 		}
 
-		sleep(delay)
+		if t.authRetrySleep != nil {
+			t.authRetrySleep(delay)
+		} else {
+			timer := time.NewTimer(delay)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return result, ctx.Err()
+			case <-timer.C:
+			}
+		}
 	}
 }
 

@@ -294,6 +294,20 @@ export namespace backend {
 		    return a;
 		}
 	}
+	export class RuntimeInfo {
+	    os: string;
+	    usesSystemKeychain: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new RuntimeInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.os = source["os"];
+	        this.usesSystemKeychain = source["usesSystemKeychain"];
+	    }
+	}
 	export class Settings {
 	    keychainPassphrase: string;
 	    themeHintShown: boolean;

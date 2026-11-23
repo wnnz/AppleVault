@@ -108,6 +108,7 @@ func (a *App) initializeAccounts() {
 	registry := accountRegistry{Accounts: make([]storedAccount, 0)}
 	store, err := a.newAppStoreWithStorage(context.Background(), legacyAccountID, true)
 	if err == nil {
+		defer closeStoreIdleConnections(store)
 		if result, infoErr := store.AccountInfo(); infoErr == nil && result.Account.Email != "" {
 			registry = registryFromLegacyAccount(result.Account, time.Now().UnixNano())
 		}
@@ -209,11 +210,12 @@ func (a *App) RefreshAccount(accountID string) (AccountInfo, error) {
 	if err != nil {
 		return AccountInfo{}, err
 	}
+	defer closeStoreIdleConnections(store)
 	storedInfo, err := store.AccountInfo()
 	if err != nil {
 		return AccountInfo{}, fmt.Errorf("读取账号凭据失败: %w", err)
 	}
-	refreshed, err := refreshAccount(store, storedInfo.Account)
+	refreshed, err := refreshAccount(ctx, store, storedInfo.Account)
 	if err != nil {
 		return AccountInfo{}, err
 	}
@@ -279,12 +281,13 @@ func (a *App) SwitchAccount(accountID string) (AccountInfo, error) {
 	if err != nil {
 		return AccountInfo{}, err
 	}
+	defer closeStoreIdleConnections(store)
 	storedInfo, err := store.AccountInfo()
 	if err != nil {
 		return AccountInfo{}, fmt.Errorf("读取账号凭据失败: %w", err)
 	}
 
-	a.CancelRunningCommand()
+	a.cancelStoreCommands()
 	a.invalidateStoreSessions("")
 	a.accountMu.Lock()
 	defer a.accountMu.Unlock()
@@ -345,10 +348,14 @@ func (a *App) RemoveAccount(accountID string) (AccountInfo, error) {
 	if !ok {
 		return AccountInfo{}, errors.New("账号不存在")
 	}
+
+	a.cancelDownloadTasksForAccount(item.ID)
+	if a.activeAccountID() == item.ID {
+		a.cancelStoreCommands()
+	}
+	a.invalidateStoreSessions(item.ID)
 	a.cleanupAccountCredentials(item.ID, item.Legacy)
 
-	a.CancelRunningCommand()
-	a.invalidateStoreSessions(item.ID)
 	a.accountMu.Lock()
 	filtered := make([]storedAccount, 0, len(a.accounts.Accounts)-1)
 	for _, candidate := range a.accounts.Accounts {
@@ -381,9 +388,13 @@ func (a *App) RemoveAccount(accountID string) (AccountInfo, error) {
 }
 
 func (a *App) accountStorage(accountID string, legacy bool) (string, string) {
+	return a.accountStorageForDataDir(a.getDataDir(), accountID, legacy)
+}
+
+func (a *App) accountStorageForDataDir(dataDir, accountID string, legacy bool) (string, string) {
 	if legacy {
-		return filepath.Join(a.getDataDir(), ipatoolConfigDirectory), ipatoolKeychainService
+		return filepath.Join(dataDir, ipatoolConfigDirectory), ipatoolKeychainService
 	}
-	return filepath.Join(a.getDataDir(), ipatoolConfigDirectory, "accounts", accountID),
+	return filepath.Join(dataDir, ipatoolConfigDirectory, "accounts", accountID),
 		fmt.Sprintf("%s.%s", ipatoolKeychainService, accountID)
 }

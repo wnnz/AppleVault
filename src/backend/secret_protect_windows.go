@@ -11,6 +11,10 @@ import (
 
 var keychainProtectEntropy = []byte("AppleVault.keychain.v1")
 
+func secretProtectionSupported() bool {
+	return true
+}
+
 func protectSecret(plain string) (string, error) {
 	if plain == "" {
 		return "", nil
